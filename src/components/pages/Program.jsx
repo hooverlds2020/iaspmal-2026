@@ -1,51 +1,15 @@
 // src/components/pages/Program.jsx
 import React, { useState } from 'react';
 import { Calendar, MapPin, Clock, ChevronDown, ChevronRight } from 'lucide-react';
+import { useProgram } from '../../hooks/useProgram';
 
 const Program = ({ lang }) => {
-  const [viewMode, setViewMode] = useState('symposiums'); // 'symposiums' | 'schedule'
+  const [viewMode, setViewMode] = useState('symposiums');
   const [selectedDay, setSelectedDay] = useState('all');
   const [expandedSymposium, setExpandedSymposium] = useState(null);
-
-  // DATOS TEMPORALES - Después vendrán de Supabase
-  const mockSymposiums = [
-    {
-      id: 1,
-      number: 1,
-      title_es: 'Música popular y política',
-      title_en: 'Popular Music and Politics',
-      coordinators: ['Adalberto Paranhos', 'Julio Mendivil'],
-      sessions: [
-        {
-          day: '2026-09-28',
-          start_time: '09:00',
-          end_time: '11:00',
-          room: 'Sala A'
-        },
-        {
-          day: '2026-09-29',
-          start_time: '14:00',
-          end_time: '16:00',
-          room: 'Sala C'
-        }
-      ]
-    },
-    {
-      id: 2,
-      number: 2,
-      title_es: 'Música popular y políticas sonoras',
-      title_en: 'Popular Music and Sound Policies',
-      coordinators: ['Ana María Ochoa Gautier'],
-      sessions: [
-        {
-          day: '2026-09-28',
-          start_time: '11:30',
-          end_time: '13:30',
-          room: 'Sala B'
-        }
-      ]
-    }
-  ];
+  
+  // Cargar datos desde Supabase
+  const { symposiums, loading, error } = useProgram();
 
   const days = [
     { value: 'all', label_es: 'Todos los días', label_en: 'All days' },
@@ -56,10 +20,33 @@ const Program = ({ lang }) => {
     { value: '2026-10-02', label_es: 'Viernes 2 Oct', label_en: 'Friday, Oct 2' }
   ];
 
-  const filteredSymposiums = mockSymposiums.filter(sym => {
+  const filteredSymposiums = symposiums.filter(sym => {
     if (selectedDay === 'all') return true;
     return sym.sessions?.some(s => s.day === selectedDay);
   });
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
+        <p className="ml-4 text-gray-600">
+          {lang === 'es' ? 'Cargando programa...' : 'Loading program...'}
+        </p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <p className="text-red-800">
+          {lang === 'es' 
+            ? `Error al cargar el programa: ${error}`
+            : `Error loading program: ${error}`}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -105,91 +92,93 @@ const Program = ({ lang }) => {
       {/* Vista por simposios */}
       {viewMode === 'symposiums' && (
         <div className="space-y-4">
-          {filteredSymposiums.map(symposium => {
-            const title = lang === 'es' ? symposium.title_es : symposium.title_en;
-            const isExpanded = expandedSymposium === symposium.id;
-
-            return (
-              <div 
-                key={symposium.id} 
-                className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden"
-              >
-                <button
-                  onClick={() => setExpandedSymposium(isExpanded ? null : symposium.id)}
-                  className="w-full px-6 py-4 flex items-start justify-between hover:bg-gray-50 transition"
-                >
-                  <div className="flex-1 text-left">
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="bg-teal-600 text-white text-sm font-bold px-3 py-1 rounded">
-                        S{symposium.number}
-                      </span>
-                      <h3 className="text-lg font-bold text-gray-900">{title}</h3>
-                    </div>
-                    <p className="text-sm text-gray-600">
-                      <strong>{lang === 'es' ? 'Coordinadores:' : 'Coordinators:'}</strong>{' '}
-                      {symposium.coordinators.join(', ')}
-                    </p>
-                  </div>
-                  <div className="ml-4 text-teal-600">
-                    {isExpanded ? (
-                      <ChevronDown className="w-5 h-5" />
-                    ) : (
-                      <ChevronRight className="w-5 h-5" />
-                    )}
-                  </div>
-                </button>
-
-                {isExpanded && symposium.sessions && (
-                  <div className="px-6 pb-4 border-t border-gray-100 bg-gray-50">
-                    <div className="space-y-3 mt-4">
-                      {symposium.sessions.map((session, idx) => (
-                        <div 
-                          key={idx} 
-                          className="bg-white rounded-lg p-4 border border-gray-200"
-                        >
-                          <div className="flex items-center gap-4 text-sm text-gray-700 flex-wrap">
-                            <span className="font-semibold text-teal-600">
-                              {lang === 'es' ? 'Sesión' : 'Session'} {idx + 1}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Calendar className="w-4 h-4" />
-                              {new Date(session.day).toLocaleDateString(lang, { 
-                                weekday: 'long', 
-                                day: 'numeric', 
-                                month: 'long' 
-                              })}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Clock className="w-4 h-4" />
-                              {session.start_time} - {session.end_time}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <MapPin className="w-4 h-4" />
-                              {session.room}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-
-          {filteredSymposiums.length === 0 && (
+          {filteredSymposiums.length === 0 ? (
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
               <p className="text-gray-600">
                 {lang === 'es' 
-                  ? 'No hay simposios programados para este día.'
-                  : 'No symposiums scheduled for this day.'}
+                  ? 'No hay simposios programados aún. Serán anunciados próximamente.'
+                  : 'No symposiums scheduled yet. They will be announced soon.'}
               </p>
             </div>
+          ) : (
+            filteredSymposiums.map(symposium => {
+              const title = lang === 'es' ? symposium.title_es : symposium.title_en || symposium.title_es;
+              const isExpanded = expandedSymposium === symposium.id;
+
+              return (
+                <div 
+                  key={symposium.id} 
+                  className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden"
+                >
+                  <button
+                    onClick={() => setExpandedSymposium(isExpanded ? null : symposium.id)}
+                    className="w-full px-6 py-4 flex items-start justify-between hover:bg-gray-50 transition"
+                  >
+                    <div className="flex-1 text-left">
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="bg-teal-600 text-white text-sm font-bold px-3 py-1 rounded">
+                          S{symposium.number}
+                        </span>
+                        <h3 className="text-lg font-bold text-gray-900">{title}</h3>
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        <strong>{lang === 'es' ? 'Coordinadores:' : 'Coordinators:'}</strong>{' '}
+                        {symposium.coordinators?.join(', ')}
+                      </p>
+                    </div>
+                    <div className="ml-4 text-teal-600">
+                      {isExpanded ? (
+                        <ChevronDown className="w-5 h-5" />
+                      ) : (
+                        <ChevronRight className="w-5 h-5" />
+                      )}
+                    </div>
+                  </button>
+
+                  {isExpanded && symposium.sessions && symposium.sessions.length > 0 && (
+                    <div className="px-6 pb-4 border-t border-gray-100 bg-gray-50">
+                      <div className="space-y-3 mt-4">
+                        {symposium.sessions.map((session, idx) => (
+                          <div 
+                            key={session.session_id} 
+                            className="bg-white rounded-lg p-4 border border-gray-200"
+                          >
+                            <div className="flex items-center gap-4 text-sm text-gray-700 flex-wrap">
+                              <span className="font-semibold text-teal-600">
+                                {lang === 'es' ? 'Sesión' : 'Session'} {session.session_number}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Calendar className="w-4 h-4" />
+                                {new Date(session.day + 'T00:00:00').toLocaleDateString(lang, { 
+                                  weekday: 'long', 
+                                  day: 'numeric', 
+                                  month: 'long' 
+                                })}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-4 h-4" />
+                                {session.start_time} - {session.end_time}
+                              </span>
+                              {session.room && (
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="w-4 h-4" />
+                                  {session.room}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })
           )}
         </div>
       )}
 
-      {/* Vista por horario (simplificada por ahora) */}
+      {/* Vista por horario */}
       {viewMode === 'schedule' && (
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <p className="text-gray-600 text-center">
