@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  iaspmal_2026-dev:
+    build:
+      context: .
+      target: development
+    container_name: iaspmal_2026-dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    command: npm run dev -- --host
+    restart: unless-stopped
+
+  iaspmal_2026-prod:
+    build:
+      context: .
+      target: production
+    container_name: iaspmal_2026-prod
+    ports:
+      - "8080:80"
+    profiles:
+      - production
+    restart: unless-stopped

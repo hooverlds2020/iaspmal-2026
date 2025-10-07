@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  iaspmal_2026-prod:
+    build:
+      context: .
+      target: production
+    container_name: iaspmal_2026-prod
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    restart: always
+    environment:
+      - NODE_ENV=production
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
