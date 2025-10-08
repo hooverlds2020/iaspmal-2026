@@ -1,5 +1,6 @@
 // src/App.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from './lib/supabaseClient';
 
 // Layout components
 import TopBar from './components/layout/TopBar';
@@ -13,6 +14,10 @@ import CallForParticipation from './components/pages/CallForParticipation';
 import ScientificCommittee from './components/pages/ScientificCommittee';
 import Program from './components/pages/Program';
 
+// Admin pages
+import Login from './pages/Login';
+import AdminDashboard from './pages/AdminDashboard';
+
 const App = () => {
   const [currentPage, setCurrentPage] = useState('comite-cientifico');
   const [lang, setLang] = useState('es');
@@ -22,6 +27,47 @@ const App = () => {
     'info-complementaria': false
   });
 
+  // Auth state
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Check if user is logged in
+  useEffect(() => {
+    // Check active session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Check if we're on admin route
+  const isAdminRoute = window.location.pathname === '/admin' || window.location.hash === '#/admin';
+
+  // Show loading while checking auth
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
+      </div>
+    );
+  }
+
+  // Admin route handling
+  if (isAdminRoute) {
+    if (!user) {
+      return <Login onLogin={setUser} />;
+    }
+    return <AdminDashboard user={user} onLogout={() => setUser(null)} />;
+  }
+
+  // Public site (existing code)
   const menuItems = [
     { 
       id: 'llamada', 

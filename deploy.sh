@@ -2,7 +2,7 @@
 
 echo "Desplegando IASPMAL 2026..."
 
-cd ~/iaspmal_2026
+cd ~/dockerdata/iaspmal_2026
 
 echo "Deteniendo contenedor..."
 docker compose -f docker-compose.prod.yml down
