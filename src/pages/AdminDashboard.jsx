@@ -1,6 +1,7 @@
 // src/pages/AdminDashboard.jsx
 import React, { useState } from 'react';
-import { LogOut, Users, Calendar, FileText, Settings } from 'lucide-react';
+import { LogOut, Users, Calendar, FileText, Settings } from 'lucide-react'
+import SymposiumsManager from '../components/admin/SymposiumsManager';
 import { supabase } from '../lib/supabaseClient';
 
 const AdminDashboard = ({ user, onLogout }) => {
@@ -89,9 +90,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                 {activeSection === 'ponencias' && 'Gestión de Ponencias'}
               </h2>
 
-              {activeSection === 'simposios' && (
-                <p className="text-gray-600">Aquí gestionarás los 19 simposios...</p>
-              )}
+              {activeSection === 'simposios' && <SymposiumsManager />}
 
               {activeSection === 'sesiones' && (
                 <p className="text-gray-600">Aquí agregarás horarios y salas...</p>
