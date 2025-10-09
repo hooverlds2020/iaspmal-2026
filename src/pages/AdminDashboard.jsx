@@ -2,6 +2,8 @@
 import React, { useState } from 'react';
 import { LogOut, Users, Calendar, FileText, Settings } from 'lucide-react'
 import SymposiumsManager from '../components/admin/SymposiumsManager';
+import SessionsManager from '../components/admin/SessionsManager';
+import PresentationsManager from '../components/admin/PresentationsManager';
 import { supabase } from '../lib/supabaseClient';
 
 const AdminDashboard = ({ user, onLogout }) => {
@@ -92,13 +94,10 @@ const AdminDashboard = ({ user, onLogout }) => {
 
               {activeSection === 'simposios' && <SymposiumsManager />}
 
-              {activeSection === 'sesiones' && (
-                <p className="text-gray-600">Aquí agregarás horarios y salas...</p>
-              )}
+              {activeSection === 'sesiones' && <SessionsManager />}
 
-              {activeSection === 'ponencias' && (
-                <p className="text-gray-600">Aquí gestionarás las ponencias...</p>
-              )}
+              {activeSection === 'ponencias' && <PresentationsManager />}
+
             </div>
           </main>
         </div>
