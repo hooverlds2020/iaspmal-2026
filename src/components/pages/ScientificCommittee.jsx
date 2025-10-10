@@ -3,43 +3,21 @@ import React from 'react';
 
 const ScientificCommittee = ({ lang }) => {
   const comiteCientifico = [
-    'Alicia González Sánchez (Conservatorio Superior de Música de Córdoba)',
-    'Amalia Casas Mas (Universidad Complutense de Madrid)',
-    'Ana Flávia Miguel (Universidade de Aveiro)',
-    'Andrew Snyder (Inet md-Universidade Nova de Lisboa)',
-    'Dario Ranocchiari (Universidad de Granada)',
-    'Enrique Cámara De Landa (Universidad de Valladolid)',
-    'Fernán Del Val Ripollés (Universidad Nacional de Educación a Distancia)',
-    'Francisco Bethencourt Llobet (Universidad Complutense de Madrid)',
-    'Gabriel Rusinek (Universidad Complutense de Madrid)',
-    'Igor Sáenz Abarzuza (Universidad Pública de Navarra)',
-    'Isabela de Aranzadi (Universidad Autónoma de Madrid)',
-    'Iván Iglesias Iglesias (Universidad de Valladolid)',
-    'Josep Martí i Pérez (Institut Català d\'Antropologia)',
-    'Karlos Sánchez Ekiza (Universidad del País Vasco)',
-    'Lidia López Gómez (Universitat Autònoma de Barcelona)',
-    'Luís Costa Vázquez (Universidad de Vigo; Conservatorio Superior de Música de Vigo)',
-    'Magda Polo Pujadas (Universitat de Barcelona)',
-    'Marcos Andrés Vierge (Universidad Pública de Navarra)',
-    'Maria Jesús Castro Martín (Esmuc; Conservatori Superior Liceu)',
-    'Marta García Quiñones (TecnoCampus-Universitat Pompeu Fabra)',
-    'Pedro Cravinho (Royal Birmingham Conservatoire)',
-    'Rolf Bäcker (Escola Superior de Música de Catalunya)',
-    'Rubén López-Cano (Escola Superior de Música de Catalunya)',
-    'Ruth Piquer Sanclemente (Universidad Complutense de Madrid)',
-    'Sergi González González (Universitat Autònoma de Barcelona)',
-    'Sílvia Martínez García (Universitat Autònoma de Barcelona)',
-    'Simone Luci Pereira (Universidade Paulista)',
-    'Susana Moreno Fernández (Universidad de Valladolid)',
-    'Susana Sardo (Universidade de Aveiro)'
+    'Lizette Alegre (Facultad de Música de la Universidad Nacional Autónoma de México)',
+    'Natalia Bieletto Bueno (Centro de Investigación en Artes y Humanidades de la Universidad Mayor de Chile)',
+    'Carlos Bonfim (Instituto de Humanidades, Artes y Ciencias Prof. Milton Santos, de la Universidad Federal da Bahía, Brasil)',
+    'María Luisa de la Garza Chávez (Centro de Estudios Superiores de México y Centroamérica - Universidad de Ciencias y Artes de Chiapas)',
+    'Mercedes Liska (CONICET - Universidad de Buenos Aires, Argentina)',
+    'Fernando Elías Llanos (Escuela de Música y Artes Escénicas, Universidad Federal de Goiás, Brasil)',
+    'Darío Tejeda (Instituto de Estudios Caribeños, República Dominicana)',
   ];
 
   return (
     <div>
       <p className="text-gray-600 mb-6">
         {lang === 'es' 
-          ? 'Miembros del Comité Científico del XVII Congreso de la IASPM-AL 2026:'
-          : 'Members of the Scientific Committee of the 17th IASPM-AL Congress 2026:'}
+          ? 'Miembros del Comité Académico del XVII Congreso de la IASPM-AL 2026:'
+          : 'Members of the Academic Committee of the 17th IASPM-AL Congress 2026:'}
       </p>
       <ul className="space-y-2">
         {comiteCientifico.map((name) => (
