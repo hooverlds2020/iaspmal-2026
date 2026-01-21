@@ -21,14 +21,14 @@ const Header = ({ lang }) => {
                 ? 'XVII Congreso de la IASPM-AL 2026'
                 : '17th IASPM-AL Congress 2026'}
             </h1>
-            <p className="text-sm md:text-lg text-gray-700 mb-1">
+            <p className="text-sm md:text-lg text-gray-700 mb-1 font-bold">
               {lang === 'es'
                 ? 'Ética, Política y Música Popular'
                 : 'Ethics, Politics and Popular Music'}
             </p>
             <p className="text-xs md:text-base text-gray-600">
               {lang === 'es'
-                ? '28 Septiembre al 2 Octubre de 2026, San Cristóbal de Las Casas, Chiapas, México.'
+                ? '28 de Septiembre al 2 de Octubre de 2026, San Cristóbal de Las Casas, Chiapas, México.'
                 : 'September 28 - October 2, 2026, San Cristóbal de Las Casas, Chiapas, Mexico.'}
             </p>
           </div>

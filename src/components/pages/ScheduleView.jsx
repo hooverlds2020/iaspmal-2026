@@ -1,7 +1,7 @@
 // src/components/pages/ScheduleView.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import { Clock, MapPin, Users, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Clock, MapPin, Users, ChevronLeft, ChevronRight, X, Printer, Download } from 'lucide-react';
 
 const ScheduleView = ({ embedded = false, lang: propLang }) => {
   const [sessions, setSessions] = useState([]);
@@ -55,6 +55,20 @@ const ScheduleView = ({ embedded = false, lang: propLang }) => {
     }
   ];
 
+  // Función para imprimir solo el día actual
+  const handlePrint = () => {
+    window.print();
+  };
+
+  // Función para exportar a PDF del día actual
+  const handleExportPDF = () => {
+    document.body.classList.add('printing');
+    setTimeout(() => {
+      window.print();
+      document.body.classList.remove('printing');
+    }, 100);
+  };
+
   // Colores para diferentes tipos de eventos
   const eventColors = {
     'symposium': 'bg-purple-400 border-purple-500 text-white',
@@ -68,6 +82,135 @@ const ScheduleView = ({ embedded = false, lang: propLang }) => {
 
   useEffect(() => {
     fetchSessions();
+  }, []);
+
+  // Agregar estilos de impresión
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      /* Ocultar scrollbar pero mantener funcionalidad */
+      .hide-scrollbar {
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
+      }
+      
+      .hide-scrollbar::-webkit-scrollbar {
+        display: none;  /* Chrome, Safari and Opera */
+      }
+
+      @media print {
+        /* Ocultar elementos no necesarios */
+        .print\\:hidden {
+          display: none !important;
+        }
+        
+        /* Ocultar navegación y header cuando no está embedded */
+        header, .top-bar, nav, .sidebar {
+          display: none !important;
+        }
+        
+        /* Ajustar página */
+        @page {
+          size: A4 landscape;
+          margin: 1.5cm;
+        }
+        
+        body {
+          print-color-adjust: exact;
+          -webkit-print-color-adjust: exact;
+          margin: 0;
+          padding: 0;
+        }
+        
+        /* Evitar saltos de página dentro de sesiones */
+        .session-card {
+          page-break-inside: avoid;
+          break-inside: avoid;
+        }
+        
+        /* Ajustar colores para impresión */
+        .bg-purple-400 { background-color: #c084fc !important; }
+        .bg-blue-400 { background-color: #60a5fa !important; }
+        .bg-cyan-400 { background-color: #22d3ee !important; }
+        .bg-pink-400 { background-color: #f472b6 !important; }
+        .bg-green-400 { background-color: #4ade80 !important; }
+        .bg-gray-300 { background-color: #d1d5db !important; }
+        
+        .border-purple-500 { border-color: #a855f7 !important; }
+        .border-blue-500 { border-color: #3b82f6 !important; }
+        .border-cyan-500 { border-color: #06b6d4 !important; }
+        .border-pink-500 { border-color: #ec4899 !important; }
+        .border-green-500 { border-color: #22c55e !important; }
+        .border-gray-400 { border-color: #9ca3af !important; }
+        
+        /* Ajustar márgenes para impresión */
+        .p-4, .p-6 {
+          padding: 0.5rem !important;
+        }
+        
+        .px-4, .px-6 {
+          padding-left: 0.5rem !important;
+          padding-right: 0.5rem !important;
+        }
+        
+        /* Reducir espacio entre sesiones */
+        .space-y-4 > * + * {
+          margin-top: 0.5rem !important;
+        }
+        
+        /* Asegurar que todo el contenido sea visible */
+        body, html {
+          height: auto !important;
+          overflow: visible !important;
+        }
+        
+        /* Título del congreso para impresión */
+        .print-header {
+          display: block !important;
+          text-align: center;
+          margin-bottom: 1rem;
+          padding-bottom: 0.5rem;
+          border-bottom: 2px solid #0d9488;
+        }
+        
+        /* Ocultar otros días en impresión */
+        .schedule-day-content {
+          display: block !important;
+        }
+        
+        /* Ajustar leyenda */
+        .legend-print {
+          page-break-before: avoid;
+          margin-top: 1rem;
+          padding-top: 0.5rem;
+          border-top: 1px solid #ccc;
+        }
+        
+        /* Hacer grid más compacto */
+        .grid {
+          gap: 0.25rem !important;
+        }
+        
+        /* Reducir tamaño de fuente si es necesario */
+        .text-sm {
+          font-size: 0.75rem !important;
+        }
+        
+        .text-xs {
+          font-size: 0.65rem !important;
+        }
+      }
+      
+      /* Ocultar el header de impresión por defecto (solo visible al imprimir) */
+      .print-header {
+        display: none;
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
   }, []);
 
   const fetchSessions = async () => {
@@ -94,7 +237,6 @@ const ScheduleView = ({ embedded = false, lang: propLang }) => {
       setSessions(data || []);
     } catch (error) {
       console.error('Error fetching sessions:', error);
-      // Si falla el join, intentar sin relaciones
       try {
         const { data, error } = await supabase
           .from('sessions')
@@ -126,10 +268,8 @@ const ScheduleView = ({ embedded = false, lang: propLang }) => {
     sessionsByTime[timeKey].push(session);
   });
 
-  // Obtener todas las horas únicas ordenadas
   const timeSlots = Object.keys(sessionsByTime).sort();
 
-  // Función para obtener el título de la sesión
   const getSessionTitle = (session) => {
     if (session.title) {
       return session.title;
@@ -142,7 +282,6 @@ const ScheduleView = ({ embedded = false, lang: propLang }) => {
     return lang === 'es' ? session.notes_es : session.notes_en || session.notes_es;
   };
 
-  // Función para obtener el tipo de evento
   const getEventType = (session) => {
     if (session.type) {
       return session.type;
@@ -169,7 +308,6 @@ const ScheduleView = ({ embedded = false, lang: propLang }) => {
     return 'symposium';
   };
 
-  // Calcular la altura del bloque basado en la duración
   const getBlockHeight = (startTime, endTime) => {
     if (!startTime || !endTime) return 80;
     
@@ -223,7 +361,7 @@ const ScheduleView = ({ embedded = false, lang: propLang }) => {
       <div className={embedded ? "w-full" : "max-w-7xl mx-auto"}>
         {/* Header - Solo mostrar si NO está embedded */}
         {!embedded && (
-          <div className="text-center mb-8">
+          <div className="text-center mb-8 print:hidden">
             <h1 className="text-4xl font-bold text-gray-900 mb-2">
               {lang === 'es' ? 'Programa del Congreso' : 'Conference Program'}
             </h1>
@@ -231,7 +369,6 @@ const ScheduleView = ({ embedded = false, lang: propLang }) => {
               XVIII IASPMAL 2026 - Tuxtla Gutiérrez, Chiapas
             </p>
             
-            {/* Botón de idioma */}
             <div className="mt-4">
               <button
                 onClick={() => setLang(lang === 'es' ? 'en' : 'es')}
@@ -243,10 +380,26 @@ const ScheduleView = ({ embedded = false, lang: propLang }) => {
           </div>
         )}
 
+        {/* Header para impresión - Solo visible al imprimir */}
+        <div className="print-header">
+          <h1 className="text-2xl font-bold text-gray-900">
+            XVIII Congreso de la IASPM-AL 2026
+          </h1>
+          <p className="text-gray-700 text-sm">
+            Ética, Política y Música Popular
+          </p>
+          <p className="text-gray-600 text-sm">
+            28 de Septiembre al 2 Octubre de 2026, San Cristóbal de Las Casas, Chiapas, México
+          </p>
+          <p className="text-teal-700 font-semibold mt-2">
+            {lang === 'es' ? currentDay.fullLabel_es : currentDay.fullLabel_en}
+          </p>
+        </div>
+
         {/* Contenedor principal */}
-        <div className={embedded ? "bg-white" : "bg-white rounded-xl shadow-lg border border-gray-200"}>
+        <div className={`schedule-day-content ${embedded ? "bg-white" : "bg-white rounded-xl shadow-lg border border-gray-200"}`}>
           {/* Navegación de días */}
-          <div className={`border-b border-gray-200 bg-gray-50 ${embedded ? '' : 'rounded-t-xl'}`}>
+          <div className={`border-b border-gray-200 bg-gray-50 ${embedded ? '' : 'rounded-t-xl'} print:hidden`}>
             <div className="flex items-center justify-center gap-2 p-4 overflow-x-auto">
               <button
                 onClick={() => setCurrentDayIndex(Math.max(0, currentDayIndex - 1))}
@@ -256,7 +409,7 @@ const ScheduleView = ({ embedded = false, lang: propLang }) => {
                 <ChevronLeft size={24} className="text-gray-700" />
               </button>
 
-              <div className="flex gap-2 overflow-x-auto flex-nowrap">
+              <div className="flex gap-2 overflow-x-auto flex-nowrap hide-scrollbar">
                 {days.map((day, index) => (
                   <button
                     key={day.date}
@@ -281,11 +434,36 @@ const ScheduleView = ({ embedded = false, lang: propLang }) => {
               </button>
             </div>
 
-            {/* Título del día */}
-            <div className="text-center pb-4">
-              <h3 className="text-lg md:text-xl font-semibold text-gray-700 px-4">
+            {/* Título del día y botones de acción */}
+            <div className="flex flex-col sm:flex-row items-center justify-between pb-4 px-4 gap-3">
+              <h3 className="text-lg md:text-xl font-semibold text-gray-700">
                 {lang === 'es' ? currentDay.fullLabel_es : currentDay.fullLabel_en}
               </h3>
+              
+              {/* Botones de acción */}
+              <div className="flex gap-2">
+                <button
+                  onClick={handlePrint}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold text-sm"
+                  title={lang === 'es' ? 'Imprimir día actual' : 'Print current day'}
+                >
+                  <Printer size={18} />
+                  <span className="hidden sm:inline">
+                    {lang === 'es' ? 'Imprimir' : 'Print'}
+                  </span>
+                </button>
+                
+                <button
+                  onClick={handleExportPDF}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold text-sm"
+                  title={lang === 'es' ? 'Exportar día actual a PDF' : 'Export current day to PDF'}
+                >
+                  <Download size={18} />
+                  <span className="hidden sm:inline">
+                    PDF
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -305,7 +483,6 @@ const ScheduleView = ({ embedded = false, lang: propLang }) => {
                   const eventType = getEventType(firstSession);
                   const isFullWidth = eventType === 'break' || eventType === 'welcome' || parallelSessions.length === 1;
 
-                  // Evento de ancho completo
                   if (isFullWidth) {
                     const height = getBlockHeight(firstSession.start_time, firstSession.end_time);
                     const duration = getDurationMinutes(firstSession.start_time, firstSession.end_time);
@@ -313,7 +490,7 @@ const ScheduleView = ({ embedded = false, lang: propLang }) => {
                     return (
                       <div
                         key={timeSlot}
-                        className={`rounded-lg border-2 p-4 cursor-pointer hover:opacity-90 hover:shadow-lg transition-all ${eventColors[eventType] || eventColors.default}`}
+                        className={`session-card rounded-lg border-2 p-4 cursor-pointer hover:opacity-90 hover:shadow-lg transition-all ${eventColors[eventType] || eventColors.default}`}
                         style={{ minHeight: `${height}px` }}
                         onClick={() => setSelectedSession(firstSession)}
                       >
@@ -334,10 +511,8 @@ const ScheduleView = ({ embedded = false, lang: propLang }) => {
                     );
                   }
 
-                  // Sesiones paralelas
                   return (
                     <div key={timeSlot}>
-                      {/* Hora común */}
                       <div className="flex items-center gap-2 mb-2 px-2">
                         <Clock size={18} className="text-teal-600 flex-shrink-0" />
                         <span className="font-bold text-gray-700">
@@ -345,7 +520,6 @@ const ScheduleView = ({ embedded = false, lang: propLang }) => {
                         </span>
                       </div>
 
-                      {/* Grid de sesiones paralelas - RESPONSIVE */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                         {parallelSessions.map((session) => {
                           const sessionEventType = getEventType(session);
@@ -355,7 +529,7 @@ const ScheduleView = ({ embedded = false, lang: propLang }) => {
                           return (
                             <div
                               key={session.id}
-                              className={`rounded-lg border-2 p-3 md:p-4 cursor-pointer hover:opacity-90 hover:shadow-lg transition-all overflow-hidden ${eventColors[sessionEventType] || eventColors.default}`}
+                              className={`session-card rounded-lg border-2 p-3 md:p-4 cursor-pointer hover:opacity-90 hover:shadow-lg transition-all overflow-hidden ${eventColors[sessionEventType] || eventColors.default}`}
                               style={{ minHeight: `${Math.max(100, height)}px` }}
                               onClick={() => setSelectedSession(session)}
                             >
@@ -387,7 +561,7 @@ const ScheduleView = ({ embedded = false, lang: propLang }) => {
             )}
 
             {/* Leyenda */}
-            <div className="mt-8 pt-6 border-t border-gray-200">
+            <div className="legend-print mt-8 pt-6 border-t border-gray-200">
               <h4 className="text-center font-semibold text-gray-700 mb-4">
                 {lang === 'es' ? 'Tipos de eventos' : 'Event types'}
               </h4>
@@ -424,7 +598,7 @@ const ScheduleView = ({ embedded = false, lang: propLang }) => {
         {/* Modal de detalles */}
         {selectedSession && (
           <div 
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 print:hidden"
             onClick={() => setSelectedSession(null)}
           >
             <div 
@@ -507,7 +681,7 @@ const ScheduleView = ({ embedded = false, lang: propLang }) => {
                   onClick={() => setSelectedSession(null)}
                   className="mt-6 w-full px-6 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-semibold"
                 >
-                  {lang === 'es' ? 'Cerrar' : 'Close'}
+		{lang === 'es' ? 'Cerrar' : 'Close'}
                 </button>
               </div>
             </div>

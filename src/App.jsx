@@ -16,6 +16,7 @@ import ScientificCommittee from './components/pages/ScientificCommittee';
 import AcceptedFormats from './components/pages/AcceptedFormats';
 import Program from './components/pages/Program';
 import ScheduleView from './components/pages/ScheduleView';
+import VenuesPage from './components/pages/VenuesPage';
 
 // Admin pages
 import Login from './pages/Login';
@@ -295,17 +296,9 @@ const MainLayout = ({ lang, setLang }) => {
             </p>
           </div>
         );
-      
-      case 'sedes':
-        return (
-          <div className="space-y-4">
-            <p className="text-gray-700">
-              {lang === 'es' 
-                ? 'Información sobre las sedes del congreso próximamente.'
-                : 'Information about congress venues coming soon.'}
-            </p>
-          </div>
-        );
+             
+     case 'sedes':
+        return <VenuesPage lang={lang} />; 		    
       
       case 'instituciones-convocantes':
         return (
