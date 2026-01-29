@@ -18,7 +18,8 @@
     "lucide-react": "^0.263.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^7.9.4"
+    "react-router-dom": "^7.9.4",
+    "resend": "^6.4.2"
   },
   "devDependencies": {
     "@types/react": "^18.2.43",

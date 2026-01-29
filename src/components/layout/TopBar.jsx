@@ -19,9 +19,9 @@ const TopBar = ({ lang, setLang, onMobileMenuOpen }) => {
             ES
           </button>
           <button
-            onClick={() => setLang('en')}
+            onClick={() => setLang('pt')}
             className={`px-4 py-1.5 rounded-lg text-sm font-medium transition ${
-              lang === 'en' 
+              lang === 'pt' 
                 ? 'bg-teal-600 text-white' 
                 : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
             }`}

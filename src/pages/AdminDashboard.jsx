@@ -5,6 +5,7 @@ import SymposiumsManager from '../components/admin/SymposiumsManager';
 import SessionsManager from '../components/admin/SessionsManager';
 import PresentationsManager from '../components/admin/PresentationsManager';
 import { supabase } from '../lib/supabaseClient';
+import RegistrationsDashboard from './RegistrationsDashboard';
 
 const AdminDashboard = ({ user, onLogout }) => {
   const [activeSection, setActiveSection] = useState('simposios');
@@ -79,6 +80,19 @@ const AdminDashboard = ({ user, onLogout }) => {
                     Ponencias
                   </button>
                 </li>
+                <li>
+                  <button
+                    onClick={() => setActiveSection('registros')}
+                    className={`w-full text-left px-4 py-2 rounded-lg transition flex items-center gap-2 ${
+                      activeSection === 'registros'
+                        ? 'bg-teal-600 text-white'
+                        : 'hover:bg-gray-100 text-gray-700'
+                    }`}
+                  >
+                    <Settings className="w-4 h-4" />
+                    Registros
+                  </button>
+                </li>
               </ul>
             </nav>
           </aside>
@@ -90,6 +104,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                 {activeSection === 'simposios' && 'Gestión de Simposios'}
                 {activeSection === 'sesiones' && 'Gestión de Sesiones'}
                 {activeSection === 'ponencias' && 'Gestión de Ponencias'}
+                {activeSection === 'registros' && 'Gestión de Registros'}
               </h2>
 
               {activeSection === 'simposios' && <SymposiumsManager />}
@@ -97,6 +112,8 @@ const AdminDashboard = ({ user, onLogout }) => {
               {activeSection === 'sesiones' && <SessionsManager />}
 
               {activeSection === 'ponencias' && <PresentationsManager />}
+
+              {activeSection === 'registros' && <RegistrationsDashboard />}
 
             </div>
           </main>

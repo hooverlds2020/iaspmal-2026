@@ -21,37 +21,37 @@ const ScheduleView = ({ embedded = false, lang: propLang }) => {
     { 
       date: '2026-09-28', 
       label_es: 'Lun. 28', 
-      label_en: 'Mon. 28', 
+      label_pt: 'Seg. 28', 
       fullLabel_es: 'lunes, 28 de septiembre de 2026', 
-      fullLabel_en: 'Monday, September 28, 2026' 
+      fullLabel_pt: 'segunda-feira, 28 de setembro de 2026' 
     },
     { 
       date: '2026-09-29', 
       label_es: 'Mar. 29', 
-      label_en: 'Tue. 29', 
+      label_pt: 'Ter. 29', 
       fullLabel_es: 'martes, 29 de septiembre de 2026', 
-      fullLabel_en: 'Tuesday, September 29, 2026' 
+      fullLabel_pt: 'terça-feira, 29 de setembro de 2026' 
     },
     { 
       date: '2026-09-30', 
       label_es: 'Mié. 30', 
-      label_en: 'Wed. 30', 
+      label_pt: 'Qua. 30', 
       fullLabel_es: 'miércoles, 30 de septiembre de 2026', 
-      fullLabel_en: 'Wednesday, September 30, 2026' 
+      fullLabel_pt: 'quarta-feira, 30 de setembro de 2026' 
     },
     { 
       date: '2026-10-01', 
       label_es: 'Jue. 01', 
-      label_en: 'Thu. 01', 
+      label_pt: 'Qui. 01', 
       fullLabel_es: 'jueves, 1 de octubre de 2026', 
-      fullLabel_en: 'Thursday, October 1, 2026' 
+      fullLabel_pt: 'quinta-feira, 1 de outubro de 2026' 
     },
     { 
       date: '2026-10-02', 
       label_es: 'Vie. 02', 
-      label_en: 'Fri. 02', 
+      label_pt: 'Sex. 02', 
       fullLabel_es: 'viernes, 2 de octubre de 2026', 
-      fullLabel_en: 'Friday, October 2, 2026' 
+      fullLabel_pt: 'sexta-feira, 2 de outubro de 2026' 
     }
   ];
 
@@ -272,14 +272,14 @@ const ScheduleView = ({ embedded = false, lang: propLang }) => {
 
   const getSessionTitle = (session) => {
     if (session.title) {
-      return session.title;
+      return lang === 'pt' ? (session.title_pt || session.title) : session.title;
     }
     if (session.symposiums) {
       return lang === 'es' 
-        ? session.symposiums.title_es 
-        : session.symposiums.title_en || session.symposiums.title_es;
+        ? lang === 'pt' ? (session.symposiums?.title_pt || session.symposiums?.title_es) : session.symposiums?.title_es 
+        : session.symposiums.title_en || lang === 'pt' ? (session.symposiums?.title_pt || session.symposiums?.title_es) : session.symposiums?.title_es;
     }
-    return lang === 'es' ? session.notes_es : session.notes_en || session.notes_es;
+    return lang === 'es' ? (lang === 'pt' ? (session.notes_pt || session.notes_es) : session.notes_es) : session.notes_en || (lang === 'pt' ? (session.notes_pt || session.notes_es) : session.notes_es);
   };
 
   const getEventType = (session) => {
@@ -287,7 +287,7 @@ const ScheduleView = ({ embedded = false, lang: propLang }) => {
       return session.type;
     }
 
-    const notes = (session.notes_es || '').toLowerCase();
+    const notes = ((lang === 'pt' ? (session.notes_pt || session.notes_es) : session.notes_es) || '').toLowerCase();
     
     if (notes.includes('pausa') || notes.includes('café') || notes.includes('comida') || notes.includes('almoco')) {
       return 'break';
@@ -420,7 +420,7 @@ const ScheduleView = ({ embedded = false, lang: propLang }) => {
                         : 'bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-teal-400'
                     }`}
                   >
-                    {lang === 'es' ? day.label_es : day.label_en}
+                    {lang === 'es' ? day.label_es : day.label_pt}
                   </button>
                 ))}
               </div>
@@ -449,7 +449,7 @@ const ScheduleView = ({ embedded = false, lang: propLang }) => {
                 >
                   <Printer size={18} />
                   <span className="hidden sm:inline">
-                    {lang === 'es' ? 'Imprimir' : 'Print'}
+                    {lang === 'es' ? 'Imprimir' : lang === 'es' ? 'Imprimir' : 'Imprimir'}
                   </span>
                 </button>
                 
@@ -563,32 +563,32 @@ const ScheduleView = ({ embedded = false, lang: propLang }) => {
             {/* Leyenda */}
             <div className="legend-print mt-8 pt-6 border-t border-gray-200">
               <h4 className="text-center font-semibold text-gray-700 mb-4">
-                {lang === 'es' ? 'Tipos de eventos' : 'Event types'}
+                {lang === 'es' ? 'Tipos de eventos' : lang === 'es' ? 'Tipos de eventos' : 'Tipos de eventos'}
               </h4>
               <div className="flex flex-wrap gap-3 md:gap-4 justify-center text-xs md:text-sm">
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 md:w-5 md:h-5 bg-purple-400 border-2 border-purple-500 rounded flex-shrink-0"></div>
-                  <span>{lang === 'es' ? 'Simposio' : 'Symposium'}</span>
+                  <span>{lang === 'es' ? 'Simposio' : lang === 'es' ? 'Simposio' : 'Simpósio'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 md:w-5 md:h-5 bg-blue-400 border-2 border-blue-500 rounded flex-shrink-0"></div>
-                  <span>{lang === 'es' ? 'Plenaria' : 'Plenary'}</span>
+                  <span>{lang === 'es' ? 'Plenaria' : lang === 'es' ? 'Plenaria' : 'Plenária'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 md:w-5 md:h-5 bg-cyan-400 border-2 border-cyan-500 rounded flex-shrink-0"></div>
-                  <span>{lang === 'es' ? 'Bienvenida' : 'Welcome'}</span>
+                  <span>{lang === 'es' ? 'Bienvenida' : lang === 'es' ? 'Bienvenida' : 'Boas-vindas'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 md:w-5 md:h-5 bg-pink-400 border-2 border-pink-500 rounded flex-shrink-0"></div>
-                  <span>{lang === 'es' ? 'Panel' : 'Panel'}</span>
+                  <span>{lang === 'es' ? lang === 'es' ? 'Panel' : 'Painel' : lang === 'es' ? 'Panel' : 'Painel'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 md:w-5 md:h-5 bg-gray-300 border-2 border-gray-400 rounded flex-shrink-0"></div>
-                  <span>{lang === 'es' ? 'Pausa' : 'Break'}</span>
+                  <span>{lang === 'es' ? 'Pausa' : lang === 'es' ? 'Pausa' : 'Pausa'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 md:w-5 md:h-5 bg-green-400 border-2 border-green-500 rounded flex-shrink-0"></div>
-                  <span>{lang === 'es' ? 'Taller' : 'Workshop'}</span>
+                  <span>{lang === 'es' ? 'Taller' : lang === 'es' ? 'Taller' : 'Oficina'}</span>
                 </div>
               </div>
             </div>
@@ -607,7 +607,7 @@ const ScheduleView = ({ embedded = false, lang: propLang }) => {
             >
               <div className="sticky top-0 bg-white border-b px-4 md:px-6 py-4 flex justify-between items-center rounded-t-2xl">
                 <h2 className="text-xl md:text-2xl font-bold text-gray-900">
-                  {lang === 'es' ? 'Detalles de la sesión' : 'Session details'}
+                  {lang === 'es' ? 'Detalles de la sesión' : lang === 'es' ? 'Detalles de la sesión' : 'Detalhes da sessão'}
                 </h2>
                 <button
                   onClick={() => setSelectedSession(null)}
@@ -647,7 +647,7 @@ const ScheduleView = ({ embedded = false, lang: propLang }) => {
                       <Users size={20} className="text-teal-600 mt-1 flex-shrink-0" />
                       <div>
                         <p className="font-semibold text-sm mb-1">
-                          {lang === 'es' ? 'Coordinadores/Ponentes:' : 'Coordinators/Speakers:'}
+                          {lang === 'es' ? 'Coordinadores/Ponentes:' : lang === 'es' ? 'Coordinadores/Ponentes:' : 'Coordenadores/Palestrantes:'}
                         </p>
                         <p>{getSpeakers(selectedSession)}</p>
                       </div>
@@ -657,7 +657,7 @@ const ScheduleView = ({ embedded = false, lang: propLang }) => {
                   {selectedSession.description && (
                     <div className="pt-4 border-t mt-4">
                       <h4 className="font-semibold text-gray-900 mb-2">
-                        {lang === 'es' ? 'Descripción' : 'Description'}
+                        {lang === 'es' ? 'Descripción' : lang === 'es' ? 'Descripción' : 'Descrição'}
                       </h4>
                       <p className="text-gray-700 leading-relaxed">
                         {selectedSession.description}
@@ -668,7 +668,7 @@ const ScheduleView = ({ embedded = false, lang: propLang }) => {
                   {(selectedSession.notes_es || selectedSession.notes_en) && (
                     <div className="pt-4 border-t mt-4">
                       <h4 className="font-semibold text-gray-900 mb-2">
-                        {lang === 'es' ? 'Notas' : 'Notes'}
+                        {lang === 'es' ? 'Notas' : lang === 'es' ? 'Notas' : 'Notas'}
                       </h4>
                       <p className="text-gray-700 leading-relaxed">
                         {lang === 'es' ? selectedSession.notes_es : selectedSession.notes_en || selectedSession.notes_es}
@@ -681,7 +681,7 @@ const ScheduleView = ({ embedded = false, lang: propLang }) => {
                   onClick={() => setSelectedSession(null)}
                   className="mt-6 w-full px-6 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-semibold"
                 >
-		{lang === 'es' ? 'Cerrar' : 'Close'}
+		{lang === 'es' ? 'Cerrar' : lang === 'es' ? 'Cerrar' : 'Fechar'}
                 </button>
               </div>
             </div>

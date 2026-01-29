@@ -77,7 +77,7 @@ function VenuesPage({ lang }) {
       },
       spaces: ['Sala 1', 'Sala 2', 'Sala 3', 'Patio'],
       icon: '🏰',
-      image: 'https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=800&h=600&fit=crop',
+      image: 'https://images.unsplash.com/photo-1582719471137-c3967ffb1c42?w=800&h=600&fit=crop',
       coordinates: { lat: 16.7365, lng: -92.6385 },
       mapLink: ''
     },
@@ -95,7 +95,7 @@ function VenuesPage({ lang }) {
       },
       spaces: ['Sala 1', 'Sala 2'],
       icon: '🎨',
-      image: 'https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=800&h=600&fit=crop',
+      image: 'https://images.unsplash.com/photo-1578926078669-7cc6bb46e3ea?w=800&h=600&fit=crop',
       coordinates: { lat: 16.7375, lng: -92.6375 },
       mapLink: ''
     },
@@ -113,7 +113,7 @@ function VenuesPage({ lang }) {
       },
       spaces: ['Espacios del museo'],
       icon: '🖼️',
-      image: 'https://images.unsplash.com/photo-1565452447621-94ef2dae2d9d?w=800&h=600&fit=crop',
+      image: 'https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?w=800&h=600&fit=crop',
       coordinates: { lat: 16.7385, lng: -92.6365 },
       mapLink: ''
     },
@@ -131,7 +131,7 @@ function VenuesPage({ lang }) {
       },
       spaces: ['Teatro principal'],
       icon: '🎪',
-      image: 'https://images.unsplash.com/photo-1503095396549-807759245b35?w=800&h=600&fit=crop',
+      image: 'https://images.unsplash.com/photo-1514306191717-452ec28c7814?w=800&h=600&fit=crop',
       coordinates: { lat: 16.7355, lng: -92.6380 },
       mapLink: ''
     }
