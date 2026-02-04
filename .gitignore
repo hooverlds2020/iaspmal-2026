@@ -20,3 +20,6 @@ node_modules/
 *.swp
 *.swo
 *~
+*.backup*
+*.before_changes
+supabase/.temp/

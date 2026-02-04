@@ -12,7 +12,7 @@ const SessionsManager = () => {
   const [formData, setFormData] = useState({
     symposium_id: '',
     notes_es: '',
-    notes_en: '',
+    notes_pt: '',
     day: '',
     start_time: '',
     end_time: '',
@@ -82,7 +82,7 @@ const SessionsManager = () => {
       setFormData({
         symposium_id: session.symposium_id,
         notes_es: session.notes_es || '',
-        notes_en: session.notes_en || '',
+        notes_pt: session.notes_pt || '',
         day: session.day,
         start_time: session.start_time,
         end_time: session.end_time,
@@ -94,7 +94,7 @@ const SessionsManager = () => {
       setFormData({
         symposium_id: '',
         notes_es: '',
-        notes_en: '',
+        notes_pt: '',
         day: '',
         start_time: '',
         end_time: '',
@@ -324,14 +324,14 @@ const SessionsManager = () => {
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Notas (Inglés)
+                    Notas (Portugués)
                   </label>
                   <textarea
-                    value={formData.notes_en}
-                    onChange={(e) => setFormData({ ...formData, notes_en: e.target.value })}
+                    value={formData.notes_pt}
+                    onChange={(e) => setFormData({ ...formData, notes_pt: e.target.value })}
                     rows={3}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                    placeholder="Session notes or description"
+                    placeholder="Notas ou descrição da sessão"
                   />
                 </div>
 

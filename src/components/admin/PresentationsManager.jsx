@@ -11,9 +11,9 @@ const PresentationsManager = () => {
   const [formData, setFormData] = useState({
     session_id: '',
     title_es: '',
-    title_en: '',
+    title_pt: '',
     abstract_es: '',
-    abstract_en: '',
+    abstract_pt: '',
     author_name: '',
     author_institution: '',
     author_email: '',
@@ -79,9 +79,9 @@ const PresentationsManager = () => {
       setFormData({
         session_id: presentation.session_id,
         title_es: presentation.title_es || '',
-        title_en: presentation.title_en || '',
+        title_pt: presentation.title_pt || '',
         abstract_es: presentation.abstract_es || '',
-        abstract_en: presentation.abstract_en || '',
+        abstract_pt: presentation.abstract_pt || '',
         author_name: presentation.author_name || '',
         author_institution: presentation.author_institution || '',
         author_email: presentation.author_email || '',
@@ -95,9 +95,9 @@ const PresentationsManager = () => {
       setFormData({
         session_id: '',
         title_es: '',
-        title_en: '',
+        title_pt: '',
         abstract_es: '',
-        abstract_en: '',
+        abstract_pt: '',
         author_name: '',
         author_institution: '',
         author_email: '',
@@ -240,7 +240,7 @@ const PresentationsManager = () => {
                   {presentation.title_es || 'Sin título'}
                 </h3>
                 <p className="text-gray-600 italic mb-3 text-sm">
-                  {presentation.title_en}
+                  {presentation.title_pt}
                 </p>
 
                 {presentation.author_name && (
@@ -439,15 +439,15 @@ const PresentationsManager = () => {
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Título (Inglés) *
+                    Título (Portugués) *
                   </label>
                   <input
                     type="text"
                     required
-                    value={formData.title_en}
-                    onChange={(e) => setFormData({ ...formData, title_en: e.target.value })}
+                    value={formData.title_pt}
+                    onChange={(e) => setFormData({ ...formData, title_pt: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                    placeholder="Presentation title"
+                    placeholder="Título da apresentação"
                   />
                 </div>
 
@@ -533,14 +533,14 @@ const PresentationsManager = () => {
 
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Resumen (Inglés)
+                        Resumen (Portugués)
                       </label>
                       <textarea
-                        value={formData.abstract_en}
-                        onChange={(e) => setFormData({ ...formData, abstract_en: e.target.value })}
+                        value={formData.abstract_pt}
+                        onChange={(e) => setFormData({ ...formData, abstract_pt: e.target.value })}
                         rows={4}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                        placeholder="Abstract or summary"
+                        placeholder="Resumo ou sumário"
                       />
                     </div>
                   </div>

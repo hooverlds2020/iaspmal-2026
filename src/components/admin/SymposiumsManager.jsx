@@ -15,9 +15,9 @@ const SymposiumsManager = () => {
   const [formData, setFormData] = useState({
     number: '',
     title_es: '',
-    title_en: '',
+    title_pt: '',
     description_es: '',
-    description_en: '',
+    description_pt: '',
     coordinators: ''
   });
 
@@ -48,9 +48,9 @@ const SymposiumsManager = () => {
     setFormData({
       number: symposium.number,
       title_es: symposium.title_es,
-      title_en: symposium.title_en || '',
+      title_pt: symposium.title_pt || '',
       description_es: symposium.description_es || '',
-      description_en: symposium.description_en || '',
+      description_pt: symposium.description_pt || '',
       coordinators: symposium.coordinators?.join(', ') || ''
     });
     setShowForm(true);
@@ -86,9 +86,9 @@ const SymposiumsManager = () => {
       const dataToSave = {
         number: parseInt(formData.number),
         title_es: formData.title_es,
-        title_en: formData.title_en || null,
+        title_pt: formData.title_pt || null,
         description_es: formData.description_es || null,
-        description_en: formData.description_en || null,
+        description_pt: formData.description_pt || null,
         coordinators: coordinatorsArray
       };
 
@@ -123,9 +123,9 @@ const SymposiumsManager = () => {
     setFormData({
       number: '',
       title_es: '',
-      title_en: '',
+      title_pt: '',
       description_es: '',
-      description_en: '',
+      description_pt: '',
       coordinators: ''
     });
     setEditingId(null);
@@ -224,12 +224,12 @@ const SymposiumsManager = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Título (Inglés)
+                Título (Portugués)
               </label>
               <input
                 type="text"
-                value={formData.title_en}
-                onChange={(e) => setFormData({ ...formData, title_en: e.target.value })}
+                value={formData.title_pt}
+                onChange={(e) => setFormData({ ...formData, title_pt: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               />
             </div>
@@ -248,12 +248,12 @@ const SymposiumsManager = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Descripción (Inglés)
+                Descripción (Portugués)
               </label>
               <textarea
                 rows="3"
-                value={formData.description_en}
-                onChange={(e) => setFormData({ ...formData, description_en: e.target.value })}
+                value={formData.description_pt}
+                onChange={(e) => setFormData({ ...formData, description_pt: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               />
             </div>
@@ -293,8 +293,8 @@ const SymposiumsManager = () => {
                   </span>
                   <h3 className="text-lg font-bold text-gray-900">{symposium.title_es}</h3>
                 </div>
-                {symposium.title_en && (
-                  <p className="text-sm text-gray-600 italic mb-2">{symposium.title_en}</p>
+                {symposium.title_pt && (
+                  <p className="text-sm text-gray-600 italic mb-2">{symposium.title_pt}</p>
                 )}
                 <p className="text-sm text-gray-600">
                   <strong>Coordinadores:</strong> {symposium.coordinators?.join(', ')}

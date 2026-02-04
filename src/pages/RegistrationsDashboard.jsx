@@ -9,6 +9,10 @@ const RegistrationsDashboard = () => {
   const [filter, setFilter] = useState('all'); // all, pending, paid, rejected
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRegistration, setSelectedRegistration] = useState(null);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentCurrency, setPaymentCurrency] = useState('MXN');
+  const [paymentMethod, setPaymentMethod] = useState('transferencia');
+
 
   const fetchRegistrations = async () => {
     try {
@@ -38,29 +42,37 @@ const RegistrationsDashboard = () => {
 
   const updateStatus = async (id, newStatus) => {
     try {
-      // Obtener datos del registro
+      // Validar monto si se marca como pagado
+      if (newStatus === 'paid' && (!paymentAmount || parseFloat(paymentAmount) <= 0)) {
+        alert('Por favor ingresa el monto del pago');
+        return;
+      }
+      
       const registration = registrations.find(r => r.id === id);
       
-      // Actualizar en base de datos
+      // Preparar datos de actualización
+      const updateData = { 
+        status: newStatus,
+        payment_date: newStatus === 'paid' ? new Date().toISOString().split('T')[0] : null
+      };
+      
+      // Agregar información de pago si se aprueba
+      if (newStatus === 'paid') {
+        updateData.payment_amount = parseFloat(paymentAmount);
+        updateData.payment_currency = paymentCurrency;
+        updateData.payment_method = paymentMethod;
+      }
+      
       const { error } = await supabase
         .from('registrations')
-        .update({ 
-          status: newStatus,
-          payment_date: newStatus === 'paid' ? new Date().toISOString().split('T')[0] : null
-        })
+        .update(updateData)
         .eq('id', id);
 
       if (error) throw error;
       
-      // Enviar correo según el nuevo estado
-      if (newStatus === 'paid') {
-        await sendPaymentApproval(registration.email, registration.full_name);
-      } else if (newStatus === 'rejected') {
-        await sendRejectionNotice(registration.email, registration.full_name);
-      }
-      
       fetchRegistrations();
       setSelectedRegistration(null);
+      setPaymentAmount('');
     } catch (error) {
       console.error('Error updating status:', error);
       alert('Error al actualizar el estado');
@@ -360,6 +372,67 @@ const RegistrationsDashboard = () => {
                       placeholder="Agregar notas..."
                     />
                   </div>
+
+
+                  {/* Información de Pago */}
+                  {selectedRegistration.status !== 'paid' && (
+                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                      <h3 className="font-semibold text-gray-800 mb-3">Información de Pago</h3>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-sm font-semibold text-gray-600">Monto *</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={paymentAmount}
+                            onChange={(e) => setPaymentAmount(e.target.value)}
+                            className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
+                            placeholder="0.00"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-semibold text-gray-600">Moneda</label>
+                          <select
+                            value={paymentCurrency}
+                            onChange={(e) => setPaymentCurrency(e.target.value)}
+                            className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
+                          >
+                            <option value="MXN">MXN (Pesos Mexicanos)</option>
+                            <option value="USD">USD (Dólares)</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="mt-3">
+                        <label className="text-sm font-semibold text-gray-600">Método de Pago</label>
+                        <select
+                          value={paymentMethod}
+                          onChange={(e) => setPaymentMethod(e.target.value)}
+                          className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
+                        >
+                          <option value="transferencia">Transferencia Bancaria</option>
+                          <option value="deposito">Depósito en Efectivo</option>
+                          <option value="tarjeta">Tarjeta de Crédito/Débito</option>
+                          <option value="otro">Otro</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedRegistration.status === 'paid' && (
+                    <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                      <h3 className="font-semibold text-gray-800 mb-2">Pago Confirmado</h3>
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <span className="text-gray-600">Monto:</span>
+                          <span className="ml-2 font-semibold">{selectedRegistration.payment_currency} ${selectedRegistration.payment_amount?.toFixed(2) || '0.00'}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Método:</span>
+                          <span className="ml-2 font-semibold capitalize">{selectedRegistration.payment_method || '-'}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="flex gap-3 pt-4 border-t">
                     <button
