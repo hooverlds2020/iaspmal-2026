@@ -1,11 +1,12 @@
 // src/pages/AdminDashboard.jsx
 import React, { useState } from 'react';
-import { LogOut, Users, Calendar, FileText, Settings } from 'lucide-react'
+import { LogOut, Users, Calendar, FileText, Settings, DollarSign } from 'lucide-react'
 import SymposiumsManager from '../components/admin/SymposiumsManager';
 import SessionsManager from '../components/admin/SessionsManager';
 import PresentationsManager from '../components/admin/PresentationsManager';
 import { supabase } from '../lib/supabaseClient';
 import RegistrationsDashboard from './RegistrationsDashboard';
+import FinancesDashboard from './FinancesDashboard';
 
 const AdminDashboard = ({ user, onLogout }) => {
   const [activeSection, setActiveSection] = useState('simposios');
@@ -93,6 +94,19 @@ const AdminDashboard = ({ user, onLogout }) => {
                     Registros
                   </button>
                 </li>
+                <li>
+                  <button
+                    onClick={() => setActiveSection('finanzas')}
+                    className={`w-full text-left px-4 py-2 rounded-lg transition flex items-center gap-2 ${
+                      activeSection === 'finanzas'
+                        ? 'bg-teal-600 text-white'
+                        : 'hover:bg-gray-100 text-gray-700'
+                    }`}
+                  >
+                    <DollarSign className="w-4 h-4" />
+                    Finanzas
+                  </button>
+                </li>
               </ul>
             </nav>
           </aside>
@@ -114,6 +128,7 @@ const AdminDashboard = ({ user, onLogout }) => {
               {activeSection === 'ponencias' && <PresentationsManager />}
 
               {activeSection === 'registros' && <RegistrationsDashboard />}
+        {activeSection === 'finanzas' && <FinancesDashboard />}
 
             </div>
           </main>

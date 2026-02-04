@@ -70,6 +70,21 @@ const RegistrationsDashboard = () => {
 
       if (error) throw error;
       
+      // Enviar emails de notificación
+      if (newStatus === 'paid') {
+        console.log('Enviando email de aprobación a:', registration.email);
+        const emailResult = await sendPaymentApproval(registration.email, registration.full_name);
+        if (emailResult.success) {
+          console.log('Email de aprobación enviado exitosamente');
+        }
+      } else if (newStatus === 'rejected') {
+        console.log('Enviando email de rechazo a:', registration.email);
+        const emailResult = await sendRejectionNotice(registration.email, registration.full_name);
+        if (emailResult.success) {
+          console.log('Email de rechazo enviado exitosamente');
+        }
+      }
+      
       fetchRegistrations();
       setSelectedRegistration(null);
       setPaymentAmount('');
