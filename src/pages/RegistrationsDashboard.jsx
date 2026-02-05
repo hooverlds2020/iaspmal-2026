@@ -418,6 +418,72 @@ const RegistrationsDashboard = () => {
                     </div>
                   </div>
 
+                  {/* Sección de Asistencia */}
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl border-2 border-blue-200">
+                    <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                      <QrCode className="w-5 h-5 text-blue-600" />
+                      Control de Asistencia
+                    </h3>
+                    
+                    <div className="grid md:grid-cols-2 gap-6">
+                      {/* Estado de asistencia */}
+                      <div>
+                        <label className="text-sm font-semibold text-gray-600 block mb-2">Estado</label>
+                        <div className="flex items-center gap-3">
+                          <span className={`px-4 py-2 rounded-lg text-sm font-bold ${
+                            selectedRegistration.attendance_confirmed
+                              ? 'bg-green-100 text-green-800 border-2 border-green-300'
+                              : 'bg-gray-100 text-gray-600 border-2 border-gray-300'
+                          }`}>
+                            {selectedRegistration.attendance_confirmed ? '✓ Confirmada' : '⏳ Pendiente'}
+                          </span>
+                        </div>
+                        {selectedRegistration.attendance_date && (
+                          <p className="text-xs text-gray-500 mt-2">
+                            Registrada: {new Date(selectedRegistration.attendance_date).toLocaleString('es-MX', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        )}
+                        
+                        {!selectedRegistration.attendance_confirmed && selectedRegistration.status === 'paid' && (
+                          <button
+                            onClick={() => confirmAttendance(selectedRegistration.id)}
+                            className="mt-3 w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2"
+                          >
+                            <Check className="w-4 h-4" />
+                            Confirmar Asistencia
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Código QR */}
+                      <div>
+                        <label className="text-sm font-semibold text-gray-600 block mb-2">Código QR</label>
+                        <div className="bg-white p-4 rounded-lg shadow-md">
+                          <div className="flex justify-center mb-3">
+                            <QRCodeCanvas 
+                              value={`https://iaspm-al-2026.clickwebhoover.online/asistencia?code=${selectedRegistration.attendance_code}`}
+                              size={150}
+                              level="H"
+                              includeMargin={true}
+                            />
+                          </div>
+                          <p className="text-center font-mono font-bold text-lg text-gray-800 mb-2">
+                            {selectedRegistration.attendance_code}
+                          </p>
+                          <p className="text-xs text-gray-500 text-center">
+                            Escanea o ingresa este código en la página de asistencia
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   <div>
                     <label className="text-sm font-semibold text-gray-600">Notas internas</label>
                     <textarea
