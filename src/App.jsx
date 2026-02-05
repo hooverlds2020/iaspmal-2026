@@ -1,6 +1,7 @@
 // src/App.jsx
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import AttendanceCheck from './pages/AttendanceCheck';
 import { supabase } from './lib/supabaseClient';
 
 // Layout components
@@ -491,6 +492,7 @@ const App = () => {
       <Routes>
         <Route path="/" element={<MainLayout lang={lang} setLang={setLang} />} />
         <Route path="/schedule" element={<ScheduleView />} />
+        <Route path="/asistencia" element={<AttendanceCheck />} />
         <Route 
           path="/admin" 
           element={

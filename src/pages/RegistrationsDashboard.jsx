@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { sendPaymentApproval, sendRejectionNotice } from '../lib/resendClient';
-import { Download, Eye, Check, X, RefreshCw, Search } from 'lucide-react';
+import { Download, Eye, Check, X, RefreshCw, Search, QrCode } from 'lucide-react';
+import { QRCodeCanvas } from 'qrcode.react';
 
 const RegistrationsDashboard = () => {
   const [registrations, setRegistrations] = useState([]);
@@ -93,6 +94,34 @@ const RegistrationsDashboard = () => {
       alert('Error al actualizar el estado');
     }
   };
+  const confirmAttendance = async (id) => {
+    try {
+      const registration = registrations.find(r => r.id === id);
+      
+      if (registration.status !== 'paid') {
+        alert('Solo se puede confirmar asistencia de participantes con pago confirmado');
+        return;
+      }
+      
+      const { error } = await supabase
+        .from('registrations')
+        .update({
+          attendance_confirmed: true,
+          attendance_date: new Date().toISOString()
+        })
+        .eq('id', id);
+        
+      if (error) throw error;
+      
+      fetchRegistrations();
+      setSelectedRegistration(null);
+      alert('Asistencia confirmada correctamente');
+    } catch (error) {
+      console.error('Error confirming attendance:', error);
+      alert('Error al confirmar asistencia');
+    }
+  };
+
 
   const updateNotes = async (id, notes) => {
     try {
@@ -263,6 +292,9 @@ const RegistrationsDashboard = () => {
                       Estado
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Asistencia
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Fecha
                     </th>
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -285,6 +317,15 @@ const RegistrationsDashboard = () => {
                       </td>
                       <td className="px-6 py-4">
                         {getStatusBadge(reg.status)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                          reg.attendance_confirmed
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-gray-100 text-gray-600'
+                        }`}>
+                          {reg.attendance_confirmed ? '✓ Confirmada' : 'Pendiente'}
+                        </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">
                         {new Date(reg.created_at).toLocaleDateString('es-ES')}
