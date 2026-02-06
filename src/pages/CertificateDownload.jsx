@@ -2,8 +2,8 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { jsPDF } from 'jspdf';
-import { Search, Download, AlertCircle, CheckCircle, QrCode, Loader2, RefreshCw, ArrowLeft } from 'lucide-react'; // Agregué iconos nuevos
-import { Link } from 'react-router-dom'; // Para volver al inicio
+import { Search, Download, AlertCircle, CheckCircle, QrCode, Loader2, RefreshCw, ArrowLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const CertificateDownload = () => {
   const [code, setCode] = useState('');
@@ -27,12 +27,13 @@ const CertificateDownload = () => {
     setDebugInfo('');
     setUserData(null);
 
+    // Limpieza inteligente del código
     let rawInput = code.toUpperCase().trim().replace(/\s/g, '');
     let cleanHex = rawInput.replace(/^IASP[-]?/, '');
     const searchCode = `IASP-${cleanHex}`;
 
     if (!cleanHex) {
-        setError('Por favor ingresa un código.');
+        setError('Por favor ingresa un código válido.');
         setLoading(false);
         return;
     }
@@ -72,30 +73,77 @@ const CertificateDownload = () => {
 
   const generateCertificate = () => {
     if (!userData) return;
-    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+    const doc = new jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: 'a4'
+    });
+
     const primaryColor = [5, 150, 105]; 
     const darkColor = [31, 41, 55]; 
-    
-    doc.setLineWidth(2); doc.setDrawColor(...primaryColor); doc.rect(10, 10, 277, 190);
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(28); doc.setTextColor(...primaryColor);
+
+    // --- MARCO Y FONDO ---
+    doc.setLineWidth(2);
+    doc.setDrawColor(...primaryColor);
+    doc.rect(10, 10, 277, 190);
+
+    // --- ENCABEZADO ---
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(28);
+    doc.setTextColor(...primaryColor);
     doc.text('CONSTANCIA DE PARTICIPACIÓN', 148.5, 40, { align: 'center' });
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(14); doc.setTextColor(...darkColor);
+
+    // --- TEXTO INTRO ---
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(14);
+    doc.setTextColor(...darkColor);
     doc.text('El Comité Organizador del XVII Congreso de la IASPM-AL otorga la presente a:', 148.5, 60, { align: 'center' });
-    doc.setFont('times', 'bold'); doc.setFontSize(32); doc.setTextColor(0, 0, 0);
+
+    // --- NOMBRE DEL PARTICIPANTE ---
+    doc.setFont('times', 'bold');
+    doc.setFontSize(32);
+    doc.setTextColor(0, 0, 0);
     doc.text(userData.full_name, 148.5, 85, { align: 'center' });
-    doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.5); doc.line(70, 90, 227, 90);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(16); doc.setTextColor(...darkColor);
+
+    // --- LÍNEA DECORATIVA ---
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.5);
+    doc.line(70, 90, 227, 90);
+
+    // --- DETALLES DE PARTICIPACIÓN ---
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(16);
+    doc.setTextColor(...darkColor);
     const categoryText = getCategoryLabel(userData.category).toUpperCase();
+    
     doc.text(`Por su valiosa participación en calidad de ${categoryText}`, 148.5, 105, { align: 'center' });
     doc.text('en el XVII Congreso de la Asociación Internacional para el Estudio', 148.5, 120, { align: 'center' });
     doc.text('de la Música Popular - Rama Latinoamericana (IASPM-AL).', 148.5, 130, { align: 'center' });
-    doc.setFontSize(14); doc.setTextColor(100, 100, 100);
+
+    // --- FECHA Y LUGAR ---
+    doc.setFontSize(14);
+    doc.setTextColor(100, 100, 100);
     doc.text('Celebrado en San Cristóbal de Las Casas, Chiapas, México', 148.5, 150, { align: 'center' });
     doc.text('del 28 de septiembre al 2 de octubre de 2026.', 148.5, 160, { align: 'center' });
-    doc.setFontSize(12); doc.setTextColor(0, 0, 0);
-    doc.text('_________________________', 90, 180, { align: 'center' }); doc.text('_________________________', 207, 180, { align: 'center' });
-    doc.setFontSize(10); doc.text('Comité Organizador', 90, 185, { align: 'center' }); doc.text('Presidencia IASPM-AL', 207, 185, { align: 'center' });
-    
+
+    // --- FIRMAS ---
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text('_________________________', 90, 180, { align: 'center' });
+    doc.text('_________________________', 207, 180, { align: 'center' });
+    doc.setFontSize(10);
+    doc.text('Comité Organizador', 90, 185, { align: 'center' });
+    doc.text('Presidencia IASPM-AL', 207, 185, { align: 'center' });
+
+    // --- NUEVO: PIE DE PÁGINA DE VALIDACIÓN (SEGURIDAD) ---
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    // Usamos tu dominio real para que sea válido
+    const validationUrl = `iaspm-al-2026.clickwebhoover.online/constancias`;
+    const validationText = `Autenticidad verificable en: ${validationUrl} | Código: ${userData.attendance_code}`;
+    doc.text(validationText, 148.5, 196, { align: 'center' });
+
     doc.save(`Constancia_${userData.full_name.replace(/\s+/g, '_')}.pdf`);
   };
 
@@ -129,7 +177,7 @@ const CertificateDownload = () => {
                     id="code"
                     required
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition font-mono uppercase tracking-widest text-center text-lg placeholder-gray-300"
-                    placeholder="Ej: IASP-D487B5" 
+                    placeholder="Ej: D487B5" 
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
                   />
@@ -165,7 +213,7 @@ const CertificateDownload = () => {
               )}
             </form>
           ) : (
-            // Si YA encontramos al usuario, mostramos el resultado y las opciones
+            // Si YA encontramos al usuario, mostramos el resultado
             <div className="animate-in fade-in slide-in-from-bottom-4">
               <div className="text-center mb-6">
                 <p className="text-sm text-gray-500 mb-1">Participante encontrado:</p>
