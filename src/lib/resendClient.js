@@ -1,3 +1,4 @@
+// src/lib/resendClient.js
 const SUPABASE_URL = 'https://rvpovifwugksrsmgabcj.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ2cG92aWZ3dWdrc3JzbWdhYmNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk3ODUwODYsImV4cCI6MjA3NTM2MTA4Nn0.Qyqsj8uoMinKkx5DrmiFaZpEJtzz3ZH_HnciDZNv1r0';
 
@@ -27,7 +28,8 @@ export const sendRegistrationConfirmation = async (email, name) => {
   }
 };
 
-export const sendPaymentApproval = async (email, name) => {
+// --- MODIFICADO: AHORA ENVÍA DATOS PARA EL QR ---
+export const sendPaymentApproval = async (email, name, attendanceCode, category) => {
   try {
     const response = await fetch(`${SUPABASE_URL}/functions/v1/send-approval-email`, {
       method: 'POST',
@@ -35,7 +37,8 @@ export const sendPaymentApproval = async (email, name) => {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
       },
-      body: JSON.stringify({ email, name }),
+      // Enviamos el código y categoría para que el servidor genere el QR
+      body: JSON.stringify({ email, name, attendanceCode, category }),
     });
     
     const data = await response.json();

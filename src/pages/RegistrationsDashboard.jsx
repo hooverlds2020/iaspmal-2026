@@ -1,23 +1,32 @@
-import React, { useState, useEffect } from 'react';
+// src/pages/RegistrationsDashboard.jsx
+import React, { useState, useEffect, useRef } from 'react'; // Importamos useRef
 import { supabase } from '../lib/supabaseClient';
 import { sendPaymentApproval, sendRejectionNotice } from '../lib/resendClient';
-import { Download, Eye, Check, X, RefreshCw, Search, QrCode } from 'lucide-react';
+import { Download, Eye, Check, X, RefreshCw, Search, QrCode, ExternalLink } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 
 const RegistrationsDashboard = () => {
   const [registrations, setRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all'); // all, pending, paid, rejected
+  const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRegistration, setSelectedRegistration] = useState(null);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentCurrency, setPaymentCurrency] = useState('MXN');
   const [paymentMethod, setPaymentMethod] = useState('transferencia');
+  
+  // Usamos una referencia para tener acceso al valor actual de selectedRegistration dentro del callback de suscripción
+  const selectedRegistrationRef = useRef(selectedRegistration);
+
+  // Mantenemos la referencia actualizada
+  useEffect(() => {
+    selectedRegistrationRef.current = selectedRegistration;
+  }, [selectedRegistration]);
 
 
   const fetchRegistrations = async () => {
     try {
-      setLoading(true);
+      // No ponemos loading(true) aquí para que las actualizaciones en tiempo real no parpadeen
       let query = supabase
         .from('registrations')
         .select('*')
@@ -33,17 +42,59 @@ const RegistrationsDashboard = () => {
     } catch (error) {
       console.error('Error fetching registrations:', error);
     } finally {
-      setLoading(false);
+      setLoading(false); // Solo quitamos el loading inicial
     }
   };
 
+  // --- ESTRATEGIA DE TIEMPO REAL + CARGA INICIAL ---
   useEffect(() => {
+    // 1. Carga inicial de datos
+    setLoading(true); // Ponemos loading solo la primera vez
     fetchRegistrations();
+
+    // 2. Configurar suscripción a cambios en tiempo real
+    console.log('📡 Conectando a actualizaciones en tiempo real...');
+    const channel = supabase
+      .channel('registrations-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE', // Escuchamos solo actualizaciones (cuando cambia asistencia o pago)
+          schema: 'public',
+          table: 'registrations',
+        },
+        (payload) => {
+          console.log('⚡ Cambio detectado en la BD:', payload.new.id);
+          
+          // A) Actualizamos la lista principal instantáneamente
+          setRegistrations(currentRegs => 
+            currentRegs.map(reg => 
+              reg.id === payload.new.id ? payload.new : reg
+            )
+          );
+
+          // B) Si el modal de detalles está abierto con ese usuario, lo actualizamos también
+          if (selectedRegistrationRef.current && selectedRegistrationRef.current.id === payload.new.id) {
+            setSelectedRegistration(payload.new);
+          }
+        }
+      )
+      .subscribe();
+
+    // 3. Limpieza al desmontar
+    return () => {
+      console.log('Reconectando suscripción...');
+      supabase.removeChannel(channel);
+    };
+    
+    // La dependencia es 'filter' para que si cambias de filtro, se recarguen los datos base,
+    // pero la suscripción sigue activa.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
 
+  // Actualizar el estado de pago (sin cambios en la lógica, solo en la respuesta visual)
   const updateStatus = async (id, newStatus) => {
     try {
-      // Validar monto si se marca como pagado
       if (newStatus === 'paid' && (!paymentAmount || parseFloat(paymentAmount) <= 0)) {
         alert('Por favor ingresa el monto del pago');
         return;
@@ -51,19 +102,18 @@ const RegistrationsDashboard = () => {
       
       const registration = registrations.find(r => r.id === id);
       
-      // Preparar datos de actualización
       const updateData = { 
         status: newStatus,
         payment_date: newStatus === 'paid' ? new Date().toISOString().split('T')[0] : null
       };
       
-      // Agregar información de pago si se aprueba
       if (newStatus === 'paid') {
         updateData.payment_amount = parseFloat(paymentAmount);
         updateData.payment_currency = paymentCurrency;
         updateData.payment_method = paymentMethod;
       }
       
+      // NOTA: Al hacer este update, se disparará el evento de tiempo real automáticamente
       const { error } = await supabase
         .from('registrations')
         .update(updateData)
@@ -71,38 +121,38 @@ const RegistrationsDashboard = () => {
 
       if (error) throw error;
       
-      // Enviar emails de notificación
       if (newStatus === 'paid') {
-        console.log('Enviando email de aprobación a:', registration.email);
-        const emailResult = await sendPaymentApproval(registration.email, registration.full_name);
-        if (emailResult.success) {
-          console.log('Email de aprobación enviado exitosamente');
-        }
+        const emailResult = await sendPaymentApproval(
+          registration.email, 
+          registration.full_name,
+          registration.attendance_code,
+          registration.category
+        );
+        if (emailResult.success) console.log('Email enviado');
       } else if (newStatus === 'rejected') {
-        console.log('Enviando email de rechazo a:', registration.email);
-        const emailResult = await sendRejectionNotice(registration.email, registration.full_name);
-        if (emailResult.success) {
-          console.log('Email de rechazo enviado exitosamente');
-        }
+        sendRejectionNotice(registration.email, registration.full_name);
       }
       
-      fetchRegistrations();
-      setSelectedRegistration(null);
+      // Ya no necesitamos fetchRegistrations() aquí porque el tiempo real lo hará
       setPaymentAmount('');
+      // No cerramos el modal inmediatamente para que se vea el cambio de estado
     } catch (error) {
       console.error('Error updating status:', error);
       alert('Error al actualizar el estado');
     }
   };
+
+  // Confirmar asistencia manual (ADMIN)
   const confirmAttendance = async (id) => {
     try {
       const registration = registrations.find(r => r.id === id);
       
       if (registration.status !== 'paid') {
-        alert('Solo se puede confirmar asistencia de participantes con pago confirmado');
+        alert('Participante sin pago confirmado');
         return;
       }
       
+      // Al hacer este update, el tiempo real actualizará la interfaz
       const { error } = await supabase
         .from('registrations')
         .update({
@@ -112,13 +162,9 @@ const RegistrationsDashboard = () => {
         .eq('id', id);
         
       if (error) throw error;
-      
-      fetchRegistrations();
-      setSelectedRegistration(null);
-      alert('Asistencia confirmada correctamente');
+      alert('Asistencia confirmada');
     } catch (error) {
-      console.error('Error confirming attendance:', error);
-      alert('Error al confirmar asistencia');
+      console.error('Error:', error);
     }
   };
 
@@ -129,11 +175,10 @@ const RegistrationsDashboard = () => {
         .from('registrations')
         .update({ notes })
         .eq('id', id);
-
       if (error) throw error;
-      fetchRegistrations();
+      // El tiempo real actualizará la nota en la lista
     } catch (error) {
-      console.error('Error updating notes:', error);
+      console.error('Error:', error);
     }
   };
 
@@ -196,19 +241,19 @@ const RegistrationsDashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
             <div className="text-sm text-gray-600 mb-1">Total</div>
-            <div className="text-3xl font-bold text-gray-800">{stats.total}</div>
+            <div className="text-3xl font-bold text-gray-800 animate-in fade-in">{stats.total}</div>
           </div>
           <div className="bg-white rounded-lg shadow p-6 border-l-4 border-yellow-500">
             <div className="text-sm text-gray-600 mb-1">Pendientes</div>
-            <div className="text-3xl font-bold text-gray-800">{stats.pending}</div>
+            <div className="text-3xl font-bold text-gray-800 animate-in fade-in">{stats.pending}</div>
           </div>
           <div className="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
             <div className="text-sm text-gray-600 mb-1">Pagados</div>
-            <div className="text-3xl font-bold text-gray-800">{stats.paid}</div>
+            <div className="text-3xl font-bold text-gray-800 animate-in fade-in">{stats.paid}</div>
           </div>
           <div className="bg-white rounded-lg shadow p-6 border-l-4 border-red-500">
             <div className="text-sm text-gray-600 mb-1">Rechazados</div>
-            <div className="text-3xl font-bold text-gray-800">{stats.rejected}</div>
+            <div className="text-3xl font-bold text-gray-800 animate-in fade-in">{stats.rejected}</div>
           </div>
         </div>
 
@@ -253,11 +298,12 @@ const RegistrationsDashboard = () => {
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                 />
               </div>
+              {/* Botón de refresco manual (por si acaso), ahora hace un fetch completo */}
               <button
-                onClick={fetchRegistrations}
+                onClick={() => { setLoading(true); fetchRegistrations(); }}
                 className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg transition flex items-center gap-2"
               >
-                <RefreshCw className="w-4 h-4" />
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                 Actualizar
               </button>
             </div>
@@ -304,7 +350,7 @@ const RegistrationsDashboard = () => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredRegistrations.map((reg) => (
-                    <tr key={reg.id} className="hover:bg-gray-50">
+                    <tr key={reg.id} className="hover:bg-gray-50 transition-colors duration-150">
                       <td className="px-6 py-4">
                         <div className="font-medium text-gray-900">{reg.full_name}</div>
                         <div className="text-sm text-gray-500">{reg.email}</div>
@@ -319,9 +365,9 @@ const RegistrationsDashboard = () => {
                         {getStatusBadge(reg.status)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold transition-all duration-300 ${
                           reg.attendance_confirmed
-                            ? 'bg-blue-100 text-blue-800'
+                            ? 'bg-blue-100 text-blue-800 scale-105'
                             : 'bg-gray-100 text-gray-600'
                         }`}>
                           {reg.attendance_confirmed ? '✓ Confirmada' : 'Pendiente'}
@@ -350,7 +396,7 @@ const RegistrationsDashboard = () => {
         {/* Modal de detalles */}
         {selectedRegistration && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl transition-all">
               <div className="p-6">
                 <div className="flex justify-between items-start mb-6">
                   <h2 className="text-2xl font-bold text-gray-800">
@@ -419,9 +465,13 @@ const RegistrationsDashboard = () => {
                   </div>
 
                   {/* Sección de Asistencia */}
-                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl border-2 border-blue-200">
+                  <div className={`bg-gradient-to-br p-6 rounded-xl border-2 transition-all duration-500 ${
+                    selectedRegistration.attendance_confirmed 
+                      ? 'from-green-50 to-teal-50 border-green-200' 
+                      : 'from-blue-50 to-indigo-50 border-blue-200'
+                  }`}>
                     <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                      <QrCode className="w-5 h-5 text-blue-600" />
+                      <QrCode className={`w-5 h-5 ${selectedRegistration.attendance_confirmed ? 'text-green-600' : 'text-blue-600'}`} />
                       Control de Asistencia
                     </h3>
                     
@@ -430,16 +480,16 @@ const RegistrationsDashboard = () => {
                       <div>
                         <label className="text-sm font-semibold text-gray-600 block mb-2">Estado</label>
                         <div className="flex items-center gap-3">
-                          <span className={`px-4 py-2 rounded-lg text-sm font-bold ${
+                          <span className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${
                             selectedRegistration.attendance_confirmed
-                              ? 'bg-green-100 text-green-800 border-2 border-green-300'
+                              ? 'bg-green-100 text-green-800 border-2 border-green-300 scale-105'
                               : 'bg-gray-100 text-gray-600 border-2 border-gray-300'
                           }`}>
                             {selectedRegistration.attendance_confirmed ? '✓ Confirmada' : '⏳ Pendiente'}
                           </span>
                         </div>
                         {selectedRegistration.attendance_date && (
-                          <p className="text-xs text-gray-500 mt-2">
+                          <p className="text-xs text-gray-500 mt-2 animate-in fade-in">
                             Registrada: {new Date(selectedRegistration.attendance_date).toLocaleString('es-MX', {
                               day: '2-digit',
                               month: 'short',
@@ -451,34 +501,63 @@ const RegistrationsDashboard = () => {
                         )}
                         
                         {!selectedRegistration.attendance_confirmed && selectedRegistration.status === 'paid' && (
-                          <button
-                            onClick={() => confirmAttendance(selectedRegistration.id)}
-                            className="mt-3 w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2"
-                          >
-                            <Check className="w-4 h-4" />
-                            Confirmar Asistencia
-                          </button>
+                          <div className="mt-4 flex flex-col gap-2">
+                            {/* BOTÓN 1: CONFIRMACIÓN DIRECTA */}
+                            <button
+                              onClick={() => confirmAttendance(selectedRegistration.id)}
+                              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2 text-sm"
+                            >
+                              <Check className="w-4 h-4" />
+                              Confirmar Entrada (Directo)
+                            </button>
+
+                            {/* BOTÓN 2: ABRIR EN PANTALLA STAFF (Magic Link) */}
+                            <a 
+                                href={`/staff/attendance?code=${selectedRegistration.attendance_code}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-full bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2 text-sm"
+                            >
+                                <ExternalLink className="w-4 h-4" />
+                                Abrir en Staff
+                            </a>
+                          </div>
                         )}
                       </div>
 
-                      {/* Código QR */}
+                      {/* Código QR PERSONALIZADO */}
                       <div>
-                        <label className="text-sm font-semibold text-gray-600 block mb-2">Código QR</label>
-                        <div className="bg-white p-4 rounded-lg shadow-md">
+                        <label className="text-sm font-semibold text-gray-600 block mb-2">Código QR Personal</label>
+                        <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200">
+                          
+                          {/* NOMBRE DEL ASISTENTE EN EL GAFETE */}
+                          <div className="text-center mb-3 border-b border-gray-100 pb-2">
+                            <p className="font-bold text-gray-900 text-lg leading-tight">
+                              {selectedRegistration.full_name}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1 uppercase tracking-wider">
+                              {getCategoryLabel(selectedRegistration.category)}
+                            </p>
+                          </div>
+
                           <div className="flex justify-center mb-3">
                             <QRCodeCanvas 
+                              // URL Mágica para autorrelleno
                               value={`https://iaspm-al-2026.clickwebhoover.online/asistencia?code=${selectedRegistration.attendance_code}`}
-                              size={150}
+                              size={180}
                               level="H"
                               includeMargin={true}
                             />
                           </div>
-                          <p className="text-center font-mono font-bold text-lg text-gray-800 mb-2">
-                            {selectedRegistration.attendance_code}
-                          </p>
-                          <p className="text-xs text-gray-500 text-center">
-                            Escanea o ingresa este código en la página de asistencia
-                          </p>
+                          
+                          <div className="text-center">
+                            <p className="font-mono font-bold text-xl text-gray-800 tracking-widest bg-gray-100 rounded py-1 mb-1">
+                              {selectedRegistration.attendance_code}
+                            </p>
+                            <p className="text-[10px] text-gray-400 uppercase">
+                              Acceso Único • IASPMAL 2026
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </div>

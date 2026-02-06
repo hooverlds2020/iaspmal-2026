@@ -1,6 +1,8 @@
 // src/App.jsx
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import AttendanceCheck from './pages/AttendanceCheck';
+import StaffAttendance from './pages/StaffAttendance';
 import { supabase } from './lib/supabaseClient';
 
 // Layout components
@@ -16,6 +18,7 @@ import ScientificCommittee from './components/pages/ScientificCommittee';
 import AcceptedFormats from './components/pages/AcceptedFormats';
 import Program from './components/pages/Program';
 import ScheduleView from './components/pages/ScheduleView';
+import RegistrationForm from './components/pages/RegistrationForm';
 import VenuesPage from './components/pages/VenuesPage';
 
 // Admin pages
@@ -24,6 +27,7 @@ import AdminDashboard from './pages/AdminDashboard';
 
 const MainLayout = ({ lang, setLang }) => {
   const [currentPage, setCurrentPage] = useState('llamada');
+  const [showRegistration, setShowRegistration] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [submenuOpen, setSubmenuOpen] = useState({
     'actividades-congreso': false,
@@ -35,73 +39,67 @@ const MainLayout = ({ lang, setLang }) => {
     { 
       id: 'llamada', 
       label: 'Acerca del Congreso',
-      label_en: 'About the Congress'
-    },
-    { 
-      id: 'formatos', 
-      label: 'Formatos admitidos',
-      label_en: 'Accepted Formats'
-    },
-    { 
+      label_pt: 'Sobre o Congresso'
+    },    { 
       id: 'conferenciantes', 
-      label: 'Conferencias magistrales y mesas plenarias',
-      label_en: 'Keynote lectures and plenary sessions'
+      label: 'Conferencias magistrales y conversatorios',
+      label_pt: 'Conferências magistrais e conversatórios'
     },
     { 
       id: 'cuotas', 
       label: 'Cuotas de inscripción',
-      label_en: 'Registration Fees'
+      label_pt: 'Taxas de inscrição'
     },
     { 
       id: 'comite-academico', 
       label: 'Comité Académico',
-      label_en: 'Academic Committee'
+      label_pt: 'Comitê Acadêmico'
     },
     { 
       id: 'comite-organizador', 
       label: 'Comité Organizador',
-      label_en: 'Organizing Committee'
+      label_pt: 'Comitê Organizador'
     },
     { 
       id: 'programa', 
       label: 'Programa',
-      label_en: 'Program'
+      label_pt: 'Programa'
     },
     { 
       id: 'inscripcion', 
       label: 'Inscripción',
-      label_en: 'Registration'
+      label_pt: 'Inscrição'
     },
     { 
       id: 'talleres', 
       label: 'Talleres',
-      label_en: 'Workshops'
+      label_pt: 'Oficinas'
     },
     { 
       id: 'presentaciones-libros', 
       label: 'Presentaciones de libros',
-      label_en: 'Book presentations'
+      label_pt: 'Apresentações de livros'
     },
     {
       id: 'actividades-congreso',
       label: 'Actividades previas y posteriores al Congreso',
-      label_en: 'Pre- and post-Congress activities',
+      label_pt: 'Atividades pré e pós-Congresso',
       submenu: [
-        { id: 'actividad1', label: 'Actividad 1', label_en: 'Activity 1' },
-        { id: 'actividad2', label: 'Actividad 2', label_en: 'Activity 2' }
+        { id: 'actividad1', label: 'Actividad 1', label_pt: 'Atividade 1' },
+        { id: 'actividad2', label: 'Actividad 2', label_pt: 'Atividade 2' }
       ]
     },
     {
       id: 'info-complementaria',
       label: 'Información complementaria',
-      label_en: 'Additional Information',
+      label_pt: 'Informação complementar',
       submenu: [
-        { id: 'sedes', label: 'Las sedes del Congreso', label_en: 'Congress Venues' },
-        { id: 'instituciones-convocantes', label: 'Instituciones convocantes', label_en: 'Convening Institutions' },
-        { id: 'organizaciones', label: 'Organizaciones colaboradoras', label_en: 'Partner Organizations' },
-        { id: 'alojamiento', label: 'Alojamiento', label_en: 'Accommodation' },
-        { id: 'san-cristobal', label: 'San Cristóbal de Las Casas', label_en: 'San Cristóbal de Las Casas' },
-        { id: 'cartel', label: 'Cartel del congreso', label_en: 'Congress Poster' }
+        { id: 'sedes', label: 'Las sedes del Congreso', label_pt: 'Locais do Congresso' },
+        { id: 'instituciones-convocantes', label: 'Instituciones convocantes', label_pt: 'Instituições convocantes' },
+        { id: 'organizaciones', label: 'Organizaciones colaboradoras', label_pt: 'Organizações colaboradoras' },
+        { id: 'alojamiento', label: 'Alojamiento', label_pt: 'Hospedagem' },
+        { id: 'san-cristobal', label: 'San Cristóbal de Las Casas', label_pt: 'San Cristóbal de Las Casas' },
+        { id: 'cartel', label: 'Cartel del congreso', label_pt: 'Cartaz do congresso' }
       ]
     }
   ];
@@ -129,61 +127,93 @@ const MainLayout = ({ lang, setLang }) => {
           </div>
         );
       
-      case 'cuotas':
+            case 'cuotas':
         return (
-          <div className="overflow-x-auto">
-            <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
-              <thead className="bg-teal-600 text-white">
-                <tr>
-                  <th className="p-3 text-left">
-                    {lang === 'es' ? 'Categoría' : 'Category'}
-                  </th>
-                  <th className="p-3 text-right">
-                    {lang === 'es' ? 'Cuota' : 'Fee'}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-t bg-white hover:bg-gray-50">
-                  <td className="p-3">
-                    {lang === 'es' ? 'Investigador/a del sur global' : 'Researcher from the Global South'}
-                  </td>
-                  <td className="p-3 text-right font-semibold">$800.00 MXN</td>
-                </tr>
-                <tr className="border-t bg-white hover:bg-gray-50">
-                  <td className="p-3">
-                    {lang === 'es' ? 'Investigador/a del norte global' : 'Researcher from the Global North'}
-                  </td>
-                  <td className="p-3 text-right font-semibold">$1,500.00 MXN</td>
-                </tr>
-                <tr className="border-t bg-white hover:bg-gray-50">
-                  <td className="p-3">
-                    {lang === 'es' ? 'Investigador/a de institución convocante' : 'Researcher from convening institution'}
-                  </td>
-                  <td className="p-3 text-right font-semibold">$600.00 MXN</td>
-                </tr>
-                <tr className="border-t bg-white hover:bg-gray-50">
-                  <td className="p-3">
-                    {lang === 'es' ? 'Estudiante' : 'Student'}
-                  </td>
-                  <td className="p-3 text-right font-semibold">$500.00 MXN</td>
-                </tr>
-                <tr className="border-t bg-white hover:bg-gray-50">
-                  <td className="p-3">
-                    {lang === 'es' ? 'Asistente' : 'Attendee'}
-                  </td>
-                  <td className="p-3 text-right font-semibold">$300.00 MXN</td>
-                </tr>
-                <tr className="border-t bg-white hover:bg-gray-50">
-                  <td className="p-3">
-                    {lang === 'es' ? 'Participante en la Muestra de Músicas Locales' : 'Local Music Showcase Participant'}
-                  </td>
-                  <td className="p-3 text-right font-semibold">$300.00 MXN</td>
-                </tr>
-              </tbody>
-            </table>
+          <div className="space-y-6">
+            <div className="overflow-x-auto">
+              <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
+                <thead className="bg-teal-600 text-white">
+                  <tr>
+                    <th className="p-3 text-left">
+                      {lang === 'es' ? 'Categoría' : 'Categoria'}
+                    </th>
+                    <th className="p-3 text-center">
+                      {lang === 'es' ? 'Pago antes del 31/05/26' : 'Pagamento antes de 31/05/26'}
+                    </th>
+                    <th className="p-3 text-center">
+                      {lang === 'es' ? 'Después del 01/06/26' : 'Depois de 01/06/26'}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-t bg-white hover:bg-gray-50">
+                    <td className="p-3">
+                      {lang === 'es' ? 'Investigador/a del sur global' : 'Pesquisador/a do sul global'}
+                    </td>
+                    <td className="p-3 text-center font-semibold">$800</td>
+                    <td className="p-3 text-center font-semibold">$1,000</td>
+                  </tr>
+                  <tr className="border-t bg-white hover:bg-gray-50">
+                    <td className="p-3">
+                      {lang === 'es' ? 'Investigador/a del norte global' : 'Pesquisador/a do norte global'}
+                    </td>
+                    <td className="p-3 text-center font-semibold">$1,300</td>
+                    <td className="p-3 text-center font-semibold">$1,500</td>
+                  </tr>
+                  <tr className="border-t bg-white hover:bg-gray-50">
+                    <td className="p-3">
+                      {lang === 'es' ? 'Investigador/a de institución convocante' : 'Pesquisador/a de instituição convocante'}
+                    </td>
+                    <td className="p-3 text-center font-semibold">$400</td>
+                    <td className="p-3 text-center font-semibold">$600</td>
+                  </tr>
+                  <tr className="border-t bg-white hover:bg-gray-50">
+                    <td className="p-3">
+                      {lang === 'es' ? 'Estudiante' : 'Estudante'}
+                    </td>
+                    <td className="p-3 text-center font-semibold">$300</td>
+                    <td className="p-3 text-center font-semibold">$500</td>
+                  </tr>
+                  <tr className="border-t bg-white hover:bg-gray-50">
+                    <td className="p-3">
+                      {lang === 'es' ? 'Asistente' : 'Assistente'}
+                    </td>
+                    <td className="p-3 text-center font-semibold">$200</td>
+                    <td className="p-3 text-center font-semibold">$300</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Botón de registro */}
+            <div className="flex justify-center">
+              <button
+                onClick={() => setShowRegistration(true)}
+                className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-4 px-8 rounded-lg text-lg transition shadow-lg hover:shadow-xl"
+              >
+                📝 {lang === 'es' ? 'Registrarse al Congreso' : 'Inscrever-se no Congresso'}
+              </button>
+            </div>
+
+            {/* Modal de registro */}
+            {showRegistration && (
+              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+                <div className="bg-white rounded-xl max-w-3xl w-full my-8 relative">
+                  <button
+                    onClick={() => setShowRegistration(false)}
+                    className="absolute top-4 right-4 bg-gray-100 hover:bg-gray-200 rounded-full w-10 h-10 flex items-center justify-center font-bold text-gray-600 z-10"
+                  >
+                    ✕
+                  </button>
+                  <div className="p-6">
+                    <RegistrationForm lang={lang} onSuccess={() => setShowRegistration(false)} />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         );
+      
       
       case 'comite-academico':
         return (
@@ -252,16 +282,7 @@ const MainLayout = ({ lang, setLang }) => {
       case 'programa':
         return <Program lang={lang} />;
       
-      case 'inscripcion':
-        return (
-          <div className="space-y-4">
-            <p className="text-gray-700">
-              {lang === 'es' 
-                ? 'El proceso de inscripción estará disponible próximamente.'
-                : 'The registration process will be available soon.'}
-            </p>
-          </div>
-        );
+
       
       case 'talleres':
         return (
@@ -368,24 +389,24 @@ const MainLayout = ({ lang, setLang }) => {
 
   const getPageTitle = () => {
     const titles = {
-      'llamada': { es: 'Acerca del Congreso', en: 'About the Congress' },
-      'formatos': { es: 'Formatos admitidos', en: 'Accepted Formats' },
-      'conferenciantes': { es: 'Conferencias magistrales y mesas plenarias', en: 'Keynote lectures and plenary sessions' },
-      'cuotas': { es: 'Cuotas de inscripción', en: 'Registration Fees' },
-      'comite-academico': { es: 'Comité Académico', en: 'Academic Committee' },
-      'comite-organizador': { es: 'Comité Organizador', en: 'Organizing Committee' },
-      'programa': { es: 'Programa', en: 'Program' },
-      'inscripcion': { es: 'Inscripción', en: 'Registration' },
-      'talleres': { es: 'Talleres', en: 'Workshops' },
-      'presentaciones-libros': { es: 'Presentaciones de libros', en: 'Book presentations' },
-      'actividad1': { es: 'Actividad 1', en: 'Activity 1' },
-      'actividad2': { es: 'Actividad 2', en: 'Activity 2' },
-      'sedes': { es: 'Las sedes del Congreso', en: 'Congress Venues' },
-      'instituciones-convocantes': { es: 'Instituciones convocantes', en: 'Convening Institutions' },
-      'organizaciones': { es: 'Organizaciones colaboradoras', en: 'Partner Organizations' },
-      'alojamiento': { es: 'Alojamiento', en: 'Accommodation' },
+      'llamada': { es: 'Acerca del Congreso', en: 'Sobre o Congresso' },
+      'formatos': { es: 'Formatos admitidos', en: 'Formatos aceitos' },
+      'conferenciantes': { es: 'Conferencias magistrales y conversatorios', en: 'Conferências magistrais e conversatórios' },
+      'cuotas': { es: 'Cuotas de inscripción', en: 'Taxas de inscrição' },
+      'comite-academico': { es: 'Comité Académico', en: 'Comitê Acadêmico' },
+      'comite-organizador': { es: 'Comité Organizador', en: 'Comitê Organizador' },
+      'programa': { es: 'Programa', en: 'Programa' },
+      'inscripcion': { es: 'Inscripción', en: 'Inscrição' },
+      'talleres': { es: 'Talleres', en: 'Oficinas' },
+      'presentaciones-libros': { es: 'Presentaciones de libros', en: 'Apresentações de livros' },
+      'actividad1': { es: 'Actividad 1', en: 'Atividade 1' },
+      'actividad2': { es: 'Actividad 2', en: 'Atividade 2' },
+      'sedes': { es: 'Las sedes del Congreso', en: 'Locais do Congresso' },
+      'instituciones-convocantes': { es: 'Instituciones convocantes', en: 'Instituições convocantes' },
+      'organizaciones': { es: 'Organizaciones colaboradoras', en: 'Organizações colaboradoras' },
+      'alojamiento': { es: 'Alojamiento', en: 'Hospedagem' },
       'san-cristobal': { es: 'San Cristóbal de Las Casas', en: 'San Cristóbal de Las Casas' },
-      'cartel': { es: 'Cartel del congreso', en: 'Congress Poster' }
+      'cartel': { es: 'Cartel del congreso', en: 'Cartaz do congresso' }
     };
     return titles[currentPage]?.[lang] || (lang === 'es' ? 'Contenido' : 'Content');
   };
@@ -472,6 +493,8 @@ const App = () => {
       <Routes>
         <Route path="/" element={<MainLayout lang={lang} setLang={setLang} />} />
         <Route path="/schedule" element={<ScheduleView />} />
+        <Route path="/asistencia" element={<AttendanceCheck />} />
+        <Route path="/staff/attendance" element={<StaffAttendance />} />
         <Route 
           path="/admin" 
           element={
