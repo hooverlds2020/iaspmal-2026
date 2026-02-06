@@ -1,9 +1,10 @@
 // src/pages/RegistrationsDashboard.jsx
-import React, { useState, useEffect, useRef } from 'react'; // Importamos useRef
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { sendPaymentApproval, sendRejectionNotice } from '../lib/resendClient';
-import { Download, Eye, Check, X, RefreshCw, Search, QrCode, ExternalLink } from 'lucide-react';
+import { Download, Eye, Check, X, RefreshCw, Search, QrCode, ExternalLink, Award, Lock } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
+import { jsPDF } from 'jspdf'; // Importamos la librería de PDF
 
 const RegistrationsDashboard = () => {
   const [registrations, setRegistrations] = useState([]);
@@ -15,10 +16,8 @@ const RegistrationsDashboard = () => {
   const [paymentCurrency, setPaymentCurrency] = useState('MXN');
   const [paymentMethod, setPaymentMethod] = useState('transferencia');
   
-  // Usamos una referencia para tener acceso al valor actual de selectedRegistration dentro del callback de suscripción
   const selectedRegistrationRef = useRef(selectedRegistration);
 
-  // Mantenemos la referencia actualizada
   useEffect(() => {
     selectedRegistrationRef.current = selectedRegistration;
   }, [selectedRegistration]);
@@ -26,7 +25,6 @@ const RegistrationsDashboard = () => {
 
   const fetchRegistrations = async () => {
     try {
-      // No ponemos loading(true) aquí para que las actualizaciones en tiempo real no parpadeen
       let query = supabase
         .from('registrations')
         .select('*')
@@ -42,38 +40,32 @@ const RegistrationsDashboard = () => {
     } catch (error) {
       console.error('Error fetching registrations:', error);
     } finally {
-      setLoading(false); // Solo quitamos el loading inicial
+      setLoading(false);
     }
   };
 
-  // --- ESTRATEGIA DE TIEMPO REAL + CARGA INICIAL ---
   useEffect(() => {
-    // 1. Carga inicial de datos
-    setLoading(true); // Ponemos loading solo la primera vez
+    setLoading(true);
     fetchRegistrations();
 
-    // 2. Configurar suscripción a cambios en tiempo real
     console.log('📡 Conectando a actualizaciones en tiempo real...');
     const channel = supabase
       .channel('registrations-updates')
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE', // Escuchamos solo actualizaciones (cuando cambia asistencia o pago)
+          event: 'UPDATE',
           schema: 'public',
           table: 'registrations',
         },
         (payload) => {
           console.log('⚡ Cambio detectado en la BD:', payload.new.id);
-          
-          // A) Actualizamos la lista principal instantáneamente
           setRegistrations(currentRegs => 
             currentRegs.map(reg => 
               reg.id === payload.new.id ? payload.new : reg
             )
           );
 
-          // B) Si el modal de detalles está abierto con ese usuario, lo actualizamos también
           if (selectedRegistrationRef.current && selectedRegistrationRef.current.id === payload.new.id) {
             setSelectedRegistration(payload.new);
           }
@@ -81,18 +73,84 @@ const RegistrationsDashboard = () => {
       )
       .subscribe();
 
-    // 3. Limpieza al desmontar
     return () => {
-      console.log('Reconectando suscripción...');
       supabase.removeChannel(channel);
     };
-    
-    // La dependencia es 'filter' para que si cambias de filtro, se recarguen los datos base,
-    // pero la suscripción sigue activa.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
 
-  // Actualizar el estado de pago (sin cambios en la lógica, solo en la respuesta visual)
+  // --- FUNCIÓN GENERADORA DE CONSTANCIA (PDF) ---
+  const generateCertificate = (reg) => {
+    const doc = new jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+    // Colores corporativos
+    const primaryColor = [5, 150, 105]; // Teal 600
+    const darkColor = [31, 41, 55]; // Gray 800
+
+    // Borde decorativo
+    doc.setLineWidth(2);
+    doc.setDrawColor(...primaryColor);
+    doc.rect(10, 10, 277, 190);
+
+    // Encabezado
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(28);
+    doc.setTextColor(...primaryColor);
+    doc.text('CONSTANCIA DE PARTICIPACIÓN', 148.5, 40, { align: 'center' });
+
+    // Texto de otorgamiento
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(14);
+    doc.setTextColor(...darkColor);
+    doc.text('El Comité Organizador del XVII Congreso de la IASPM-AL otorga la presente a:', 148.5, 60, { align: 'center' });
+
+    // NOMBRE DEL PARTICIPANTE
+    doc.setFont('times', 'bold'); // Tipografía más elegante para el nombre
+    doc.setFontSize(32);
+    doc.setTextColor(0, 0, 0);
+    doc.text(reg.full_name, 148.5, 85, { align: 'center' });
+
+    // Línea separadora
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.5);
+    doc.line(70, 90, 227, 90);
+
+    // Texto del cuerpo
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(16);
+    doc.setTextColor(...darkColor);
+    const categoryText = getCategoryLabel(reg.category).toUpperCase();
+    
+    doc.text(`Por su valiosa participación en calidad de ${categoryText}`, 148.5, 105, { align: 'center' });
+    
+    doc.text('en el XVII Congreso de la Asociación Internacional para el Estudio', 148.5, 120, { align: 'center' });
+    doc.text('de la Música Popular - Rama Latinoamericana (IASPM-AL).', 148.5, 130, { align: 'center' });
+
+    // Detalles del evento
+    doc.setFontSize(14);
+    doc.setTextColor(100, 100, 100);
+    doc.text('Celebrado en San Cristóbal de Las Casas, Chiapas, México', 148.5, 150, { align: 'center' });
+    doc.text('del 28 de septiembre al 2 de octubre de 2026.', 148.5, 160, { align: 'center' });
+
+    // Firmas (Simuladas con texto por ahora)
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text('_________________________', 90, 180, { align: 'center' });
+    doc.text('_________________________', 207, 180, { align: 'center' });
+    
+    doc.setFontSize(10);
+    doc.text('Comité Organizador', 90, 185, { align: 'center' });
+    doc.text('Presidencia IASPM-AL', 207, 185, { align: 'center' });
+
+    // Guardar PDF
+    doc.save(`Constancia_${reg.full_name.replace(/\s+/g, '_')}.pdf`);
+  };
+
+
   const updateStatus = async (id, newStatus) => {
     try {
       if (newStatus === 'paid' && (!paymentAmount || parseFloat(paymentAmount) <= 0)) {
@@ -113,7 +171,6 @@ const RegistrationsDashboard = () => {
         updateData.payment_method = paymentMethod;
       }
       
-      // NOTA: Al hacer este update, se disparará el evento de tiempo real automáticamente
       const { error } = await supabase
         .from('registrations')
         .update(updateData)
@@ -133,16 +190,13 @@ const RegistrationsDashboard = () => {
         sendRejectionNotice(registration.email, registration.full_name);
       }
       
-      // Ya no necesitamos fetchRegistrations() aquí porque el tiempo real lo hará
       setPaymentAmount('');
-      // No cerramos el modal inmediatamente para que se vea el cambio de estado
     } catch (error) {
       console.error('Error updating status:', error);
       alert('Error al actualizar el estado');
     }
   };
 
-  // Confirmar asistencia manual (ADMIN)
   const confirmAttendance = async (id) => {
     try {
       const registration = registrations.find(r => r.id === id);
@@ -152,7 +206,6 @@ const RegistrationsDashboard = () => {
         return;
       }
       
-      // Al hacer este update, el tiempo real actualizará la interfaz
       const { error } = await supabase
         .from('registrations')
         .update({
@@ -176,7 +229,6 @@ const RegistrationsDashboard = () => {
         .update({ notes })
         .eq('id', id);
       if (error) throw error;
-      // El tiempo real actualizará la nota en la lista
     } catch (error) {
       console.error('Error:', error);
     }
@@ -298,7 +350,6 @@ const RegistrationsDashboard = () => {
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                 />
               </div>
-              {/* Botón de refresco manual (por si acaso), ahora hace un fetch completo */}
               <button
                 onClick={() => { setLoading(true); fetchRegistrations(); }}
                 className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg transition flex items-center gap-2"
@@ -411,11 +462,11 @@ const RegistrationsDashboard = () => {
                 </div>
 
                 <div className="space-y-4">
+                  {/* ... Datos personales (igual que antes) ... */}
                   <div>
                     <label className="text-sm font-semibold text-gray-600">Nombre completo</label>
                     <p className="text-gray-900">{selectedRegistration.full_name}</p>
                   </div>
-
                   <div>
                     <label className="text-sm font-semibold text-gray-600">Email</label>
                     <p className="text-gray-900">{selectedRegistration.email}</p>
@@ -442,7 +493,6 @@ const RegistrationsDashboard = () => {
                   <div>
                     <label className="text-sm font-semibold text-gray-600">Comprobante de pago</label>
                     {selectedRegistration.payment_proof_url ? (
-                      
                         <a
                         href={selectedRegistration.payment_proof_url}
                         target="_blank"
@@ -464,7 +514,7 @@ const RegistrationsDashboard = () => {
                     </div>
                   </div>
 
-                  {/* Sección de Asistencia */}
+                  {/* Sección de Asistencia y QR */}
                   <div className={`bg-gradient-to-br p-6 rounded-xl border-2 transition-all duration-500 ${
                     selectedRegistration.attendance_confirmed 
                       ? 'from-green-50 to-teal-50 border-green-200' 
@@ -476,7 +526,7 @@ const RegistrationsDashboard = () => {
                     </h3>
                     
                     <div className="grid md:grid-cols-2 gap-6">
-                      {/* Estado de asistencia */}
+                      {/* Columna Izquierda: Estado y Botones */}
                       <div>
                         <label className="text-sm font-semibold text-gray-600 block mb-2">Estado</label>
                         <div className="flex items-center gap-3">
@@ -491,18 +541,13 @@ const RegistrationsDashboard = () => {
                         {selectedRegistration.attendance_date && (
                           <p className="text-xs text-gray-500 mt-2 animate-in fade-in">
                             Registrada: {new Date(selectedRegistration.attendance_date).toLocaleString('es-MX', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
+                              day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
                             })}
                           </p>
                         )}
                         
                         {!selectedRegistration.attendance_confirmed && selectedRegistration.status === 'paid' && (
                           <div className="mt-4 flex flex-col gap-2">
-                            {/* BOTÓN 1: CONFIRMACIÓN DIRECTA */}
                             <button
                               onClick={() => confirmAttendance(selectedRegistration.id)}
                               className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2 text-sm"
@@ -510,8 +555,6 @@ const RegistrationsDashboard = () => {
                               <Check className="w-4 h-4" />
                               Confirmar Entrada (Directo)
                             </button>
-
-                            {/* BOTÓN 2: ABRIR EN PANTALLA STAFF (Magic Link) */}
                             <a 
                                 href={`/staff/attendance?code=${selectedRegistration.attendance_code}`}
                                 target="_blank"
@@ -525,12 +568,10 @@ const RegistrationsDashboard = () => {
                         )}
                       </div>
 
-                      {/* Código QR PERSONALIZADO */}
+                      {/* Columna Derecha: QR */}
                       <div>
                         <label className="text-sm font-semibold text-gray-600 block mb-2">Código QR Personal</label>
                         <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200">
-                          
-                          {/* NOMBRE DEL ASISTENTE EN EL GAFETE */}
                           <div className="text-center mb-3 border-b border-gray-100 pb-2">
                             <p className="font-bold text-gray-900 text-lg leading-tight">
                               {selectedRegistration.full_name}
@@ -539,29 +580,60 @@ const RegistrationsDashboard = () => {
                               {getCategoryLabel(selectedRegistration.category)}
                             </p>
                           </div>
-
                           <div className="flex justify-center mb-3">
                             <QRCodeCanvas 
-                              // URL Mágica para autorrelleno
                               value={`https://iaspm-al-2026.clickwebhoover.online/asistencia?code=${selectedRegistration.attendance_code}`}
-                              size={180}
-                              level="H"
-                              includeMargin={true}
+                              size={180} level="H" includeMargin={true}
                             />
                           </div>
-                          
                           <div className="text-center">
                             <p className="font-mono font-bold text-xl text-gray-800 tracking-widest bg-gray-100 rounded py-1 mb-1">
                               {selectedRegistration.attendance_code}
-                            </p>
-                            <p className="text-[10px] text-gray-400 uppercase">
-                              Acceso Único • IASPMAL 2026
                             </p>
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
+
+                  {/* --- NUEVA SECCIÓN: CONSTANCIAS --- */}
+                  <div className="bg-amber-50 p-6 rounded-xl border-2 border-amber-200">
+                    <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                      <Award className="w-5 h-5 text-amber-600" />
+                      Certificado de Participación
+                    </h3>
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                         <p className="text-sm text-gray-600">
+                           {selectedRegistration.attendance_confirmed && selectedRegistration.status === 'paid'
+                             ? 'La constancia está lista para generar.'
+                             : 'Se requiere confirmar asistencia y pago para desbloquear.'}
+                         </p>
+                      </div>
+
+                      {/* Botón de Descarga condicional */}
+                      {selectedRegistration.attendance_confirmed && selectedRegistration.status === 'paid' ? (
+                        <button
+                          onClick={() => generateCertificate(selectedRegistration)}
+                          className="bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2 px-6 rounded-lg transition flex items-center gap-2 shadow-sm"
+                        >
+                          <Download className="w-5 h-5" />
+                          Descargar PDF
+                        </button>
+                      ) : (
+                        <button
+                          disabled
+                          className="bg-gray-200 text-gray-400 font-semibold py-2 px-6 rounded-lg flex items-center gap-2 cursor-not-allowed"
+                        >
+                          <Lock className="w-5 h-5" />
+                          Bloqueado
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  {/* --- FIN CONSTANCIAS --- */}
+
 
                   <div>
                     <label className="text-sm font-semibold text-gray-600">Notas internas</label>
@@ -574,63 +646,28 @@ const RegistrationsDashboard = () => {
                     />
                   </div>
 
-
-                  {/* Información de Pago */}
+                  {/* Información de Pago (si falta) */}
                   {selectedRegistration.status !== 'paid' && (
                     <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                      <h3 className="font-semibold text-gray-800 mb-3">Información de Pago</h3>
-                      <div className="grid grid-cols-2 gap-3">
+                       <h3 className="font-semibold text-gray-800 mb-3">Información de Pago</h3>
+                       {/* ... Inputs de pago ... */}
+                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="text-sm font-semibold text-gray-600">Monto *</label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={paymentAmount}
-                            onChange={(e) => setPaymentAmount(e.target.value)}
-                            className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
-                            placeholder="0.00"
-                          />
+                          <input type="number" step="0.01" value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg" placeholder="0.00" />
                         </div>
                         <div>
                           <label className="text-sm font-semibold text-gray-600">Moneda</label>
-                          <select
-                            value={paymentCurrency}
-                            onChange={(e) => setPaymentCurrency(e.target.value)}
-                            className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
-                          >
-                            <option value="MXN">MXN (Pesos Mexicanos)</option>
-                            <option value="USD">USD (Dólares)</option>
+                          <select value={paymentCurrency} onChange={(e) => setPaymentCurrency(e.target.value)} className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg">
+                            <option value="MXN">MXN (Pesos)</option> <option value="USD">USD (Dólares)</option>
                           </select>
                         </div>
                       </div>
-                      <div className="mt-3">
-                        <label className="text-sm font-semibold text-gray-600">Método de Pago</label>
-                        <select
-                          value={paymentMethod}
-                          onChange={(e) => setPaymentMethod(e.target.value)}
-                          className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
-                        >
-                          <option value="transferencia">Transferencia Bancaria</option>
-                          <option value="deposito">Depósito en Efectivo</option>
-                          <option value="tarjeta">Tarjeta de Crédito/Débito</option>
-                          <option value="otro">Otro</option>
+                       <div className="mt-3">
+                        <label className="text-sm font-semibold text-gray-600">Método</label>
+                        <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg">
+                          <option value="transferencia">Transferencia</option> <option value="deposito">Depósito</option> <option value="tarjeta">Tarjeta</option> <option value="otro">Otro</option>
                         </select>
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedRegistration.status === 'paid' && (
-                    <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                      <h3 className="font-semibold text-gray-800 mb-2">Pago Confirmado</h3>
-                      <div className="grid grid-cols-2 gap-3 text-sm">
-                        <div>
-                          <span className="text-gray-600">Monto:</span>
-                          <span className="ml-2 font-semibold">{selectedRegistration.payment_currency} ${selectedRegistration.payment_amount?.toFixed(2) || '0.00'}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">Método:</span>
-                          <span className="ml-2 font-semibold capitalize">{selectedRegistration.payment_method || '-'}</span>
-                        </div>
                       </div>
                     </div>
                   )}
@@ -641,16 +678,14 @@ const RegistrationsDashboard = () => {
                       disabled={selectedRegistration.status === 'paid'}
                       className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2"
                     >
-                      <Check className="w-4 h-4" />
-                      Marcar como Pagado
+                      <Check className="w-4 h-4" /> Marcar Pagado
                     </button>
                     <button
                       onClick={() => updateStatus(selectedRegistration.id, 'rejected')}
                       disabled={selectedRegistration.status === 'rejected'}
                       className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-gray-300 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2"
                     >
-                      <X className="w-4 h-4" />
-                      Rechazar
+                      <X className="w-4 h-4" /> Rechazar
                     </button>
                   </div>
                 </div>

@@ -23,7 +23,8 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^7.9.4",
-    "resend": "^6.4.2"
+    "resend": "^6.4.2",
+    "sonner": "^2.0.7"
   },
   "devDependencies": {
     "@types/react": "^18.2.43",
