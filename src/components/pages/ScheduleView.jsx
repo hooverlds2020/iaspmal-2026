@@ -3,6 +3,39 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { Clock, MapPin, Users, ChevronLeft, ChevronRight, X, Printer, Download } from 'lucide-react';
 
+// --- FUNCIÓN DE LIMPIEZA DE NOMBRES ---
+const cleanCoordinators = (data) => {
+  if (!data) return null;
+  
+  // Si ya es un array real
+  if (Array.isArray(data)) {
+    return data.join(', ');
+  }
+  
+  // Si es un string tipo PostgreSQL array: '{"Nombre 1","Nombre 2"}'
+  if (typeof data === 'string') {
+    // Si empieza con { y termina con }
+    if (data.startsWith('{') && data.endsWith('}')) {
+      return data
+        .slice(1, -1) // Quitar { y }
+        .split(',')   // Separar por comas
+        // Quitar comillas dobles si existen alrededor de cada nombre
+        .map(name => {
+           const trimmed = name.trim();
+           if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
+             return trimmed.slice(1, -1);
+           }
+           return trimmed;
+        })
+        .join(', ');
+    }
+    // Si es un string normal, devolverlo tal cual
+    return data;
+  }
+  
+  return data;
+};
+
 const ScheduleView = ({ embedded = false, lang: propLang }) => {
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -338,9 +371,10 @@ const ScheduleView = ({ embedded = false, lang: propLang }) => {
     return null;
   };
 
+  // --- MODIFICADO: USA cleanCoordinators ---
   const getSpeakers = (session) => {
-    if (session.speakers) return session.speakers;
-    if (session.symposiums?.coordinators) return session.symposiums.coordinators;
+    if (session.speakers) return cleanCoordinators(session.speakers);
+    if (session.symposiums?.coordinators) return cleanCoordinators(session.symposiums.coordinators);
     return null;
   };
 
@@ -681,7 +715,7 @@ const ScheduleView = ({ embedded = false, lang: propLang }) => {
                   onClick={() => setSelectedSession(null)}
                   className="mt-6 w-full px-6 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-semibold"
                 >
-		{lang === 'es' ? 'Cerrar' : lang === 'es' ? 'Cerrar' : 'Fechar'}
+        {lang === 'es' ? 'Cerrar' : lang === 'es' ? 'Cerrar' : 'Fechar'}
                 </button>
               </div>
             </div>

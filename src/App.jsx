@@ -1,11 +1,14 @@
 // src/App.jsx
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from 'sonner'; // Mantenemos el Toaster para las notificaciones lindas
+import { Toaster } from 'sonner';
+// Importamos el icono seguro desde la librería (evita problemas de emojis)
+import { Ticket } from 'lucide-react';
+import { supabase } from './lib/supabaseClient';
+
 import AttendanceCheck from './pages/AttendanceCheck';
 import StaffAttendance from './pages/StaffAttendance';
 import CertificateDownload from './pages/CertificateDownload';
-import { supabase } from './lib/supabaseClient';
 
 // Layout components
 import TopBar from './components/layout/TopBar';
@@ -15,6 +18,7 @@ import MobileSidebar from './components/layout/MobileSidebar';
 import Footer from './components/layout/Footer';
 
 // Page components
+import HomeLanding from './components/pages/HomeLanding';
 import CallForParticipation from './components/pages/CallForParticipation';
 import ScientificCommittee from './components/pages/ScientificCommittee';
 import AcceptedFormats from './components/pages/AcceptedFormats';
@@ -25,10 +29,10 @@ import VenuesPage from './components/pages/VenuesPage';
 
 // Admin pages
 import Login from './pages/Login';
-import AdminDashboard from './pages/AdminDashboard'; // <--- IMPORTANTE: Volvemos a usar este
+import AdminDashboard from './pages/AdminDashboard';
 
 const MainLayout = ({ lang, setLang }) => {
-  const [currentPage, setCurrentPage] = useState('llamada');
+  const [currentPage, setCurrentPage] = useState('home');
   const [showRegistration, setShowRegistration] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [submenuOpen, setSubmenuOpen] = useState({
@@ -37,13 +41,13 @@ const MainLayout = ({ lang, setLang }) => {
   });
 
   const menuItems = [
+    { id: 'home', label: 'Inicio', label_pt: 'Início' },
     { id: 'llamada', label: 'Acerca del Congreso', label_pt: 'Sobre o Congresso' },
     { id: 'conferenciantes', label: 'Conferencias magistrales y conversatorios', label_pt: 'Conferências magistrais e conversatórios' },
-    { id: 'cuotas', label: 'Cuotas de inscripción', label_pt: 'Taxas de inscrição' },
+    { id: 'cuotas', label: 'Inscripción', label_pt: 'Inscrição' },
     { id: 'comite-academico', label: 'Comité Académico', label_pt: 'Comitê Acadêmico' },
     { id: 'comite-organizador', label: 'Comité Organizador', label_pt: 'Comitê Organizador' },
     { id: 'programa', label: 'Programa', label_pt: 'Programa' },
-    { id: 'inscripcion', label: 'Inscripción', label_pt: 'Inscrição' },
     { id: 'talleres', label: 'Talleres', label_pt: 'Oficinas' },
     { id: 'presentaciones-libros', label: 'Presentaciones de libros', label_pt: 'Apresentações de livros' },
     {
@@ -76,9 +80,12 @@ const MainLayout = ({ lang, setLang }) => {
 
   const renderContent = () => {
     switch (currentPage) {
+      case 'home': return <HomeLanding lang={lang} setCurrentPage={setCurrentPage} />;
       case 'llamada': return <CallForParticipation lang={lang} />;
       case 'formatos': return <AcceptedFormats lang={lang} />;
       case 'conferenciantes': return <div className="space-y-4"><p className="text-gray-700">{lang === 'es' ? 'Información sobre conferencias magistrales y mesas plenarias próximamente.' : 'Information about keynote lectures and plenary sessions coming soon.'}</p></div>;
+      
+      // CASO CUOTAS
       case 'cuotas': return (
           <div className="space-y-6">
             <div className="overflow-x-auto">
@@ -94,16 +101,19 @@ const MainLayout = ({ lang, setLang }) => {
                   <tr className="border-t bg-white hover:bg-gray-50"><td className="p-3">{lang === 'es' ? 'Investigador/a del sur global' : 'Pesquisador/a do sul global'}</td><td className="p-3 text-center font-semibold">$800</td><td className="p-3 text-center font-semibold">$1,000</td></tr>
                   <tr className="border-t bg-white hover:bg-gray-50"><td className="p-3">{lang === 'es' ? 'Investigador/a del norte global' : 'Pesquisador/a do norte global'}</td><td className="p-3 text-center font-semibold">$1,300</td><td className="p-3 text-center font-semibold">$1,500</td></tr>
                   <tr className="border-t bg-white hover:bg-gray-50"><td className="p-3">{lang === 'es' ? 'Investigador/a de institución convocante' : 'Pesquisador/a de institución convocante'}</td><td className="p-3 text-center font-semibold">$400</td><td className="p-3 text-center font-semibold">$600</td></tr>
-                  <tr className="border-t bg-white hover:bg-gray-50"><td className="p-3">{lang === 'es' ? 'Estudiante' : 'Estudante'}</td><td className="p-3 text-center font-semibold">$300</td><td className="p-3 text-center font-semibold">$500</td></tr>
                   <tr className="border-t bg-white hover:bg-gray-50"><td className="p-3">{lang === 'es' ? 'Asistente' : 'Assistente'}</td><td className="p-3 text-center font-semibold">$200</td><td className="p-3 text-center font-semibold">$300</td></tr>
                 </tbody>
               </table>
             </div>
+            
+            {/* BOTÓN DE REGISTRO CORREGIDO (Sin emojis de texto) */}
             <div className="flex justify-center">
-              <button onClick={() => setShowRegistration(true)} className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-4 px-8 rounded-lg text-lg transition shadow-lg hover:shadow-xl">
-                📝 {lang === 'es' ? 'Registrarse al Congreso' : 'Inscrever-se no Congresso'}
+              <button onClick={() => setShowRegistration(true)} className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-4 px-8 rounded-lg text-lg transition shadow-lg hover:shadow-xl flex items-center gap-2">
+                <Ticket className="w-6 h-6" /> {/* Icono SVG limpio */}
+                <span>{lang === 'es' ? 'Registrarse al Congreso' : 'Inscrever-se no Congresso'}</span>
               </button>
             </div>
+
             {showRegistration && (
               <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
                 <div className="bg-white rounded-xl max-w-3xl w-full my-8 relative">
@@ -126,16 +136,21 @@ const MainLayout = ({ lang, setLang }) => {
       case 'alojamiento': return <div className="space-y-4"><p className="text-gray-700">{lang === 'es' ? 'Información sobre alojamiento próximamente.' : 'Information about accommodation coming soon.'}</p></div>;
       case 'san-cristobal': return <div className="space-y-4"><p className="text-gray-700">{lang === 'es' ? 'Información sobre San Cristóbal de Las Casas próximamente.' : 'Information about San Cristóbal de Las Casas coming soon.'}</p></div>;
       case 'cartel': return <div className="space-y-4"><p className="text-gray-700">{lang === 'es' ? 'Cartel del congreso próximamente.' : 'Congress poster coming soon.'}</p></div>;
+      
+      // Respaldo
+      case 'inscripcion': return renderContent('cuotas'); 
+      
       default: return <p className="text-gray-600">{lang === 'es' ? 'Contenido en preparación.' : 'Content in preparation.'}</p>;
     }
   };
 
   const getPageTitle = () => {
     const titles = {
+      'home': { es: 'Bienvenidos', en: 'Welcome' },
       'llamada': { es: 'Acerca del Congreso', en: 'Sobre o Congresso' },
       'formatos': { es: 'Formatos admitidos', en: 'Formatos aceitos' },
       'conferenciantes': { es: 'Conferencias magistrales y conversatorios', en: 'Conferências magistrais e conversatórios' },
-      'cuotas': { es: 'Cuotas de inscripción', en: 'Taxas de inscrição' },
+      'cuotas': { es: 'Inscripción', en: 'Inscrição' },
       'comite-academico': { es: 'Comité Académico', en: 'Comitê Acadêmico' },
       'comite-organizador': { es: 'Comité Organizador', en: 'Comitê Organizador' },
       'programa': { es: 'Programa', en: 'Programa' },
@@ -163,9 +178,11 @@ const MainLayout = ({ lang, setLang }) => {
           <Sidebar menuItems={menuItems} currentPage={currentPage} setCurrentPage={setCurrentPage} submenuOpen={submenuOpen} toggleSubmenu={toggleSubmenu} lang={lang} />
           <MobileSidebar isOpen={isMobileOpen} onClose={() => setIsMobileOpen(false)} menuItems={menuItems} currentPage={currentPage} setCurrentPage={setCurrentPage} submenuOpen={submenuOpen} toggleSubmenu={toggleSubmenu} lang={lang} />
           <section className="bg-white rounded-xl shadow-sm border border-gray-200">
-            <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-              <h2 className="text-teal-700 text-xl font-bold">{getPageTitle()}</h2>
-            </div>
+            {currentPage !== 'home' && (
+                <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+                <h2 className="text-teal-700 text-xl font-bold">{getPageTitle()}</h2>
+                </div>
+            )}
             <div className="p-6">
               <div className="prose max-w-none">{renderContent()}</div>
             </div>
@@ -203,7 +220,6 @@ const App = () => {
 
   return (
     <Router>
-      {/* 2. AGREGAMOS EL TOASTER AQUÍ */}
       <Toaster position="top-center" richColors />
       <Routes>
         <Route path="/" element={<MainLayout lang={lang} setLang={setLang} />} />
@@ -211,8 +227,6 @@ const App = () => {
         <Route path="/asistencia" element={<AttendanceCheck />} />
         <Route path="/constancias" element={<CertificateDownload />} />
         <Route path="/staff/attendance" element={<StaffAttendance />} />
-        
-        {/* --- CORRECCIÓN AQUÍ: Usamos AdminDashboard de nuevo --- */}
         <Route 
           path="/admin" 
           element={
@@ -223,7 +237,6 @@ const App = () => {
             )
           } 
         />
-        
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>

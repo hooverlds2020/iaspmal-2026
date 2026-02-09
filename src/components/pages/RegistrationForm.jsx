@@ -1,7 +1,9 @@
+// src/components/pages/RegistrationForm.jsx
 import React, { useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { sendRegistrationConfirmation } from '../../lib/resendClient';
-import { Upload, Check, X } from 'lucide-react';
+import { Upload, Check, X, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
 
 const RegistrationForm = ({ lang, onSuccess }) => {
   const [formData, setFormData] = useState({
@@ -14,13 +16,12 @@ const RegistrationForm = ({ lang, onSuccess }) => {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [error, setError] = useState('');
-
+  
+  // Categorías
   const categories = [
     { id: 'sur_global', es: 'Investigador/a del sur global', pt: 'Pesquisador/a do sul global' },
     { id: 'norte_global', es: 'Investigador/a del norte global', pt: 'Pesquisador/a do norte global' },
     { id: 'institucion_convocante', es: 'Investigador/a de institución convocante', pt: 'Pesquisador/a de instituição convocante' },
-    { id: 'estudiante', es: 'Estudiante', pt: 'Estudante' },
     { id: 'asistente', es: 'Asistente', pt: 'Assistente' }
   ];
 
@@ -31,17 +32,16 @@ const RegistrationForm = ({ lang, onSuccess }) => {
       const maxSize = 5 * 1024 * 1024; // 5MB
 
       if (!validTypes.includes(selectedFile.type)) {
-        setError(lang === 'es' ? 'Solo se permiten archivos JPG, PNG o PDF' : 'Apenas arquivos JPG, PNG ou PDF são permitidos');
+        toast.error(lang === 'es' ? 'Formato no válido. Solo JPG, PNG o PDF' : 'Formato inválido. Apenas JPG, PNG ou PDF');
         return;
       }
 
       if (selectedFile.size > maxSize) {
-        setError(lang === 'es' ? 'El archivo no debe superar 5MB' : 'O arquivo não deve exceder 5MB');
+        toast.error(lang === 'es' ? 'El archivo pesa más de 5MB' : 'O arquivo é maior que 5MB');
         return;
       }
 
       setFile(selectedFile);
-      setError('');
     }
   };
 
@@ -66,24 +66,21 @@ const RegistrationForm = ({ lang, onSuccess }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
 
     try {
-      // Validaciones
       if (!formData.full_name || !formData.email || !formData.country || !formData.category) {
-        throw new Error(lang === 'es' ? 'Por favor complete todos los campos obligatorios' : 'Por favor, preencha todos os campos obrigatórios');
+        throw new Error(lang === 'es' ? 'Completa todos los campos obligatorios' : 'Preencha todos os campos obrigatórios');
       }
 
       if (!file) {
-        throw new Error(lang === 'es' ? 'Por favor adjunte el comprobante de pago' : 'Por favor, anexe o comprovante de pagamento');
+        throw new Error(lang === 'es' ? 'Debes adjuntar el comprobante de pago' : 'Você deve anexar o comprovante de pagamento');
       }
 
-      // Insertar registro
       const { data: registration, error: insertError } = await supabase
         .from('registrations')
         .insert([{
           full_name: formData.full_name,
-          email: formData.email,
+          email: formData.email.trim().toLowerCase(),
           country: formData.country,
           category: formData.category,
           presentation_title: formData.presentation_title || null
@@ -91,12 +88,17 @@ const RegistrationForm = ({ lang, onSuccess }) => {
         .select()
         .single();
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        if (insertError.code === '23505') {
+            throw new Error(lang === 'es' 
+                ? 'Este correo ya está registrado. Por favor ve al Inicio y verifica tu estatus.' 
+                : 'Este e-mail já está registrado. Por favor, vá para a Home e verifique seu status.');
+        }
+        throw insertError;
+      }
 
-      // Subir archivo
       const fileUrl = await uploadFile(file, registration.id);
 
-      // Actualizar con URL del archivo
       const { error: updateError } = await supabase
         .from('registrations')
         .update({ payment_proof_url: fileUrl })
@@ -104,28 +106,19 @@ const RegistrationForm = ({ lang, onSuccess }) => {
 
       if (updateError) throw updateError;
 
-      // Éxito
       setSuccess(true);
-      setFormData({
-        full_name: '',
-        email: '',
-        country: '',
-        category: '',
-        presentation_title: ''
-      });
+      setFormData({ full_name: '', email: '', country: '', category: '', presentation_title: '' });
       setFile(null);
-
-      // Enviar correo de confirmación
-      await sendRegistrationConfirmation(formData.email, formData.full_name);
       
-      // Cerrar modal si se proporciona la función
+      await sendRegistrationConfirmation(formData.email, formData.full_name);
+
       if (onSuccess) {
-        setTimeout(() => onSuccess(), 2000); // Esperar 2 segundos antes de cerrar
+        setTimeout(() => onSuccess(), 3000);
       }
 
     } catch (err) {
       console.error('Error:', err);
-      setError(err.message || (lang === 'es' ? 'Error al procesar el registro' : 'Erro ao processar o registro'));
+      toast.error(err.message || (lang === 'es' ? 'Ocurrió un error al registrar' : 'Ocorreu um erro ao registrar'));
     } finally {
       setLoading(false);
     }
@@ -133,24 +126,24 @@ const RegistrationForm = ({ lang, onSuccess }) => {
 
   if (success) {
     return (
-      <div className="max-w-2xl mx-auto">
-        <div className="bg-green-50 border-2 border-green-500 rounded-lg p-8 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-green-500 rounded-full mb-4">
-            <Check className="w-8 h-8 text-white" />
+      <div className="max-w-2xl mx-auto animate-in zoom-in duration-300">
+        <div className="bg-green-50 border-2 border-green-500 rounded-xl p-6 text-center shadow-lg">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
+            <Check className="w-8 h-8 text-green-600" />
           </div>
-          <h3 className="text-2xl font-bold text-green-800 mb-3">
-            {lang === 'es' ? '¡Registro exitoso!' : 'Registro bem-sucedido!'}
+          <h3 className="text-xl font-bold text-green-800 mb-2">
+            {lang === 'es' ? '¡Registro Recibido!' : 'Registro Recebido!'}
           </h3>
-          <p className="text-green-700 mb-4">
-            {lang === 'es' 
-              ? 'Hemos recibido tu solicitud de inscripción. Recibirás un correo de confirmación en breve.'
-              : 'Recebemos sua solicitação de inscrição. Você receberá um e-mail de confirmação em breve.'}
+          <p className="text-green-700 mb-4 text-sm">
+            {lang === 'es'
+              ? 'Hemos recibido tus datos y comprobante. Te enviaremos un correo de confirmación.'
+              : 'Recebemos seus dados e comprovante. Enviaremos um e-mail de confirmação.'}
           </p>
           <button
             onClick={() => setSuccess(false)}
-            className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition"
+            className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-bold transition shadow-md hover:shadow-lg text-sm"
           >
-            {lang === 'es' ? 'Realizar otra inscripción' : 'Fazer outra inscrição'}
+            {lang === 'es' ? 'Entendido' : 'Entendido'}
           </button>
         </div>
       </div>
@@ -158,137 +151,155 @@ const RegistrationForm = ({ lang, onSuccess }) => {
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="bg-white rounded-lg shadow-md border border-gray-200 p-8">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">
-          {lang === 'es' ? 'Formulario de Inscripción' : 'Formulário de Inscrição'}
-        </h2>
+    <div className="max-w-2xl mx-auto w-full">
+      {/* Añadido max-h-[85vh] y overflow-y-auto para scroll en laptops */}
+      <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-5 relative overflow-hidden flex flex-col max-h-[85vh] overflow-y-auto">
+        {/* Adorno visual */}
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-teal-400 to-emerald-500"></div>
 
-        {error && (
-          <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
-            <div className="flex items-start">
-              <X className="w-5 h-5 text-red-500 mt-0.5 mr-2" />
-              <p className="text-red-700">{error}</p>
+        <h2 className="text-xl font-bold text-gray-800 mb-1">
+          {lang === 'es' ? 'Inscripción' : 'Inscrição'}
+        </h2>
+        <p className="text-gray-500 mb-4 text-xs">
+          {lang === 'es' ? 'Ingresa tus datos y comprobante.' : 'Insira seus dados e comprovante.'}
+        </p>
+
+        <form onSubmit={handleSubmit} className="space-y-3">
+          
+          {/* Nombre y Email en una fila para ahorrar espacio (opcional, o mantener apilados pero compactos) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+             {/* Nombre */}
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">
+                {lang === 'es' ? 'Nombre completo' : 'Nome completo'} <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.full_name}
+                onChange={(e) => setFormData({...formData, full_name: e.target.value})}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition bg-gray-50 focus:bg-white"
+                placeholder={lang === 'es' ? 'Ej. María González' : 'Ex. Maria Silva'}
+              />
+            </div>
+
+            {/* Email */}
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">
+                {lang === 'es' ? 'Correo electrónico' : 'E-mail'} <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                required
+                value={formData.email}
+                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition bg-gray-50 focus:bg-white"
+                placeholder="correo@ejemplo.com"
+              />
             </div>
           </div>
-        )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Nombre completo */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              {lang === 'es' ? 'Nombre completo' : 'Nome completo'} *
-            </label>
-            <input
-              type="text"
-              required
-              value={formData.full_name}
-              onChange={(e) => setFormData({...formData, full_name: e.target.value})}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-            />
-          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {/* País */}
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">
+                {lang === 'es' ? 'País' : 'País'} <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.country}
+                onChange={(e) => setFormData({...formData, country: e.target.value})}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition bg-gray-50 focus:bg-white"
+              />
+            </div>
 
-          {/* Email */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              {lang === 'es' ? 'Correo electrónico' : 'E-mail'} *
-            </label>
-            <input
-              type="email"
-              required
-              value={formData.email}
-              onChange={(e) => setFormData({...formData, email: e.target.value})}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-            />
-          </div>
-
-          {/* País */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              {lang === 'es' ? 'País' : 'País'} *
-            </label>
-            <input
-              type="text"
-              required
-              value={formData.country}
-              onChange={(e) => setFormData({...formData, country: e.target.value})}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-            />
-          </div>
-
-          {/* Categoría */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              {lang === 'es' ? 'Categoría de inscripción' : 'Categoria de inscrição'} *
-            </label>
-            <select
-              required
-              value={formData.category}
-              onChange={(e) => setFormData({...formData, category: e.target.value})}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-            >
-              <option value="">
-                {lang === 'es' ? 'Seleccione una categoría' : 'Selecione uma categoria'}
-              </option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {lang === 'es' ? cat.es : cat.pt}
+            {/* Categoría */}
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">
+                {lang === 'es' ? 'Categoría' : 'Categoria'} <span className="text-red-500">*</span>
+              </label>
+              <select
+                required
+                value={formData.category}
+                onChange={(e) => setFormData({...formData, category: e.target.value})}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition bg-gray-50 focus:bg-white"
+              >
+                <option value="">
+                  {lang === 'es' ? 'Seleccionar...' : 'Selecionar...'}
                 </option>
-              ))}
-            </select>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {lang === 'es' ? cat.es : cat.pt}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          {/* Título de ponencia (opcional) */}
+          {/* Título Ponencia */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              {lang === 'es' ? 'Título de la ponencia (opcional)' : 'Título da apresentação (opcional)'}
+            <label className="block text-xs font-bold text-gray-700 mb-1">
+              {lang === 'es' ? 'Título de la ponencia (Opcional)' : 'Título da apresentação (Opcional)'}
             </label>
             <input
               type="text"
               value={formData.presentation_title}
               onChange={(e) => setFormData({...formData, presentation_title: e.target.value})}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition bg-gray-50 focus:bg-white"
             />
           </div>
 
-          {/* Comprobante de pago */}
+          {/* Archivo Compacto */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              {lang === 'es' ? 'Comprobante de pago' : 'Comprovante de pagamento'} * (JPG, PNG, PDF - max 5MB)
+            <label className="block text-xs font-bold text-gray-700 mb-1">
+              {lang === 'es' ? 'Comprobante de pago' : 'Comprovante de pagamento'} <span className="text-red-500">*</span>
             </label>
-            <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-teal-500 transition">
-              <div className="space-y-1 text-center">
-                <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                <div className="flex text-sm text-gray-600">
-                  <label className="relative cursor-pointer bg-white rounded-md font-medium text-teal-600 hover:text-teal-500">
-                    <span>{lang === 'es' ? 'Seleccionar archivo' : 'Selecionar arquivo'}</span>
-                    <input
-                      type="file"
-                      required
-                      accept=".jpg,.jpeg,.png,.pdf"
-                      onChange={handleFileChange}
-                      className="sr-only"
-                    />
-                  </label>
-                </div>
-                {file && (
-                  <p className="text-sm text-green-600 font-semibold">
-                    ✓ {file.name}
-                  </p>
-                )}
+            <div className={`mt-1 flex justify-center px-4 py-3 border-2 border-dashed rounded-lg transition cursor-pointer group ${file ? 'border-teal-500 bg-teal-50' : 'border-gray-300 hover:border-teal-400 hover:bg-gray-50'}`}>
+              <div className="space-y-1 text-center w-full">
+                <label className="cursor-pointer w-full block">
+                  {file ? (
+                    <div className="flex items-center justify-center gap-2 animate-in zoom-in">
+                        <Check className="h-5 w-5 text-teal-600" />
+                        <span className="text-xs text-teal-800 font-bold truncate max-w-[200px]">{file.name}</span>
+                        <span className="text-xs text-teal-600">({(file.size / 1024 / 1024).toFixed(1)} MB)</span>
+                        <span className="text-xs text-teal-700 underline ml-2">{lang === 'es' ? 'Cambiar' : 'Mudar'}</span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center">
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                           <Upload className="h-5 w-5 text-gray-400 group-hover:text-teal-500 transition" />
+                           <span className="font-bold text-teal-600">{lang === 'es' ? 'Clic para subir archivo' : 'Clique para enviar'}</span>
+                        </div>
+                        <p className="text-[10px] text-gray-400">JPG, PNG, PDF (Max 5MB)</p>
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    required={!file}
+                    accept=".jpg,.jpeg,.png,.pdf"
+                    onChange={handleFileChange}
+                    className="sr-only"
+                  />
+                </label>
               </div>
             </div>
           </div>
 
-          {/* Botón de envío */}
+          {/* Botón Submit Compacto */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-bold py-3 px-4 rounded-xl transition shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transform hover:-translate-y-0.5 active:translate-y-0 text-sm"
           >
-            {loading 
-              ? (lang === 'es' ? 'Procesando...' : 'Processando...')
-              : (lang === 'es' ? 'Enviar Inscripción' : 'Enviar Inscrição')}
+            {loading ? (
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <span>{lang === 'es' ? 'Procesando...' : 'Processando...'}</span>
+                </div>
+            ) : (
+                lang === 'es' ? 'Confirmar Inscripción' : 'Confirmar Inscrição'
+            )}
           </button>
         </form>
       </div>

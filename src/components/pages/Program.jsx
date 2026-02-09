@@ -4,6 +4,34 @@ import { supabase } from '../../lib/supabaseClient';
 import ScheduleView from './ScheduleView';
 import { Users, ChevronDown, ChevronUp } from 'lucide-react';
 
+// --- FUNCIÓN DE LIMPIEZA ---
+const cleanCoordinators = (data) => {
+  if (!data) return null;
+  
+  if (Array.isArray(data)) {
+    return data.join(', ');
+  }
+  
+  if (typeof data === 'string') {
+    if (data.startsWith('{') && data.endsWith('}')) {
+      return data
+        .slice(1, -1)
+        .split(',')
+        .map(name => {
+           const trimmed = name.trim();
+           if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
+             return trimmed.slice(1, -1);
+           }
+           return trimmed;
+        })
+        .join(', ');
+    }
+    return data;
+  }
+  
+  return data;
+};
+
 const Program = ({ lang }) => {
   const [view, setView] = useState('symposiums');
   const [symposiums, setSymposiums] = useState([]);
@@ -19,7 +47,6 @@ const Program = ({ lang }) => {
   const fetchSymposiums = async () => {
     try {
       setLoading(true);
-      // Query simplificada - solo symposiums sin relaciones
       const { data, error } = await supabase
         .from('symposiums')
         .select('*')
@@ -107,7 +134,8 @@ const Program = ({ lang }) => {
                           {symposium.coordinators && (
                             <div className="flex items-center gap-2 text-sm text-gray-600">
                               <Users className="w-4 h-4" />
-                              <span>{symposium.coordinators}</span>
+                              {/* --- MODIFICADO: APLICA cleanCoordinators --- */}
+                              <span>{cleanCoordinators(symposium.coordinators)}</span>
                             </div>
                           )}
                         </div>

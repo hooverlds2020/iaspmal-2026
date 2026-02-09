@@ -2,8 +2,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { sendPaymentApproval, sendRejectionNotice } from '../lib/resendClient';
-// Iconos: Agregamos Trash2 (Basura) y Edit (Lápiz) y Save (Guardar)
-import { Download, Eye, Check, X, RefreshCw, Search, QrCode, ExternalLink, Award, Lock, WifiOff, AlertTriangle, Send, FileSpreadsheet, History, User, Trash2, Edit, Save } from 'lucide-react';
+// Iconos completos
+import { Download, Eye, Check, X, RefreshCw, Search, ExternalLink, Award, Lock, WifiOff, AlertTriangle, Send, FileSpreadsheet, History, User, Trash2, Edit, Save, Bell, ShieldAlert } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { jsPDF } from 'jspdf';
 import { toast } from 'sonner';
@@ -33,13 +33,16 @@ const RegistrationsDashboard = () => {
   // Selección y Edición
   const [selectedRegistration, setSelectedRegistration] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState({}); // Datos temporales mientras editas
+  const [editForm, setEditForm] = useState({});
 
   // Estados de pago
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentCurrency, setPaymentCurrency] = useState('MXN');
   const [paymentMethod, setPaymentMethod] = useState('transferencia');
   
+  // NUEVO: Estado para el modal de "Aprobación Forzada"
+  const [showForceAuth, setShowForceAuth] = useState(false);
+
   // Pestañas y Logs
   const [activeTab, setActiveTab] = useState('details'); 
   const [auditLogs, setAuditLogs] = useState([]);
@@ -51,7 +54,7 @@ const RegistrationsDashboard = () => {
     selectedRegistrationRef.current = selectedRegistration;
   }, [selectedRegistration]);
 
-  // Al abrir un usuario, preparamos el formulario de edición por si acaso
+  // Al abrir un usuario, preparamos el formulario de edición
   useEffect(() => {
     if (selectedRegistration) {
         setEditForm({
@@ -60,10 +63,42 @@ const RegistrationsDashboard = () => {
             country: selectedRegistration.country,
             category: selectedRegistration.category
         });
-        setIsEditing(false); // Siempre empezar en modo lectura
+        setIsEditing(false); 
+        setShowForceAuth(false); // Resetear modal de seguridad
     }
   }, [selectedRegistration]);
 
+  // --- LÓGICA DE NOTIFICACIONES Y BADGES ---
+  const updateAppBadge = (count) => {
+    if ('setAppBadge' in navigator) {
+      if (count > 0) {
+        navigator.setAppBadge(count).catch(e => console.error(e));
+      } else {
+        navigator.clearAppBadge().catch(e => console.error(e));
+      }
+    }
+    document.title = count > 0 ? `(${count}) Admin IASPM` : 'Panel Admin - IASPM';
+  };
+
+  const requestNotificationPermission = async () => {
+    if (!('Notification' in window)) {
+      toast.error("Tu navegador no soporta notificaciones.");
+      return;
+    }
+    
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      toast.success("¡Notificaciones activadas!");
+      new Notification("Sistema Listo", {
+        body: "Te avisaremos cuando haya novedades mientras tengas la app abierta.",
+        icon: "/pwa-192x192.png"
+      });
+    } else {
+      toast.warning("Necesitamos permiso para notificarte.");
+    }
+  };
+
+  // --- CARGAR DATOS ---
   const fetchRegistrations = async () => {
     try {
       setErrorState(false);
@@ -72,7 +107,12 @@ const RegistrationsDashboard = () => {
       if (filter !== 'all') query = query.eq('status', filter);
       const { data, error } = await query;
       if (error) throw error;
+      
       setRegistrations(data || []);
+      
+      const pendingCount = (data || []).filter(r => r.status === 'pending').length;
+      updateAppBadge(pendingCount);
+
     } catch (error) {
       console.error('Error:', error);
       setErrorState(true);
@@ -94,7 +134,7 @@ const RegistrationsDashboard = () => {
         if (error) throw error;
         setAuditLogs(data || []);
     } catch (e) {
-        toast.error("No se pudo cargar el historial.");
+        console.error("Logs error", e);
     } finally {
         setLoadingLogs(false);
     }
@@ -110,76 +150,167 @@ const RegistrationsDashboard = () => {
     fetchRegistrations();
     const channel = supabase.channel('registrations-updates')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'registrations' }, (payload) => {
-          setRegistrations(currentRegs => currentRegs.map(reg => reg.id === payload.new.id ? payload.new : reg));
+          setRegistrations(currentRegs => {
+              const updated = currentRegs.map(reg => reg.id === payload.new.id ? payload.new : reg);
+              const pending = updated.filter(r => r.status === 'pending').length;
+              updateAppBadge(pending);
+              
+              if (payload.new.status === 'pending' && Notification.permission === 'granted') {
+                 new Notification("Nuevo Registro Pendiente", {
+                    body: `${payload.new.full_name} requiere aprobación.`,
+                    icon: "/pwa-192x192.png"
+                 });
+              }
+              return updated;
+          });
+          
           if (selectedRegistrationRef.current && selectedRegistrationRef.current.id === payload.new.id) {
             setSelectedRegistration(payload.new);
           }
-      }).subscribe();
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'registrations' }, (payload) => {
+          setRegistrations(currentRegs => {
+              const updated = [payload.new, ...currentRegs];
+              const pending = updated.filter(r => r.status === 'pending').length;
+              updateAppBadge(pending);
+              
+              if (Notification.permission === 'granted') {
+                 new Notification("¡Nueva Inscripción!", {
+                    body: `${payload.new.full_name} se acaba de registrar.`,
+                    icon: "/pwa-192x192.png"
+                 });
+              }
+              return updated;
+          });
+      })
+      .subscribe();
+
     return () => { supabase.removeChannel(channel); };
   }, [filter]);
 
-  // --- NUEVO: GUARDAR EDICIÓN ---
+  // --- GUARDAR EDICIÓN ---
   const handleSaveChanges = async () => {
       try {
-          const { error } = await supabase
-            .from('registrations')
-            .update(editForm)
-            .eq('id', selectedRegistration.id);
-
+          const { error } = await supabase.from('registrations').update(editForm).eq('id', selectedRegistration.id);
           if (error) throw error;
-
-          toast.success("Datos actualizados correctamente");
+          toast.success("Datos actualizados");
           setIsEditing(false);
-          // Actualizamos la vista local
           setSelectedRegistration({ ...selectedRegistration, ...editForm });
           setRegistrations(prev => prev.map(r => r.id === selectedRegistration.id ? { ...r, ...editForm } : r));
-      } catch (error) {
-          toast.error("Error al guardar cambios");
-      }
+      } catch (error) { toast.error("Error al guardar cambios"); }
   };
 
-  // --- NUEVO: ELIMINAR REGISTRO ---
+  // --- ELIMINAR REGISTRO ---
   const handleDelete = async () => {
-      if (!window.confirm("⚠️ ¿ESTÁS SEGURO?\n\nEsta acción eliminará permanentemente este registro y su historial.\nNo se puede deshacer.")) {
-          return;
-      }
-
+      if (!window.confirm("⚠️ ¿ESTÁS SEGURO?\n\nEsta acción eliminará permanentemente este registro.")) return;
       try {
-          const { error } = await supabase
-            .from('registrations')
-            .delete()
-            .eq('id', selectedRegistration.id);
-
+          const { error } = await supabase.from('registrations').delete().eq('id', selectedRegistration.id);
           if (error) throw error;
-
           toast.success("Registro eliminado");
-          setSelectedRegistration(null); // Cerrar modal
-          setRegistrations(prev => prev.filter(r => r.id !== selectedRegistration.id)); // Quitar de la lista
-      } catch (error) {
-          toast.error("Error al eliminar");
-          console.error(error);
-      }
+          setSelectedRegistration(null);
+          setRegistrations(prev => prev.filter(r => r.id !== selectedRegistration.id));
+      } catch (error) { toast.error("Error al eliminar"); }
   };
 
-  // ... (Funciones auxiliares: exportToCSV, generateCertificate, handleResendEmail, etc. IGUAL QUE ANTES) ...
+  const waitForCode = async (id) => {
+    let attempts = 0;
+    while (attempts < 5) { 
+      const { data, error } = await supabase.from('registrations').select('attendance_code').eq('id', id).single();
+      if (!error && data?.attendance_code) return data.attendance_code; 
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      attempts++;
+    }
+    return null; 
+  };
+
+  // --- PASO 1: VERIFICAR SI PODEMOS APROBAR ---
+  const attemptApproval = () => {
+    if (!paymentAmount || parseFloat(paymentAmount) <= 0) {
+      toast.warning('Por favor ingresa el monto del pago.');
+      return;
+    }
+    // Si no hay archivo, mostramos el modal personalizado PRO
+    if (!selectedRegistration.payment_proof_url) {
+      setShowForceAuth(true); // Esto abre el modal bonito
+    } else {
+      // Si hay archivo, aprobamos directo
+      executeStatusUpdate(selectedRegistration.id, 'paid');
+    }
+  };
+
+  // --- PASO 2: EJECUTAR ACTUALIZACIÓN (REAL) ---
+  const executeStatusUpdate = async (id, newStatus) => {
+    setShowForceAuth(false); // Cerramos modal si estaba abierto
+
+    const { data: currentReg } = await supabase.from('registrations').select('*').eq('id', id).single();
+
+    const processUpdate = async () => {
+      const updateData = { 
+        status: newStatus,
+        payment_date: newStatus === 'paid' ? new Date().toISOString().split('T')[0] : null
+      };
+      
+      if (newStatus === 'paid') {
+        updateData.payment_amount = parseFloat(paymentAmount);
+        updateData.payment_currency = paymentCurrency;
+        updateData.payment_method = paymentMethod;
+      }
+      
+      const { error } = await supabase.from('registrations').update(updateData).eq('id', id);
+      if (error) throw error;
+
+      if (newStatus === 'paid') {
+        const finalCode = await waitForCode(id);
+        const codeToSend = finalCode || 'CODIGO-EN-PROCESO';
+        await sendPaymentApproval(currentReg.email, currentReg.full_name, codeToSend, currentReg.category);
+      } else if (newStatus === 'rejected') {
+        await sendRejectionNotice(currentReg.email, currentReg.full_name);
+        const note = currentReg.payment_proof_url ? "Rechazado por Admin" : "Rechazado: Faltaba archivo adjunto";
+        await supabase.from('registrations').update({ notes: (currentReg.notes || '') + '\n' + note }).eq('id', id);
+      }
+      
+      setPaymentAmount(''); 
+      return newStatus === 'paid' ? 'Pago aprobado y QR enviado' : 'Aviso enviado al participante';
+    };
+
+    toast.promise(processUpdate(), {
+      loading: newStatus === 'paid' ? 'Verificando y generando QR...' : 'Actualizando...',
+      success: (msg) => msg,
+      error: 'Error al actualizar.'
+    });
+  };
+
+  const handleResendEmail = async (reg) => {
+    if (!reg.attendance_code) { toast.error('Sin código generado aún.'); return; }
+    const process = async () => {
+        await sendPaymentApproval(reg.email, reg.full_name, reg.attendance_code, reg.category);
+        const timeLog = new Date().toLocaleString('es-MX');
+        const newNote = (reg.notes || '') + `\n[Sistema] Correo reenviado el: ${timeLog}`;
+        const { error } = await supabase.from('registrations').update({ notes: newNote }).eq('id', reg.id);
+        if (error) throw error;
+        return 'Correo enviado y registrado en historial';
+    };
+    toast.promise(process(), { loading: 'Enviando...', success: (msg) => msg, error: 'Error al enviar' });
+  };
+
+  const confirmAttendance = async (id) => {
+    const promise = supabase.from('registrations').update({ attendance_confirmed: true, attendance_date: new Date().toISOString() }).eq('id', id);
+    toast.promise(promise, { loading: 'Confirmando...', success: 'Asistencia confirmada', error: 'Error' });
+  };
+
+  const updateNotes = async (id, notes) => {
+    const { error } = await supabase.from('registrations').update({ notes }).eq('id', id);
+    if (error) toast.error('Error al guardar nota'); else toast.success('Nota guardada');
+  };
+
   const exportToCSV = () => {
     const dataToExport = filteredRegistrations;
-    if (dataToExport.length === 0) { toast.error("Sin datos para exportar"); return; }
+    if (dataToExport.length === 0) { toast.error("Sin datos"); return; }
     const headers = ["ID", "Nombre", "Email", "País", "Categoría", "Estado", "Monto", "Moneda", "Código", "Asistencia", "Fecha Asistencia", "Notas"];
-    const csvRows = [
-        headers.join(","),
-        ...dataToExport.map(row => [row.id, `"${row.full_name}"`, row.email, row.country, getCategoryLabel(row.category), row.status, row.payment_amount || 0, row.payment_currency || 'MXN', row.attendance_code, row.attendance_confirmed ? "SI" : "NO", row.attendance_date, `"${row.notes || ''}"`].join(","))
-    ].join("\n");
-    const bom = "\uFEFF"; 
-    const blob = new Blob([bom + csvRows], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", `Registros_IASPM_${filter}_${new Date().toISOString().slice(0,10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success('Exportación completada');
+    const csvRows = [headers.join(","), ...dataToExport.map(row => [row.id, `"${row.full_name}"`, row.email, row.country, getCategoryLabel(row.category), row.status, row.payment_amount || 0, row.payment_currency || 'MXN', row.attendance_code, row.attendance_confirmed ? "SI" : "NO", row.attendance_date, `"${row.notes || ''}"`].join(","))].join("\n");
+    const bom = "\uFEFF"; const blob = new Blob([bom + csvRows], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.setAttribute("download", `Registros_IASPM_${filter}_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link); link.click(); document.body.removeChild(link); toast.success('Exportación completada');
   };
 
   const generateCertificate = (reg) => {
@@ -211,44 +342,6 @@ const RegistrationsDashboard = () => {
         doc.save(`Constancia_${reg.full_name.replace(/\s+/g, '_')}.pdf`);
         toast.success('PDF Generado');
     } catch (e) { toast.error('Error al generar PDF'); }
-  };
-
-  const handleResendEmail = async (reg) => {
-    if (!reg.attendance_code) { toast.error('Sin código generado aún.'); return; }
-    const process = async () => {
-        await sendPaymentApproval(reg.email, reg.full_name, reg.attendance_code, reg.category);
-        const timeLog = new Date().toLocaleString('es-MX');
-        const newNote = (reg.notes || '') + `\n[Sistema] Correo reenviado el: ${timeLog}`;
-        const { error } = await supabase.from('registrations').update({ notes: newNote }).eq('id', reg.id);
-        if (error) throw error;
-        return 'Correo enviado y registrado en historial';
-    };
-    toast.promise(process(), { loading: 'Enviando y registrando...', success: (msg) => msg, error: 'Error al procesar la solicitud' });
-  };
-
-  const updateStatus = async (id, newStatus) => {
-    if (newStatus === 'paid' && (!paymentAmount || parseFloat(paymentAmount) <= 0)) { toast.warning('Ingresa el monto.'); return; }
-    const promise = async () => {
-      const registration = registrations.find(r => r.id === id);
-      const updateData = { status: newStatus, payment_date: newStatus === 'paid' ? new Date().toISOString().split('T')[0] : null };
-      if (newStatus === 'paid') { updateData.payment_amount = parseFloat(paymentAmount); updateData.payment_currency = paymentCurrency; updateData.payment_method = paymentMethod; }
-      const { error } = await supabase.from('registrations').update(updateData).eq('id', id);
-      if (error) throw error;
-      if (newStatus === 'paid') { await sendPaymentApproval(registration.email, registration.full_name, registration.attendance_code, registration.category); } 
-      else if (newStatus === 'rejected') { await sendRejectionNotice(registration.email, registration.full_name); }
-      setPaymentAmount(''); return 'Estado actualizado';
-    };
-    toast.promise(promise(), { loading: 'Actualizando...', success: (msg) => msg, error: 'Error al actualizar.' });
-  };
-
-  const confirmAttendance = async (id) => {
-    const promise = supabase.from('registrations').update({ attendance_confirmed: true, attendance_date: new Date().toISOString() }).eq('id', id);
-    toast.promise(promise, { loading: 'Confirmando...', success: 'Asistencia confirmada', error: 'Error' });
-  };
-
-  const updateNotes = async (id, notes) => {
-    const { error } = await supabase.from('registrations').update({ notes }).eq('id', id);
-    if (error) toast.error('Error al guardar nota'); else toast.success('Nota guardada');
   };
 
   const getCategoryLabel = (cat) => { const map = { 'sur_global': 'Sur Global', 'norte_global': 'Norte Global', 'institucion_convocante': 'Institución Convocante', 'estudiante': 'Estudiante', 'asistente': 'Asistente' }; return map[cat] || cat; };
@@ -297,7 +390,16 @@ const RegistrationsDashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8"><h1 className="text-3xl font-bold text-gray-800">Gestión de Inscripciones</h1><p className="text-gray-500 mt-1">Panel de control del XVII Congreso IASPM-AL 2026</p></div>
+        <div className="mb-8 flex justify-between items-start">
+            <div>
+                <h1 className="text-3xl font-bold text-gray-800">Gestión de Inscripciones</h1>
+                <p className="text-gray-500 mt-1">Panel de control del XVII Congreso IASPM-AL 2026</p>
+            </div>
+            {/* BOTÓN PARA ACTIVAR NOTIFICACIONES */}
+            <button onClick={requestNotificationPermission} className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-indigo-700 transition shadow-sm">
+                <Bell className="w-4 h-4" /> Activar Alertas
+            </button>
+        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100"><p className="text-sm font-medium text-gray-500">Total Registros</p><p className="text-3xl font-bold text-gray-900 mt-2">{stats.total}</p></div>
@@ -339,26 +441,19 @@ const RegistrationsDashboard = () => {
           )}
         </div>
 
+        {/* MODAL PRINCIPAL */}
         {selectedRegistration && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-            <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl relative">
               <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center z-10">
-                
-                {/* HEADER CON BOTONES DE EDICIÓN */}
                 <div className="flex-1">
                     {isEditing ? (
                        <input type="text" value={editForm.full_name} onChange={(e) => setEditForm({...editForm, full_name: e.target.value})} className="text-xl font-bold text-gray-800 border-b border-teal-500 focus:outline-none w-full" placeholder="Nombre completo" />
-                    ) : (
-                       <h2 className="text-xl font-bold text-gray-800">{selectedRegistration.full_name}</h2>
-                    )}
-                    
+                    ) : ( <h2 className="text-xl font-bold text-gray-800">{selectedRegistration.full_name}</h2> )}
                     {isEditing ? (
                         <input type="email" value={editForm.email} onChange={(e) => setEditForm({...editForm, email: e.target.value})} className="text-sm text-gray-500 border-b border-gray-300 focus:outline-none w-full mt-1" placeholder="Correo electrónico" />
-                    ) : (
-                        <p className="text-sm text-gray-500">{selectedRegistration.email}</p>
-                    )}
+                    ) : ( <p className="text-sm text-gray-500">{selectedRegistration.email}</p> )}
                 </div>
-
                 <div className="flex items-center gap-2">
                     {!isEditing && (
                         <>
@@ -399,12 +494,12 @@ const RegistrationsDashboard = () => {
                                             <select value={editForm.category} onChange={(e) => setEditForm({...editForm, category: e.target.value})} className="font-medium border-b w-full bg-white">
                                                 <option value="sur_global">Sur Global</option>
                                                 <option value="norte_global">Norte Global</option>
-                                                <option value="estudiante">Estudiante</option>
+                                                <option value="institucion_convocante">Inst. Convocante</option>
                                                 <option value="asistente">Asistente</option>
                                             </select>
                                         ) : <p className="font-medium">{getCategoryLabel(selectedRegistration.category)}</p>}
                                     </div>
-                                    <div className="col-span-2"><p className="text-xs text-gray-500">Comprobante</p>{selectedRegistration.payment_proof_url ? <a href={selectedRegistration.payment_proof_url} target="_blank" rel="noopener noreferrer" className="text-sm text-teal-600 hover:underline flex items-center gap-1"><Download className="w-3 h-3" /> Ver archivo</a> : <span className="text-sm text-gray-400">No adjuntado</span>}</div>
+                                    <div className="col-span-2"><p className="text-xs text-gray-500">Comprobante</p>{selectedRegistration.payment_proof_url ? <a href={selectedRegistration.payment_proof_url} target="_blank" rel="noopener noreferrer" className="text-sm text-teal-600 hover:underline flex items-center gap-1"><Download className="w-3 h-3" /> Ver archivo</a> : <span className="text-sm text-red-500 bg-red-50 px-2 py-0.5 rounded flex items-center gap-1 w-fit"><AlertTriangle className="w-3 h-3"/> No adjuntado</span>}</div>
                                 </div>
                             </div>
                             <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
@@ -412,7 +507,11 @@ const RegistrationsDashboard = () => {
                                 {selectedRegistration.status !== 'paid' && (
                                     <div className="space-y-3">
                                         <div className="grid grid-cols-2 gap-2"><input type="number" placeholder="Monto" value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} className="text-sm border rounded px-2 py-1" /><select value={paymentCurrency} onChange={e => setPaymentCurrency(e.target.value)} className="text-sm border rounded px-2 py-1"><option value="MXN">MXN</option><option value="USD">USD</option></select></div>
-                                        <div className="flex gap-2"><button onClick={() => updateStatus(selectedRegistration.id, 'paid')} className="flex-1 bg-green-600 text-white py-1.5 rounded text-sm hover:bg-green-700 transition">Aprobar</button><button onClick={() => updateStatus(selectedRegistration.id, 'rejected')} className="flex-1 bg-white border border-red-200 text-red-600 py-1.5 rounded text-sm hover:bg-red-50 transition">Rechazar</button></div>
+                                        <div className="flex gap-2">
+                                          {/* MODIFICACIÓN: Aquí llamamos a attemptApproval en lugar de actualizar directo */}
+                                          <button onClick={attemptApproval} className="flex-1 bg-green-600 text-white py-1.5 rounded text-sm hover:bg-green-700 transition">Aprobar</button>
+                                          <button onClick={() => executeStatusUpdate(selectedRegistration.id, 'rejected')} className="flex-1 bg-white border border-red-200 text-red-600 py-1.5 rounded text-sm hover:bg-red-50 transition">Rechazar</button>
+                                        </div>
                                     </div>
                                 )}
                                 {selectedRegistration.status === 'paid' && (
@@ -446,6 +545,39 @@ const RegistrationsDashboard = () => {
                 )}
               </div>
             </div>
+
+            {/* MODAL DE SEGURIDAD PARA APROBACIÓN MANUAL (Z-60 para estar encima) */}
+            {showForceAuth && (
+              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in zoom-in-95 duration-200">
+                <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full border border-gray-100">
+                  <div className="flex flex-col items-center text-center">
+                    <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mb-4">
+                      <ShieldAlert className="w-6 h-6" />
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">Aprobación Manual</h3>
+                    <p className="text-sm text-gray-500 mb-6">
+                      Este usuario <strong>no adjuntó comprobante</strong>.
+                      <br/><br/>
+                      ¿Confirmas que verificaste el pago de <strong>${paymentAmount} {paymentCurrency}</strong> en el banco?
+                    </p>
+                    <div className="flex gap-3 w-full">
+                      <button 
+                        onClick={() => setShowForceAuth(false)}
+                        className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition"
+                      >
+                        Cancelar
+                      </button>
+                      <button 
+                        onClick={() => executeStatusUpdate(selectedRegistration.id, 'paid')}
+                        className="flex-1 px-4 py-2 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-700 transition shadow-sm"
+                      >
+                        Confirmar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
