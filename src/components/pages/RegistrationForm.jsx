@@ -68,6 +68,15 @@ const RegistrationForm = ({ lang, onSuccess }) => {
     setLoading(true);
 
     try {
+      // 1. OBTENER USUARIO LOGUEADO (CRÍTICO PARA SEGURIDAD RLS)
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        throw new Error(lang === 'es' 
+          ? 'Debes iniciar sesión para inscribirte. Por favor ve al menú "Admin/Login" o inicia sesión.' 
+          : 'Você deve fazer login para se inscrever.');
+      }
+
       if (!formData.full_name || !formData.email || !formData.country || !formData.category) {
         throw new Error(lang === 'es' ? 'Completa todos los campos obligatorios' : 'Preencha todos os campos obrigatórios');
       }
@@ -83,7 +92,10 @@ const RegistrationForm = ({ lang, onSuccess }) => {
           email: formData.email.trim().toLowerCase(),
           country: formData.country,
           category: formData.category,
-          presentation_title: formData.presentation_title || null
+          presentation_title: formData.presentation_title || null,
+          
+          // 2. VINCULAR EL REGISTRO CON EL USUARIO (EL CANDADO)
+          user_id: user.id 
         }])
         .select()
         .single();

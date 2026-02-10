@@ -2,8 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { sendPaymentApproval, sendRejectionNotice } from '../lib/resendClient';
-// Iconos completos
-import { Download, Eye, Check, X, RefreshCw, Search, ExternalLink, Award, Lock, WifiOff, AlertTriangle, Send, FileSpreadsheet, History, User, Trash2, Edit, Save, Bell, ShieldAlert } from 'lucide-react';
+import { Download, Eye, Check, X, RefreshCw, Search, Award, Lock, WifiOff, AlertTriangle, Send, FileSpreadsheet, History, User, Trash2, Edit, Save, Bell, ShieldAlert } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { jsPDF } from 'jspdf';
 import { toast } from 'sonner';
@@ -40,8 +39,9 @@ const RegistrationsDashboard = () => {
   const [paymentCurrency, setPaymentCurrency] = useState('MXN');
   const [paymentMethod, setPaymentMethod] = useState('transferencia');
   
-  // NUEVO: Estado para el modal de "Aprobación Forzada"
+  // Modales
   const [showForceAuth, setShowForceAuth] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false); // <--- NUEVO ESTADO PARA EL POP-UP
 
   // Pestañas y Logs
   const [activeTab, setActiveTab] = useState('details'); 
@@ -54,7 +54,6 @@ const RegistrationsDashboard = () => {
     selectedRegistrationRef.current = selectedRegistration;
   }, [selectedRegistration]);
 
-  // Al abrir un usuario, preparamos el formulario de edición
   useEffect(() => {
     if (selectedRegistration) {
         setEditForm({
@@ -64,41 +63,26 @@ const RegistrationsDashboard = () => {
             category: selectedRegistration.category
         });
         setIsEditing(false); 
-        setShowForceAuth(false); // Resetear modal de seguridad
+        setShowForceAuth(false);
+        setShowDeleteConfirm(false); // Reseteamos al abrir uno nuevo
     }
   }, [selectedRegistration]);
 
-  // --- LÓGICA DE NOTIFICACIONES Y BADGES ---
+  // --- LÓGICA DE NOTIFICACIONES ---
   const updateAppBadge = (count) => {
     if ('setAppBadge' in navigator) {
-      if (count > 0) {
-        navigator.setAppBadge(count).catch(e => console.error(e));
-      } else {
-        navigator.clearAppBadge().catch(e => console.error(e));
-      }
+      if (count > 0) navigator.setAppBadge(count).catch(e => console.error(e));
+      else navigator.clearAppBadge().catch(e => console.error(e));
     }
     document.title = count > 0 ? `(${count}) Admin IASPM` : 'Panel Admin - IASPM';
   };
 
   const requestNotificationPermission = async () => {
-    if (!('Notification' in window)) {
-      toast.error("Tu navegador no soporta notificaciones.");
-      return;
-    }
-    
+    if (!('Notification' in window)) { toast.error("Navegador no soporta notificaciones"); return; }
     const permission = await Notification.requestPermission();
-    if (permission === 'granted') {
-      toast.success("¡Notificaciones activadas!");
-      new Notification("Sistema Listo", {
-        body: "Te avisaremos cuando haya novedades mientras tengas la app abierta.",
-        icon: "/pwa-192x192.png"
-      });
-    } else {
-      toast.warning("Necesitamos permiso para notificarte.");
-    }
+    if (permission === 'granted') toast.success("Notificaciones activadas");
   };
 
-  // --- CARGAR DATOS ---
   const fetchRegistrations = async () => {
     try {
       setErrorState(false);
@@ -107,12 +91,9 @@ const RegistrationsDashboard = () => {
       if (filter !== 'all') query = query.eq('status', filter);
       const { data, error } = await query;
       if (error) throw error;
-      
       setRegistrations(data || []);
-      
       const pendingCount = (data || []).filter(r => r.status === 'pending').length;
       updateAppBadge(pendingCount);
-
     } catch (error) {
       console.error('Error:', error);
       setErrorState(true);
@@ -125,25 +106,14 @@ const RegistrationsDashboard = () => {
   const fetchAuditLogs = async (recordId) => {
     setLoadingLogs(true);
     try {
-        const { data, error } = await supabase
-            .from('audit_logs')
-            .select('*')
-            .eq('record_id', recordId)
-            .order('created_at', { ascending: false });
-        
+        const { data, error } = await supabase.from('audit_logs').select('*').eq('record_id', recordId).order('created_at', { ascending: false });
         if (error) throw error;
         setAuditLogs(data || []);
-    } catch (e) {
-        console.error("Logs error", e);
-    } finally {
-        setLoadingLogs(false);
-    }
+    } catch (e) { console.error("Logs error", e); } finally { setLoadingLogs(false); }
   };
 
   useEffect(() => {
-      if (selectedRegistration && activeTab === 'history') {
-          fetchAuditLogs(selectedRegistration.id);
-      }
+      if (selectedRegistration && activeTab === 'history') fetchAuditLogs(selectedRegistration.id);
   }, [activeTab, selectedRegistration]);
 
   useEffect(() => {
@@ -152,43 +122,20 @@ const RegistrationsDashboard = () => {
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'registrations' }, (payload) => {
           setRegistrations(currentRegs => {
               const updated = currentRegs.map(reg => reg.id === payload.new.id ? payload.new : reg);
-              const pending = updated.filter(r => r.status === 'pending').length;
-              updateAppBadge(pending);
-              
-              if (payload.new.status === 'pending' && Notification.permission === 'granted') {
-                 new Notification("Nuevo Registro Pendiente", {
-                    body: `${payload.new.full_name} requiere aprobación.`,
-                    icon: "/pwa-192x192.png"
-                 });
-              }
+              updateAppBadge(updated.filter(r => r.status === 'pending').length);
               return updated;
           });
-          
           if (selectedRegistrationRef.current && selectedRegistrationRef.current.id === payload.new.id) {
             setSelectedRegistration(payload.new);
           }
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'registrations' }, (payload) => {
-          setRegistrations(currentRegs => {
-              const updated = [payload.new, ...currentRegs];
-              const pending = updated.filter(r => r.status === 'pending').length;
-              updateAppBadge(pending);
-              
-              if (Notification.permission === 'granted') {
-                 new Notification("¡Nueva Inscripción!", {
-                    body: `${payload.new.full_name} se acaba de registrar.`,
-                    icon: "/pwa-192x192.png"
-                 });
-              }
-              return updated;
-          });
+          setRegistrations(currentRegs => [payload.new, ...currentRegs]);
       })
       .subscribe();
-
     return () => { supabase.removeChannel(channel); };
   }, [filter]);
 
-  // --- GUARDAR EDICIÓN ---
   const handleSaveChanges = async () => {
       try {
           const { error } = await supabase.from('registrations').update(editForm).eq('id', selectedRegistration.id);
@@ -200,16 +147,26 @@ const RegistrationsDashboard = () => {
       } catch (error) { toast.error("Error al guardar cambios"); }
   };
 
-  // --- ELIMINAR REGISTRO ---
-  const handleDelete = async () => {
-      if (!window.confirm("⚠️ ¿ESTÁS SEGURO?\n\nEsta acción eliminará permanentemente este registro.")) return;
+  // --- NUEVA LÓGICA DE ELIMINACIÓN ---
+  // Paso 1: El botón de basura solo abre el modal
+  const openDeleteModal = () => {
+      setShowDeleteConfirm(true);
+  };
+
+  // Paso 2: Esta función es la que realmente borra (se llama desde el modal)
+  const confirmDelete = async () => {
       try {
           const { error } = await supabase.from('registrations').delete().eq('id', selectedRegistration.id);
           if (error) throw error;
-          toast.success("Registro eliminado");
-          setSelectedRegistration(null);
+          
+          toast.success("Registro eliminado correctamente");
+          setShowDeleteConfirm(false); // Cerrar modal
+          setSelectedRegistration(null); // Cerrar detalle
           setRegistrations(prev => prev.filter(r => r.id !== selectedRegistration.id));
-      } catch (error) { toast.error("Error al eliminar"); }
+      } catch (error) { 
+          console.error(error);
+          toast.error("Error al eliminar el registro"); 
+      }
   };
 
   const waitForCode = async (id) => {
@@ -223,27 +180,21 @@ const RegistrationsDashboard = () => {
     return null; 
   };
 
-  // --- PASO 1: VERIFICAR SI PODEMOS APROBAR ---
   const attemptApproval = () => {
     if (!paymentAmount || parseFloat(paymentAmount) <= 0) {
       toast.warning('Por favor ingresa el monto del pago.');
       return;
     }
-    // Si no hay archivo, mostramos el modal personalizado PRO
     if (!selectedRegistration.payment_proof_url) {
-      setShowForceAuth(true); // Esto abre el modal bonito
+      setShowForceAuth(true);
     } else {
-      // Si hay archivo, aprobamos directo
       executeStatusUpdate(selectedRegistration.id, 'paid');
     }
   };
 
-  // --- PASO 2: EJECUTAR ACTUALIZACIÓN (REAL) ---
   const executeStatusUpdate = async (id, newStatus) => {
-    setShowForceAuth(false); // Cerramos modal si estaba abierto
-
+    setShowForceAuth(false);
     const { data: currentReg } = await supabase.from('registrations').select('*').eq('id', id).single();
-
     const processUpdate = async () => {
       const updateData = { 
         status: newStatus,
@@ -268,7 +219,6 @@ const RegistrationsDashboard = () => {
         const note = currentReg.payment_proof_url ? "Rechazado por Admin" : "Rechazado: Faltaba archivo adjunto";
         await supabase.from('registrations').update({ notes: (currentReg.notes || '') + '\n' + note }).eq('id', id);
       }
-      
       setPaymentAmount(''); 
       return newStatus === 'paid' ? 'Pago aprobado y QR enviado' : 'Aviso enviado al participante';
     };
@@ -288,7 +238,7 @@ const RegistrationsDashboard = () => {
         const newNote = (reg.notes || '') + `\n[Sistema] Correo reenviado el: ${timeLog}`;
         const { error } = await supabase.from('registrations').update({ notes: newNote }).eq('id', reg.id);
         if (error) throw error;
-        return 'Correo enviado y registrado en historial';
+        return 'Correo enviado';
     };
     toast.promise(process(), { loading: 'Enviando...', success: (msg) => msg, error: 'Error al enviar' });
   };
@@ -395,7 +345,6 @@ const RegistrationsDashboard = () => {
                 <h1 className="text-3xl font-bold text-gray-800">Gestión de Inscripciones</h1>
                 <p className="text-gray-500 mt-1">Panel de control del XVII Congreso IASPM-AL 2026</p>
             </div>
-            {/* BOTÓN PARA ACTIVAR NOTIFICACIONES */}
             <button onClick={requestNotificationPermission} className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-indigo-700 transition shadow-sm">
                 <Bell className="w-4 h-4" /> Activar Alertas
             </button>
@@ -458,7 +407,8 @@ const RegistrationsDashboard = () => {
                     {!isEditing && (
                         <>
                             <button onClick={() => setIsEditing(true)} className="p-2 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded-full transition" title="Editar datos"><Edit className="w-4 h-4" /></button>
-                            <button onClick={handleDelete} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition" title="Eliminar registro"><Trash2 className="w-4 h-4" /></button>
+                            {/* AQUI ESTA EL CAMBIO: Ahora llama a openDeleteModal */}
+                            <button onClick={openDeleteModal} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition" title="Eliminar registro"><Trash2 className="w-4 h-4" /></button>
                         </>
                     )}
                     {isEditing && (
@@ -508,9 +458,8 @@ const RegistrationsDashboard = () => {
                                     <div className="space-y-3">
                                         <div className="grid grid-cols-2 gap-2"><input type="number" placeholder="Monto" value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} className="text-sm border rounded px-2 py-1" /><select value={paymentCurrency} onChange={e => setPaymentCurrency(e.target.value)} className="text-sm border rounded px-2 py-1"><option value="MXN">MXN</option><option value="USD">USD</option></select></div>
                                         <div className="flex gap-2">
-                                          {/* MODIFICACIÓN: Aquí llamamos a attemptApproval en lugar de actualizar directo */}
-                                          <button onClick={attemptApproval} className="flex-1 bg-green-600 text-white py-1.5 rounded text-sm hover:bg-green-700 transition">Aprobar</button>
-                                          <button onClick={() => executeStatusUpdate(selectedRegistration.id, 'rejected')} className="flex-1 bg-white border border-red-200 text-red-600 py-1.5 rounded text-sm hover:bg-red-50 transition">Rechazar</button>
+                                            <button onClick={attemptApproval} className="flex-1 bg-green-600 text-white py-1.5 rounded text-sm hover:bg-green-700 transition">Aprobar</button>
+                                            <button onClick={() => executeStatusUpdate(selectedRegistration.id, 'rejected')} className="flex-1 bg-white border border-red-200 text-red-600 py-1.5 rounded text-sm hover:bg-red-50 transition">Rechazar</button>
                                         </div>
                                     </div>
                                 )}
@@ -546,7 +495,7 @@ const RegistrationsDashboard = () => {
               </div>
             </div>
 
-            {/* MODAL DE SEGURIDAD PARA APROBACIÓN MANUAL (Z-60 para estar encima) */}
+            {/* MODAL 1: APROBACIÓN MANUAL (Z-60) */}
             {showForceAuth && (
               <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in zoom-in-95 duration-200">
                 <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full border border-gray-100">
@@ -555,29 +504,50 @@ const RegistrationsDashboard = () => {
                       <ShieldAlert className="w-6 h-6" />
                     </div>
                     <h3 className="text-lg font-bold text-gray-900 mb-2">Aprobación Manual</h3>
-                    <p className="text-sm text-gray-500 mb-6">
-                      Este usuario <strong>no adjuntó comprobante</strong>.
+                    <p className="text-sm text-gray-500 mb-6">Este usuario <strong>no adjuntó comprobante</strong>.<br/><br/>¿Confirmas que verificaste el pago de <strong>${paymentAmount} {paymentCurrency}</strong> en el banco?</p>
+                    <div className="flex gap-3 w-full">
+                      <button onClick={() => setShowForceAuth(false)} className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition">Cancelar</button>
+                      <button onClick={() => executeStatusUpdate(selectedRegistration.id, 'paid')} className="flex-1 px-4 py-2 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-700 transition shadow-sm">Confirmar</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* MODAL 2: CONFIRMACIÓN DE ELIMINACIÓN (Z-60) - ¡NUEVO Y BONITO! */}
+            {showDeleteConfirm && (
+              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in zoom-in-95 duration-200">
+                <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full border-2 border-red-100">
+                  <div className="flex flex-col items-center text-center">
+                    <div className="w-14 h-14 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4 border-4 border-red-50">
+                      <AlertTriangle className="w-7 h-7" />
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">¿Estás seguro?</h3>
+                    <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+                      Estás a punto de eliminar el registro de <br/>
+                      <strong className="text-gray-800">{selectedRegistration.full_name}</strong>.
                       <br/><br/>
-                      ¿Confirmas que verificaste el pago de <strong>${paymentAmount} {paymentCurrency}</strong> en el banco?
+                      <span className="bg-red-50 text-red-600 px-2 py-0.5 rounded font-bold text-xs">Esta acción es irreversible</span>
                     </p>
                     <div className="flex gap-3 w-full">
                       <button 
-                        onClick={() => setShowForceAuth(false)}
-                        className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition"
+                        onClick={() => setShowDeleteConfirm(false)} 
+                        className="flex-1 px-4 py-2.5 bg-white border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition"
                       >
                         Cancelar
                       </button>
                       <button 
-                        onClick={() => executeStatusUpdate(selectedRegistration.id, 'paid')}
-                        className="flex-1 px-4 py-2 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-700 transition shadow-sm"
+                        onClick={confirmDelete} 
+                        className="flex-1 px-4 py-2.5 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition shadow-lg shadow-red-200"
                       >
-                        Confirmar
+                        Sí, eliminar
                       </button>
                     </div>
                   </div>
                 </div>
               </div>
             )}
+
           </div>
         )}
       </div>

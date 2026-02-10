@@ -1,26 +1,100 @@
 // src/components/pages/HomeLanding.jsx
-import React, { useState, useEffect } from 'react';
-import { Calendar, MapPin, Users, Search, CheckCircle, Ticket, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Calendar, MapPin, Users, Search, CheckCircle, Ticket, AlertCircle, Clock, Flag, FileText, Mic } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
+import HeroSlider from './HeroSlider';
+
+// --- COMPONENTE INTERNO: ITEM DE LÍNEA DE TIEMPO ANIMADO ---
+const TimelineItem = ({ date, title, desc, icon: Icon, status, align, index }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const domRef = useRef();
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => setIsVisible(entry.isIntersecting));
+    });
+    if (domRef.current) observer.observe(domRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  // Definir colores según el estado
+  const colors = {
+    done: 'bg-teal-100 text-teal-700 border-teal-200',
+    active: 'bg-amber-100 text-amber-700 border-amber-200 animate-pulse',
+    future: 'bg-gray-50 text-gray-400 border-gray-100'
+  };
+
+  const isLeft = align === 'left';
+
+  return (
+    <div 
+      ref={domRef}
+      className={`relative flex items-center justify-between md:justify-center gap-8 mb-12 transition-all duration-1000 transform ${
+        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-20'
+      }`}
+      style={{ transitionDelay: `${index * 150}ms` }} // Efecto cascada
+    >
+      {/* LADO IZQUIERDO (Desktop) */}
+      <div className={`hidden md:block w-5/12 ${isLeft ? 'text-right' : ''}`}>
+        {isLeft && (
+          <div>
+            <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold mb-2 ${status === 'done' ? 'bg-teal-100 text-teal-800' : 'bg-gray-100 text-gray-500'}`}>
+              {date}
+            </span>
+            <h3 className="text-xl font-bold text-gray-800">{title}</h3>
+            <p className="text-gray-500 text-sm mt-1">{desc}</p>
+          </div>
+        )}
+      </div>
+
+      {/* PUNTO CENTRAL E ICONO */}
+      <div className="absolute left-4 md:left-1/2 md:-translate-x-1/2 flex items-center justify-center">
+        <div className={`w-12 h-12 rounded-full border-4 border-white shadow-lg flex items-center justify-center z-10 ${colors[status] || colors.future}`}>
+          <Icon size={20} />
+        </div>
+      </div>
+
+      {/* LADO DERECHO (Desktop) / CONTENIDO (Móvil) */}
+      <div className={`w-full pl-20 md:pl-0 md:w-5/12 ${!isLeft ? 'text-left' : ''}`}>
+        {/* En móvil mostramos siempre el contenido aquí */}
+        <div className="block md:hidden">
+          <span className="text-xs font-bold text-teal-600 block mb-1">{date}</span>
+          <h3 className="text-lg font-bold text-gray-800">{title}</h3>
+          <p className="text-gray-500 text-sm">{desc}</p>
+        </div>
+
+        {/* En desktop solo si es el lado derecho */}
+        <div className="hidden md:block">
+          {!isLeft && (
+            <div>
+              <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold mb-2 ${status === 'done' ? 'bg-teal-100 text-teal-800' : 'bg-gray-100 text-gray-500'}`}>
+                {date}
+              </span>
+              <h3 className="text-xl font-bold text-gray-800">{title}</h3>
+              <p className="text-gray-500 text-sm mt-1">{desc}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const HomeLanding = ({ lang, setCurrentPage }) => {
   const [emailCheck, setEmailCheck] = useState('');
   const [statusResult, setStatusResult] = useState(null);
   const [loadingCheck, setLoadingCheck] = useState(false);
 
-  // --- EFECTO DE AUTOLIMPIEZA ---
-  // Si encontramos un resultado, esperamos 6 segundos y lo borramos
   useEffect(() => {
     if (statusResult) {
       const timer = setTimeout(() => {
         setStatusResult(null);
-        setEmailCheck(''); // Opcional: limpiar también el campo de texto
-      }, 6000); // 6000ms = 6 segundos
+        setEmailCheck('');
+      }, 6000);
       return () => clearTimeout(timer);
     }
   }, [statusResult]);
 
-  // --- LÓGICA DE BÚSQUEDA ---
   const checkStatus = async (e) => {
     e.preventDefault();
     if (!emailCheck) return;
@@ -32,7 +106,7 @@ const HomeLanding = ({ lang, setCurrentPage }) => {
     try {
       const { data, error } = await supabase
         .from('registrations')
-        .select('status, full_name') // Ya no pedimos 'attendance_code'
+        .select('status, full_name')
         .ilike('email', cleanEmail) 
         .maybeSingle();
 
@@ -55,40 +129,58 @@ const HomeLanding = ({ lang, setCurrentPage }) => {
     }
   };
 
+  // --- DATOS DE LA LÍNEA DE TIEMPO ---
+  const timelineEvents = [
+    {
+      date: 'Noviembre 2025',
+      title: lang === 'es' ? 'Publicación de Convocatoria' : 'Call for Papers',
+      desc: lang === 'es' ? 'Apertura oficial para recepción de propuestas.' : 'Official opening for proposal submissions.',
+      icon: FileText,
+      status: 'done'
+    },
+    {
+      date: 'Febrero 2026',
+      title: lang === 'es' ? 'Inicio de Inscripciones' : 'Registration Opens',
+      desc: lang === 'es' ? 'Registro disponible para asistentes y ponentes.' : 'Registration available for attendees and speakers.',
+      icon: Ticket,
+      status: 'done'
+    },
+    {
+      date: '31 Mayo 2026',
+      title: lang === 'es' ? 'Límite Pago Reducido' : 'Early Bird Deadline',
+      desc: lang === 'es' ? 'Último día para aprovechar el descuento.' : 'Last day to take advantage of the discount.',
+      icon: AlertCircle,
+      status: 'active' // Este parpadea o destaca
+    },
+    {
+      date: '15 Julio 2026',
+      title: lang === 'es' ? 'Programa Preliminar' : 'Preliminary Program',
+      desc: lang === 'es' ? 'Publicación de horarios y mesas de trabajo.' : 'Publication of schedules and working tables.',
+      icon: Mic,
+      status: 'future'
+    },
+    {
+      date: '28 Sept 2026',
+      title: lang === 'es' ? 'Inauguración del Congreso' : 'Congress Opening',
+      desc: lang === 'es' ? 'Ceremonia de apertura en el Teatro Zebadúa.' : 'Opening ceremony at Zebadúa Theater.',
+      icon: Flag,
+      status: 'future'
+    }
+  ];
+
   return (
-    <div className="space-y-12 animate-in fade-in duration-500">
+    <div className="space-y-16 animate-in fade-in duration-500">
       
-      {/* 1. HERO SECTION */}
-      <div className="relative bg-teal-900 rounded-3xl overflow-hidden shadow-2xl text-white group">
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1518105779142-d975f22f1b0a?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-40 mix-blend-multiply transition-transform duration-1000 group-hover:scale-105"></div>
-        
-        <div className="relative p-6 md:p-12 lg:p-16 flex flex-col items-start gap-6">
-          <span className="bg-teal-500/20 border border-teal-400/30 text-teal-100 px-4 py-1.5 rounded-full text-sm font-semibold tracking-wide backdrop-blur-sm shadow-sm">
-            28 Sep - 02 Oct, 2026
-          </span>
-          <h1 className="text-3xl md:text-5xl font-extrabold max-w-2xl leading-tight drop-shadow-lg">
-            Ética, Política y <br/>
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-200 to-emerald-400">Música Popular</span>
-          </h1>
-          <p className="text-lg text-teal-50 max-w-xl leading-relaxed drop-shadow-md">
-            {lang === 'es' 
-              ? 'Bienvenidos al XVII Congreso de la IASPM-AL en San Cristóbal de Las Casas. Un espacio para repensar las intersecciones sonoras en América Latina.'
-              : 'Welcome to the XVII IASPM-AL Congress in San Cristóbal de Las Casas. A space to rethink sonic intersections in Latin America.'}
-          </p>
-          
-          <div className="flex flex-wrap gap-4 mt-4">
-            <button onClick={() => setCurrentPage('cuotas')} className="bg-emerald-500 hover:bg-emerald-400 text-white px-8 py-3.5 rounded-xl font-bold transition-all shadow-lg shadow-emerald-900/30 hover:shadow-emerald-900/50 hover:-translate-y-1 flex items-center gap-2">
-              <Ticket className="w-5 h-5" />
-              {lang === 'es' ? 'Inscribirse Ahora' : 'Register Now'}
-            </button>
-            <button onClick={() => setCurrentPage('programa')} className="bg-white/10 hover:bg-white/20 text-white border border-white/30 px-6 py-3.5 rounded-xl font-semibold transition backdrop-blur-md flex items-center gap-2 hover:bg-white/25">
-              {lang === 'es' ? 'Ver Programa' : 'View Program'}
-            </button>
-          </div>
-        </div>
+      {/* 1. HERO SLIDER */}
+      <div className="mb-4">
+        <HeroSlider 
+          lang={lang} 
+          onNavigateToProgram={() => setCurrentPage('programa')} 
+          onNavigateToRegistration={() => setCurrentPage('cuotas')} 
+        />
       </div>
 
-      {/* 2. SHORTCUTS */}
+      {/* 2. TARJETAS DE ACCESO RÁPIDO */}
       <div className="grid md:grid-cols-3 gap-6">
         {[
           { id: 'programa', icon: Calendar, color: 'purple', title: { es: 'Agenda Académica', en: 'Academic Agenda' }, desc: { es: 'Consulta los simposios, ponencias y actividades.', en: 'Check symposia and activities.' } },
@@ -105,7 +197,34 @@ const HomeLanding = ({ lang, setCurrentPage }) => {
         ))}
       </div>
 
-      {/* 3. CHECK STATUS WIDGET (LIMPIO Y AUTOMÁTICO) */}
+      {/* 3. LÍNEA DE TIEMPO VERTICAL (Vertical Timeline) */}
+      <div className="relative py-8">
+        <div className="text-center mb-12">
+           <h2 className="text-3xl font-bold text-gray-900 flex items-center justify-center gap-3">
+             <Clock className="text-teal-600" />
+             {lang === 'es' ? 'Camino al Congreso' : 'Road to Congress'}
+           </h2>
+           <p className="text-gray-500 mt-2">
+             {lang === 'es' ? 'Fechas clave para tu participación' : 'Key dates for your participation'}
+           </p>
+        </div>
+
+        {/* Línea Central (Solo visible en Desktop) */}
+        <div className="absolute left-4 md:left-1/2 top-24 bottom-0 w-0.5 bg-gray-200 -translate-x-1/2"></div>
+
+        <div className="relative">
+          {timelineEvents.map((event, index) => (
+            <TimelineItem 
+              key={index}
+              index={index}
+              {...event}
+              align={index % 2 === 0 ? 'left' : 'right'} // Alternar izquierda/derecha
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* 4. VERIFICADOR DE INSCRIPCIÓN */}
       <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-6 md:p-8 border border-gray-200 shadow-sm flex flex-col md:flex-row items-center gap-8">
         <div className="flex-1 space-y-3">
           <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
@@ -138,7 +257,6 @@ const HomeLanding = ({ lang, setCurrentPage }) => {
               </div>
             </div>
             
-            {/* RESULTADOS (Se auto-destruyen en 6s) */}
             {statusResult && (
               <div className={`mt-4 p-4 rounded-xl text-sm border animate-in slide-in-from-top-2 fade-in duration-500 ${
                 statusResult.found 
@@ -172,11 +290,10 @@ const HomeLanding = ({ lang, setCurrentPage }) => {
         </div>
       </div>
       
-      {/* 4. LOGOS (Placeholders mejorados) */}
+      {/* 5. LOGOS */}
       <div className="border-t border-gray-200 pt-10 pb-4">
         <p className="text-center text-xs text-gray-400 font-bold mb-8 uppercase tracking-[0.2em]">{lang === 'es' ? 'Instituciones Convocantes' : 'Convening Institutions'}</p>
         <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 opacity-50 grayscale hover:grayscale-0 transition-all duration-700">
-           {/* Reemplaza con <img> reales cuando las tengas */}
            <div className="h-14 px-6 bg-white border-2 border-gray-100 rounded-lg flex items-center justify-center font-black text-gray-300 text-xl shadow-sm select-none hover:border-teal-100 hover:text-teal-600 hover:shadow-md transition-all">UNICACH</div>
            <div className="h-14 px-6 bg-white border-2 border-gray-100 rounded-lg flex items-center justify-center font-black text-gray-300 text-xl shadow-sm select-none hover:border-teal-100 hover:text-teal-600 hover:shadow-md transition-all">IASPM</div>
            <div className="h-14 px-6 bg-white border-2 border-gray-100 rounded-lg flex items-center justify-center font-black text-gray-300 text-xl shadow-sm select-none hover:border-teal-100 hover:text-teal-600 hover:shadow-md transition-all">CESMECA</div>

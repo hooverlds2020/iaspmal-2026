@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
-// Importamos el icono seguro desde la librería (evita problemas de emojis)
 import { Ticket } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
 
@@ -32,13 +31,47 @@ import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
 
 const MainLayout = ({ lang, setLang }) => {
-  const [currentPage, setCurrentPage] = useState('home');
+  // 1. FUNCIÓN PARA LEER EL HASH INICIAL
+  // Si alguien entra directo a misitio.com/#programa, lo detectamos aquí
+  const getInitialPage = () => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash.replace('#', '');
+      return hash || 'home';
+    }
+    return 'home';
+  };
+
+  const [currentPage, setCurrentPage] = useState(getInitialPage);
   const [showRegistration, setShowRegistration] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [submenuOpen, setSubmenuOpen] = useState({
     'actividades-congreso': false,
     'info-complementaria': false
   });
+
+  // 2. EFECTO: SINCRONIZAR ESTADO -> URL
+  // Cuando setCurrentPage cambia (por clic), actualizamos el #hash
+  useEffect(() => {
+    window.location.hash = currentPage;
+    // Scroll al inicio suavemente cuando cambia la "página"
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentPage]);
+
+  // 3. EFECTO: SINCRONIZAR URL (BOTÓN ATRÁS) -> ESTADO
+  // Cuando el usuario da clic en "Atrás" en el navegador
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash) {
+        setCurrentPage(hash);
+      } else {
+        setCurrentPage('home');
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   const menuItems = [
     { id: 'home', label: 'Inicio', label_pt: 'Início' },
@@ -87,7 +120,7 @@ const MainLayout = ({ lang, setLang }) => {
       
       // CASO CUOTAS
       case 'cuotas': return (
-          <div className="space-y-6">
+          <div className="space-y-6 animate-in fade-in duration-300">
             <div className="overflow-x-auto">
               <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
                 <thead className="bg-teal-600 text-white">
@@ -106,10 +139,10 @@ const MainLayout = ({ lang, setLang }) => {
               </table>
             </div>
             
-            {/* BOTÓN DE REGISTRO CORREGIDO (Sin emojis de texto) */}
+            {/* BOTÓN DE REGISTRO */}
             <div className="flex justify-center">
               <button onClick={() => setShowRegistration(true)} className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-4 px-8 rounded-lg text-lg transition shadow-lg hover:shadow-xl flex items-center gap-2">
-                <Ticket className="w-6 h-6" /> {/* Icono SVG limpio */}
+                <Ticket className="w-6 h-6" /> 
                 <span>{lang === 'es' ? 'Registrarse al Congreso' : 'Inscrever-se no Congresso'}</span>
               </button>
             </div>

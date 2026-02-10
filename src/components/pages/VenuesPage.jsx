@@ -23,9 +23,9 @@ function VenuesPage({ lang }) {
         'Sala Julio Barrientos'
       ],
       icon: '🏛️',
-      image: 'https://images.unsplash.com/photo-1580130732478-260d6c6ca155?w=800&h=600&fit=crop',
+      image: '/images/el-carmen.webp', // Actualizado a .webp
       coordinates: { lat: 16.7370, lng: -92.6378 },
-      mapLink: 'https://maps.app.goo.gl/mhqQrW75tVCzv47d9'
+      mapLink: '' 
     },
     {
       id: 2,
@@ -41,9 +41,9 @@ function VenuesPage({ lang }) {
       },
       spaces: ['Auditorio principal'],
       icon: '🎭',
-      image: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=800&h=600&fit=crop',
+      image: '/images/dif.webp', // Actualizado a .webp
       coordinates: { lat: 16.7360, lng: -92.6370 },
-      mapLink: 'https://maps.app.goo.gl/cmMu53nuujH2hvXH6'
+      mapLink: ''
     },
     {
       id: 3,
@@ -59,7 +59,7 @@ function VenuesPage({ lang }) {
       },
       spaces: ['Auditorio', 'Aula Magna'],
       icon: '⚖️',
-      image: 'https://images.unsplash.com/photo-1562774053-701939374585?w=800&h=600&fit=crop',
+      image: '/images/facultad-derecho.webp', // Actualizado a .webp
       coordinates: { lat: 16.7380, lng: -92.6390 },
       mapLink: ''
     },
@@ -77,7 +77,7 @@ function VenuesPage({ lang }) {
       },
       spaces: ['Sala 1', 'Sala 2', 'Sala 3', 'Patio'],
       icon: '🏰',
-      image: 'https://images.unsplash.com/photo-1582719471137-c3967ffb1c42?w=800&h=600&fit=crop',
+      image: '/images/casa-mazariegos.webp', // Actualizado a .webp
       coordinates: { lat: 16.7365, lng: -92.6385 },
       mapLink: ''
     },
@@ -95,7 +95,7 @@ function VenuesPage({ lang }) {
       },
       spaces: ['Sala 1', 'Sala 2'],
       icon: '🎨',
-      image: 'https://images.unsplash.com/photo-1578926078669-7cc6bb46e3ea?w=800&h=600&fit=crop',
+      image: '/images/carlos-jurado.webp', // Actualizado a .webp
       coordinates: { lat: 16.7375, lng: -92.6375 },
       mapLink: ''
     },
@@ -113,7 +113,7 @@ function VenuesPage({ lang }) {
       },
       spaces: ['Espacios del museo'],
       icon: '🖼️',
-      image: 'https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?w=800&h=600&fit=crop',
+      image: '/images/musac.webp', // Actualizado a .webp
       coordinates: { lat: 16.7385, lng: -92.6365 },
       mapLink: ''
     },
@@ -131,20 +131,20 @@ function VenuesPage({ lang }) {
       },
       spaces: ['Teatro principal'],
       icon: '🎪',
-      image: 'https://images.unsplash.com/photo-1514306191717-452ec28c7814?w=800&h=600&fit=crop',
+      image: '/images/teatro.webp', // Actualizado a .webp
       coordinates: { lat: 16.7355, lng: -92.6380 },
       mapLink: ''
     }
   ];
 
   const openInMaps = (venue) => {
-    const url = venue.mapLink || 
-      `https://www.google.com/maps/search/?api=1&query=${venue.coordinates.lat},${venue.coordinates.lng}`;
+    const query = encodeURIComponent(`${venue.name} San Cristóbal de las Casas`);
+    const url = venue.mapLink || `https://www.google.com/maps/search/?api=1&query=${query}`;
     window.open(url, '_blank');
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-in fade-in duration-500">
       {/* Descripción inicial */}
       <div>
         <p className="text-gray-700 text-lg mb-4">
@@ -159,63 +159,65 @@ function VenuesPage({ lang }) {
         {venues.map((venue) => (
           <div
             key={venue.id}
-            className="bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-200 cursor-pointer group"
+            className="bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-200 cursor-pointer group flex flex-col h-full"
             onClick={() => setSelectedVenue(venue)}
           >
             {/* Imagen */}
-            <div className="relative h-48 overflow-hidden">
+            <div className="relative h-56 overflow-hidden">
               <img
                 src={venue.image}
                 alt={venue.name}
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                // Fallback por si la imagen webp no carga (volver a jpg o placeholder)
                 onError={(e) => {
-                  e.target.src = `https://via.placeholder.com/800x600/0d9488/ffffff?text=${encodeURIComponent(venue.name)}`;
+                  // Intenta cargar la JPG si la WEBP falla, o usa un placeholder
+                  if (e.target.src.includes('.webp')) {
+                     e.target.src = e.target.src.replace('.webp', '.jpg');
+                  } else {
+                     e.target.src = `https://via.placeholder.com/800x600/0d9488/ffffff?text=${encodeURIComponent(venue.name)}`;
+                  }
                 }}
               />
+              {/* Overlay suave al hacer hover */}
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300"></div>
+              
               {/* Icono flotante */}
-              <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm rounded-full w-12 h-12 flex items-center justify-center shadow-lg">
-                <span className="text-2xl">{venue.icon}</span>
-              </div>
-              {/* Badge provisional */}
-              <div className="absolute bottom-3 left-3 bg-amber-500 text-white text-xs font-semibold px-3 py-1 rounded-full shadow-lg">
-                📷 {lang === 'es' ? 'Provisional' : 'Temporary'}
+              <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-full w-10 h-10 flex items-center justify-center shadow-md">
+                <span className="text-xl">{venue.icon}</span>
               </div>
             </div>
 
             {/* Contenido */}
-            <div className="p-4">
-              <h3 className="font-bold text-lg text-gray-800 mb-2 group-hover:text-teal-600 transition-colors">
+            <div className="p-5 flex-1 flex flex-col">
+              <h3 className="font-bold text-lg text-gray-800 mb-2 group-hover:text-teal-700 transition-colors">
                 {venue.name}
               </h3>
               
               {/* Dirección compacta */}
-              <div className="mb-3 text-xs text-gray-600 flex items-start gap-1">
+              <div className="mb-3 text-xs text-gray-500 flex items-start gap-1.5">
                 <span className="text-teal-600 mt-0.5">📍</span>
                 <span className="line-clamp-2">
                   {venue.address.street}, {venue.address.zone}
                 </span>
               </div>
 
-              <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+              <p className="text-gray-600 text-sm mb-4 line-clamp-2 flex-1">
                 {venue.description}
               </p>
 
               {/* Espacios */}
               <div className="mb-4">
-                <h4 className="text-xs font-semibold text-gray-500 mb-2 uppercase">
-                  {lang === 'es' ? 'Espacios' : 'Spaces'} ({venue.spaces.length})
-                </h4>
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-1.5">
                   {venue.spaces.slice(0, 2).map((space, index) => (
                     <span
                       key={index}
-                      className="text-xs bg-teal-50 text-teal-700 px-2 py-1 rounded-full"
+                      className="text-[10px] uppercase tracking-wide font-medium bg-teal-50 text-teal-700 px-2 py-1 rounded-md border border-teal-100"
                     >
                       {space}
                     </span>
                   ))}
                   {venue.spaces.length > 2 && (
-                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                    <span className="text-[10px] font-medium bg-gray-50 text-gray-600 px-2 py-1 rounded-md border border-gray-200">
                       +{venue.spaces.length - 2}
                     </span>
                   )}
@@ -228,10 +230,10 @@ function VenuesPage({ lang }) {
                   e.stopPropagation();
                   openInMaps(venue);
                 }}
-                className="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
+                className="w-full bg-white border border-teal-600 text-teal-700 hover:bg-teal-50 font-semibold py-2 px-4 rounded-lg transition-colors text-sm flex items-center justify-center gap-2 group-hover:bg-teal-600 group-hover:text-white"
               >
-                <span>📍</span>
-                <span>{lang === 'es' ? 'Ver ubicación' : 'View location'}</span>
+                <span>🗺️</span>
+                <span>{lang === 'es' ? 'Ver en Mapa' : 'View on Map'}</span>
               </button>
             </div>
           </div>
@@ -239,21 +241,23 @@ function VenuesPage({ lang }) {
       </div>
 
       {/* Mapa general */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200">
-        <div className="bg-teal-700 text-white p-4">
-          <h3 className="text-xl font-bold mb-1">
-            {lang === 'es' ? 'Ubicación General' : 'General Location'}
-          </h3>
-          <p className="text-sm text-teal-100">
-            {lang === 'es'
-              ? 'Todas las sedes están en el centro histórico, a distancia caminable'
-              : 'All venues are in the historic center, within walking distance'}
-          </p>
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
+        <div className="bg-gray-800 text-white p-4 flex justify-between items-center">
+          <div>
+            <h3 className="text-lg font-bold">
+              {lang === 'es' ? 'Mapa de Sedes' : 'Venues Map'}
+            </h3>
+            <p className="text-xs text-gray-400">
+              {lang === 'es'
+                ? 'Centro Histórico de San Cristóbal de Las Casas'
+                : 'Historic Center of San Cristóbal de Las Casas'}
+            </p>
+          </div>
         </div>
         
-        <div className="h-96">
+        <div className="h-96 bg-gray-100 relative">
           <iframe
-            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3822.5!2d-92.6378!3d16.7370!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x85ed4531619ba4c9%3A0x8e5558c5c875fc37!2sSan%20Crist%C3%B3bal%20de%20las%20Casas%2C%20Chiapas!5e0!3m2!1ses!2smx!4v1234567890"
+            src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d15286.326848606086!2d-92.63750000000002!3d16.737500000000004!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1ses!2smx!4v1679000000000!5m2!1ses!2smx"
             width="100%"
             height="100%"
             style={{ border: 0 }}
@@ -261,76 +265,55 @@ function VenuesPage({ lang }) {
             loading="lazy"
             referrerPolicy="no-referrer-when-downgrade"
             title={lang === 'es' ? 'Mapa de las sedes' : 'Venues map'}
-          />
-        </div>
-
-        {/* Leyenda */}
-        <div className="p-4 bg-gray-50 border-t border-gray-200">
-          <h4 className="font-bold text-gray-800 mb-3 text-sm">
-            {lang === 'es' ? 'Leyenda de ubicaciones:' : 'Location legend:'}
-          </h4>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {venues.map((venue) => (
-              <div key={venue.id} className="flex items-center gap-2">
-                <span className="text-lg">{venue.icon}</span>
-                <span className="text-xs text-gray-700">{venue.name}</span>
-              </div>
-            ))}
+          ></iframe>
+          
+          {/* Overlay informativo */}
+          <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur p-2 rounded shadow text-xs text-gray-500">
+            San Cristóbal de Las Casas, Chiapas
           </div>
         </div>
       </div>
 
       {/* Información adicional */}
       <div className="grid md:grid-cols-3 gap-4">
-        <div className="bg-teal-50 p-4 rounded-lg border border-teal-200">
-          <div className="text-2xl mb-2">🚶</div>
-          <h3 className="font-bold text-gray-800 mb-1">
-            {lang === 'es' ? 'Distancias caminables' : 'Walking distances'}
-          </h3>
-          <p className="text-gray-700 text-sm">
-            {lang === 'es'
-              ? 'Todas las sedes están a 5-15 minutos caminando entre sí.'
-              : 'All venues are 5-15 minutes walking distance from each other.'}
-          </p>
-        </div>
-
-        <div className="bg-teal-50 p-4 rounded-lg border border-teal-200">
-          <div className="text-2xl mb-2">🌡️</div>
-          <h3 className="font-bold text-gray-800 mb-1">
-            {lang === 'es' ? 'Clima templado' : 'Mild climate'}
-          </h3>
-          <p className="text-gray-700 text-sm">
-            {lang === 'es'
-              ? 'Temperatura promedio de 15-20°C. Traer ropa abrigada para las noches.'
-              : 'Average temperature 15-20°C. Bring warm clothing for evenings.'}
-          </p>
-        </div>
-
-        <div className="bg-teal-50 p-4 rounded-lg border border-teal-200">
-          <div className="text-2xl mb-2">🏔️</div>
-          <h3 className="font-bold text-gray-800 mb-1">
-            {lang === 'es' ? 'Altura' : 'Altitude'}
-          </h3>
-          <p className="text-gray-700 text-sm">
-            {lang === 'es'
-              ? '2,200 metros sobre el nivel del mar. Tómate tiempo para aclimatarte.'
-              : '2,200 meters above sea level. Take time to acclimate.'}
-          </p>
-        </div>
-      </div>
-
-      {/* Nota sobre imágenes */}
-      <div className="bg-amber-50 border-l-4 border-amber-500 rounded-lg p-4">
-        <div className="flex items-start gap-3">
-          <span className="text-2xl">⚠️</span>
+        <div className="bg-blue-50 p-5 rounded-xl border border-blue-100 flex items-start gap-4">
+          <div className="text-3xl bg-white p-2 rounded-full shadow-sm">🚶</div>
           <div>
-            <h3 className="font-bold text-amber-800 mb-1">
-              {lang === 'es' ? 'Nota sobre las imágenes' : 'Note about images'}
+            <h3 className="font-bold text-blue-900 mb-1">
+              {lang === 'es' ? 'Todo cerca' : 'Everything close'}
             </h3>
-            <p className="text-amber-700 text-sm">
+            <p className="text-blue-800 text-sm leading-relaxed">
               {lang === 'es'
-                ? 'Las imágenes mostradas son provisionales y serán reemplazadas por fotografías reales de cada sede próximamente.'
-                : 'The images shown are provisional and will be replaced with actual photographs of each venue soon.'}
+                ? 'Todas las sedes se encuentran en el centro histórico, a una distancia máxima de 15 minutos caminando.'
+                : 'All venues are located in the historic center, within a maximum 15-minute walking distance.'}
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-orange-50 p-5 rounded-xl border border-orange-100 flex items-start gap-4">
+          <div className="text-3xl bg-white p-2 rounded-full shadow-sm">🌡️</div>
+          <div>
+            <h3 className="font-bold text-orange-900 mb-1">
+              {lang === 'es' ? 'Clima' : 'Climate'}
+            </h3>
+            <p className="text-orange-800 text-sm leading-relaxed">
+              {lang === 'es'
+                ? 'Templado húmedo. Promedio 18°C. Las noches pueden ser frías. Se recomienda traer ropa abrigada.'
+                : 'Humid temperate. Average 18°C. Nights can be cold. Warm clothing is recommended.'}
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-purple-50 p-5 rounded-xl border border-purple-100 flex items-start gap-4">
+          <div className="text-3xl bg-white p-2 rounded-full shadow-sm">🏔️</div>
+          <div>
+            <h3 className="font-bold text-purple-900 mb-1">
+              {lang === 'es' ? 'Altitud' : 'Altitude'}
+            </h3>
+            <p className="text-purple-800 text-sm leading-relaxed">
+              {lang === 'es'
+                ? '2,200 msnm. Tómate el primer día con calma para aclimatarte a la altura.'
+                : '2,200 meters above sea level. Take the first day easy to acclimatize to the altitude.'}
             </p>
           </div>
         </div>
@@ -339,70 +322,90 @@ function VenuesPage({ lang }) {
       {/* Modal de detalle */}
       {selectedVenue && (
         <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200"
           onClick={() => setSelectedVenue(null)}
         >
           <div
-            className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="relative h-64">
+            <div className="relative h-72">
               <img
                 src={selectedVenue.image}
                 alt={selectedVenue.name}
                 className="w-full h-full object-cover"
+                onError={(e) => {
+                  if (e.target.src.includes('.webp')) {
+                     e.target.src = e.target.src.replace('.webp', '.jpg');
+                  } else {
+                     e.target.src = `https://via.placeholder.com/800x600/0d9488/ffffff?text=${encodeURIComponent(selectedVenue.name)}`;
+                  }
+                }}
               />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
               <button
                 onClick={() => setSelectedVenue(null)}
-                className="absolute top-4 right-4 bg-white rounded-full w-10 h-10 flex items-center justify-center shadow-lg hover:bg-gray-100 font-bold text-gray-600"
+                className="absolute top-4 right-4 bg-black/20 hover:bg-black/40 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center text-white transition-all"
               >
                 ✕
               </button>
-            </div>
-            <div className="p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <span className="text-4xl">{selectedVenue.icon}</span>
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-800">
+              <div className="absolute bottom-6 left-6 text-white">
+                <div className="flex items-center gap-3 mb-2">
+                    <span className="text-3xl bg-white/20 backdrop-blur-md p-2 rounded-lg">{selectedVenue.icon}</span>
+                    <h2 className="text-3xl font-bold text-shadow-sm">
                     {selectedVenue.name}
-                  </h2>
+                    </h2>
                 </div>
               </div>
+            </div>
+            
+            <div className="p-8">
+              <div className="grid md:grid-cols-2 gap-8">
+                  <div>
+                      <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <span className="text-teal-600">ℹ️</span>
+                        {lang === 'es' ? 'Información' : 'Information'}
+                      </h3>
+                      <p className="text-gray-600 mb-6 leading-relaxed text-sm">
+                        {selectedVenue.description}
+                      </p>
 
-              {/* Dirección completa */}
-              <div className="bg-gray-50 rounded-lg p-4 mb-4 border border-gray-200">
-                <h3 className="font-bold text-gray-800 mb-2 flex items-center gap-2">
-                  <span className="text-teal-600">📍</span>
-                  {lang === 'es' ? 'Dirección' : 'Address'}
-                </h3>
-                <div className="text-gray-700 text-sm space-y-1">
-                  <p>{selectedVenue.address.street}</p>
-                  <p>{selectedVenue.address.zone}</p>
-                  <p>{selectedVenue.address.city}</p>
-                  <p>{selectedVenue.address.zip}</p>
-                </div>
+                      <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                        <h4 className="font-bold text-gray-800 mb-2 text-xs uppercase tracking-wide text-teal-700">
+                            {lang === 'es' ? 'Dirección' : 'Address'}
+                        </h4>
+                        <div className="text-gray-700 text-sm space-y-1">
+                            <p className="font-medium">{selectedVenue.address.street}</p>
+                            <p>{selectedVenue.address.zone}</p>
+                            <p>{selectedVenue.address.city}</p>
+                            <p className="text-gray-500 text-xs">{selectedVenue.address.zip}</p>
+                        </div>
+                      </div>
+                  </div>
+
+                  <div>
+                      <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <span className="text-teal-600">🏛️</span>
+                        {lang === 'es' ? 'Espacios' : 'Spaces'}
+                      </h3>
+                      <ul className="space-y-3">
+                        {selectedVenue.spaces.map((space, index) => (
+                        <li key={index} className="flex items-center gap-3 text-gray-700 text-sm bg-white border border-gray-100 p-3 rounded-lg shadow-sm">
+                            <span className="text-teal-500 font-bold">✓</span>
+                            {space}
+                        </li>
+                        ))}
+                      </ul>
+
+                      <button
+                        onClick={() => openInMaps(selectedVenue)}
+                        className="w-full mt-6 bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-teal-100 hover:shadow-teal-200 transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
+                    >
+                        <span>🗺️</span> 
+                        {lang === 'es' ? 'Cómo llegar' : 'Get directions'}
+                    </button>
+                  </div>
               </div>
-
-              <p className="text-gray-600 mb-6">{selectedVenue.description}</p>
-              
-              <h3 className="font-bold text-gray-800 mb-3">
-                {lang === 'es' ? 'Espacios disponibles:' : 'Available spaces:'}
-              </h3>
-              <ul className="space-y-2 mb-6">
-                {selectedVenue.spaces.map((space, index) => (
-                  <li key={index} className="flex items-center gap-2 text-gray-700">
-                    <span className="text-teal-600">✓</span>
-                    {space}
-                  </li>
-                ))}
-              </ul>
-
-              <button
-                onClick={() => openInMaps(selectedVenue)}
-                className="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
-              >
-                📍 {lang === 'es' ? 'Ver en Google Maps' : 'View on Google Maps'}
-              </button>
             </div>
           </div>
         </div>
