@@ -10,7 +10,7 @@ import StaffAttendance from './pages/StaffAttendance';
 import CertificateDownload from './pages/CertificateDownload';
 
 // Layout components
-import TopBar from './components/layout/TopBar';
+// NOTA: Ya no importamos TopBar
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
 import MobileSidebar from './components/layout/MobileSidebar';
@@ -31,8 +31,6 @@ import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
 
 const MainLayout = ({ lang, setLang }) => {
-  // 1. FUNCIÓN PARA LEER EL HASH INICIAL
-  // Si alguien entra directo a misitio.com/#programa, lo detectamos aquí
   const getInitialPage = () => {
     if (typeof window !== 'undefined') {
       const hash = window.location.hash.replace('#', '');
@@ -49,16 +47,11 @@ const MainLayout = ({ lang, setLang }) => {
     'info-complementaria': false
   });
 
-  // 2. EFECTO: SINCRONIZAR ESTADO -> URL
-  // Cuando setCurrentPage cambia (por clic), actualizamos el #hash
   useEffect(() => {
     window.location.hash = currentPage;
-    // Scroll al inicio suavemente cuando cambia la "página"
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentPage]);
 
-  // 3. EFECTO: SINCRONIZAR URL (BOTÓN ATRÁS) -> ESTADO
-  // Cuando el usuario da clic en "Atrás" en el navegador
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.replace('#', '');
@@ -118,12 +111,11 @@ const MainLayout = ({ lang, setLang }) => {
       case 'formatos': return <AcceptedFormats lang={lang} />;
       case 'conferenciantes': return <div className="space-y-4"><p className="text-gray-700">{lang === 'es' ? 'Información sobre conferencias magistrales y mesas plenarias próximamente.' : 'Information about keynote lectures and plenary sessions coming soon.'}</p></div>;
       
-      // CASO CUOTAS
       case 'cuotas': return (
           <div className="space-y-6 animate-in fade-in duration-300">
             <div className="overflow-x-auto">
               <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
-                <thead className="bg-teal-600 text-white">
+                <thead className="bg-iaspm-blue text-white">
                   <tr>
                     <th className="p-3 text-left">{lang === 'es' ? 'Categoría' : 'Categoria'}</th>
                     <th className="p-3 text-center">{lang === 'es' ? 'Pago antes del 31/05/26' : 'Pagamento antes de 31/05/26'}</th>
@@ -139,9 +131,8 @@ const MainLayout = ({ lang, setLang }) => {
               </table>
             </div>
             
-            {/* BOTÓN DE REGISTRO */}
             <div className="flex justify-center">
-              <button onClick={() => setShowRegistration(true)} className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-4 px-8 rounded-lg text-lg transition shadow-lg hover:shadow-xl flex items-center gap-2">
+              <button onClick={() => setShowRegistration(true)} className="bg-iaspm-orange hover:bg-orange-600 text-white font-bold py-4 px-8 rounded-lg text-lg transition shadow-lg hover:shadow-xl flex items-center gap-2 transform hover:-translate-y-1">
                 <Ticket className="w-6 h-6" /> 
                 <span>{lang === 'es' ? 'Registrarse al Congreso' : 'Inscrever-se no Congresso'}</span>
               </button>
@@ -170,7 +161,6 @@ const MainLayout = ({ lang, setLang }) => {
       case 'san-cristobal': return <div className="space-y-4"><p className="text-gray-700">{lang === 'es' ? 'Información sobre San Cristóbal de Las Casas próximamente.' : 'Information about San Cristóbal de Las Casas coming soon.'}</p></div>;
       case 'cartel': return <div className="space-y-4"><p className="text-gray-700">{lang === 'es' ? 'Cartel del congreso próximamente.' : 'Congress poster coming soon.'}</p></div>;
       
-      // Respaldo
       case 'inscripcion': return renderContent('cuotas'); 
       
       default: return <p className="text-gray-600">{lang === 'es' ? 'Contenido en preparación.' : 'Content in preparation.'}</p>;
@@ -204,20 +194,35 @@ const MainLayout = ({ lang, setLang }) => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col" dir="ltr">
-      <TopBar lang={lang} setLang={setLang} onMobileMenuOpen={() => setIsMobileOpen(true)} />
-      <Header lang={lang} />
-      <main className="flex-1 max-w-7xl mx-auto px-6 pb-16 w-full">
-        <div className="grid grid-cols-1 md:grid-cols-[280px,1fr] gap-6 items-start">
+      
+      {/* CAMBIO: Pasamos todas las funciones de control al Header */}
+      <Header 
+        lang={lang} 
+        setLang={setLang} 
+        onMobileMenuOpen={() => setIsMobileOpen(true)} 
+      />
+      
+      <main className="flex-1 max-w-7xl mx-auto px-6 pb-16 w-full py-6">
+        
+        <div className="grid grid-cols-1 md:grid-cols-[280px,1fr] gap-8 items-start">
           <Sidebar menuItems={menuItems} currentPage={currentPage} setCurrentPage={setCurrentPage} submenuOpen={submenuOpen} toggleSubmenu={toggleSubmenu} lang={lang} />
           <MobileSidebar isOpen={isMobileOpen} onClose={() => setIsMobileOpen(false)} menuItems={menuItems} currentPage={currentPage} setCurrentPage={setCurrentPage} submenuOpen={submenuOpen} toggleSubmenu={toggleSubmenu} lang={lang} />
-          <section className="bg-white rounded-xl shadow-sm border border-gray-200">
-            {currentPage !== 'home' && (
-                <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-                <h2 className="text-teal-700 text-xl font-bold">{getPageTitle()}</h2>
+          
+          <section className="bg-white rounded-xl shadow-sm border border-gray-200 relative overflow-hidden">
+            
+            <div 
+              className="absolute inset-0 z-0 opacity-[0.03] bg-[url('/images/Marimba_Watermark.png')] bg-cover bg-center bg-no-repeat grayscale pointer-events-none"
+            ></div>
+
+            <div className="relative z-10">
+                {currentPage !== 'home' && (
+                    <div className="bg-gray-50/90 px-6 py-4 border-b border-gray-200 backdrop-blur-sm">
+                    <h2 className="text-iaspm-blue text-xl font-bold font-sans">{getPageTitle()}</h2>
+                    </div>
+                )}
+                <div className="p-6">
+                  <div className="prose max-w-none">{renderContent()}</div>
                 </div>
-            )}
-            <div className="p-6">
-              <div className="prose max-w-none">{renderContent()}</div>
             </div>
           </section>
         </div>
@@ -246,7 +251,7 @@ const App = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-iaspm-orange"></div>
       </div>
     );
   }
