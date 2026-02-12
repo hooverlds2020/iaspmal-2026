@@ -1,14 +1,16 @@
 // src/pages/AdminDashboard.jsx
 import React, { useState } from 'react';
-import { LogOut, Users, Calendar, FileText, Settings, DollarSign } from 'lucide-react'
+import { LogOut, Users, Calendar, FileText, Settings, DollarSign, MapPin } from 'lucide-react'; // Agregamos MapPin
 import SymposiumsManager from '../components/admin/SymposiumsManager';
 import SessionsManager from '../components/admin/SessionsManager';
 import PresentationsManager from '../components/admin/PresentationsManager';
+import SymposiumVenueManager from '../components/admin/SymposiumVenueManager'; // <--- IMPORT NUEVO
 import { supabase } from '../lib/supabaseClient';
 import RegistrationsDashboard from './RegistrationsDashboard';
 import FinancesDashboard from './FinancesDashboard';
 
 const AdminDashboard = ({ user, onLogout }) => {
+  // Estado para controlar qué sección se muestra
   const [activeSection, setActiveSection] = useState('simposios');
 
   const handleLogout = async () => {
@@ -37,11 +39,14 @@ const AdminDashboard = ({ user, onLogout }) => {
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          
           {/* Sidebar */}
           <aside className="md:col-span-1">
             <nav className="bg-white rounded-lg border border-gray-200 p-4">
               <h2 className="font-bold text-gray-900 mb-4">Menú</h2>
               <ul className="space-y-2">
+                
+                {/* Opción 1: Simposios (Gestión general) */}
                 <li>
                   <button
                     onClick={() => setActiveSection('simposios')}
@@ -55,6 +60,23 @@ const AdminDashboard = ({ user, onLogout }) => {
                     Simposios
                   </button>
                 </li>
+
+                {/* Opción NUEVA: Sedes y Asignación */}
+                <li>
+                  <button
+                    onClick={() => setActiveSection('sedes')}
+                    className={`w-full text-left px-4 py-2 rounded-lg transition flex items-center gap-2 ${
+                      activeSection === 'sedes'
+                        ? 'bg-teal-600 text-white'
+                        : 'hover:bg-gray-100 text-gray-700'
+                    }`}
+                  >
+                    <MapPin className="w-4 h-4" />
+                    Sedes y Simposios
+                  </button>
+                </li>
+
+                {/* Opción 2: Sesiones */}
                 <li>
                   <button
                     onClick={() => setActiveSection('sesiones')}
@@ -65,9 +87,11 @@ const AdminDashboard = ({ user, onLogout }) => {
                     }`}
                   >
                     <Calendar className="w-4 h-4" />
-                    Sesiones
+                    Sesiones (Mesas)
                   </button>
                 </li>
+
+                {/* Opción 3: Ponencias */}
                 <li>
                   <button
                     onClick={() => setActiveSection('ponencias')}
@@ -81,6 +105,8 @@ const AdminDashboard = ({ user, onLogout }) => {
                     Ponencias
                   </button>
                 </li>
+
+                {/* Opción 4: Registros */}
                 <li>
                   <button
                     onClick={() => setActiveSection('registros')}
@@ -94,6 +120,8 @@ const AdminDashboard = ({ user, onLogout }) => {
                     Registros
                   </button>
                 </li>
+
+                {/* Opción 5: Finanzas */}
                 <li>
                   <button
                     onClick={() => setActiveSection('finanzas')}
@@ -116,19 +144,26 @@ const AdminDashboard = ({ user, onLogout }) => {
             <div className="bg-white rounded-lg border border-gray-200 p-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">
                 {activeSection === 'simposios' && 'Gestión de Simposios'}
+                {activeSection === 'sedes' && 'Asignación de Sedes'} 
                 {activeSection === 'sesiones' && 'Gestión de Sesiones'}
                 {activeSection === 'ponencias' && 'Gestión de Ponencias'}
                 {activeSection === 'registros' && 'Gestión de Registros'}
+                {activeSection === 'finanzas' && 'Panel Financiero'}
               </h2>
 
+              {/* Renderizado condicional de componentes */}
               {activeSection === 'simposios' && <SymposiumsManager />}
+              
+              {/* COMPONENTE NUEVO */}
+              {activeSection === 'sedes' && <SymposiumVenueManager />}
 
               {activeSection === 'sesiones' && <SessionsManager />}
 
               {activeSection === 'ponencias' && <PresentationsManager />}
 
               {activeSection === 'registros' && <RegistrationsDashboard />}
-        {activeSection === 'finanzas' && <FinancesDashboard />}
+              
+              {activeSection === 'finanzas' && <FinancesDashboard />}
 
             </div>
           </main>

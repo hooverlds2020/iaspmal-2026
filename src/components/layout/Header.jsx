@@ -4,31 +4,30 @@ import { Globe, User, Menu } from 'lucide-react';
 
 const Header = ({ lang, setLang, onMobileMenuOpen }) => {
   return (
-    // 'relative' y 'overflow-hidden' son vitales para contener la marca de agua
-    <header className="relative bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm transition-all duration-300 overflow-hidden">
+    <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm transition-all duration-300">
       
-      {/* --- MARCA DE AGUA (MARIMBA) --- */}
-      {/* Está posicionada a la derecha (right-0) y ocupa toda la altura (h-full).
-          'pointer-events-none' asegura que NO bloquee los clics de los botones.
-          'z-0' la manda al fondo. */}
-      <div className="absolute right-0 top-0 h-full w-1/2 md:w-1/3 flex justify-end items-center pointer-events-none z-0 overflow-hidden">
-         <img 
-            src="/images/Marimba_Watermark.png" 
-            alt="" 
-            // AJUSTES VISUALES:
-            // opacity-10: Muy suave (10%). Si la quieres más suave, baja a opacity-5.
-            // grayscale: Para que no compita en color.
-            // object-cover / object-right: Se ajusta sin deformarse.
-            // translate-x-10: La movemos un poco a la derecha para que solo se vea una parte, muy elegante.
-            className="h-[150%] w-auto object-contain object-right opacity-[0.08] grayscale mix-blend-multiply translate-x-6 md:translate-x-10"
-         />
-      </div>
-
-      {/* --- CONTENIDO PRINCIPAL --- */}
-      {/* 'relative z-10' asegura que el texto y botones estén ENCIMA de la marimba */}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* CONTENEDOR PRINCIPAL CENTRADO
+          Agregamos 'relative' aquí para que la marimba se ancle a ESTE espacio 
+          y no al borde de la pantalla completa. */}
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 overflow-hidden">
         
-        <div className="flex justify-between items-center py-2 md:py-3"> 
+        {/* --- MARCA DE AGUA (MARIMBA) --- */}
+        {/* MOVIDO AQUÍ ADENTRO.
+            Ahora 'right-0' significa 'borde derecho del contenido', justo donde están los botones. */}
+        <div className="absolute right-0 top-0 h-full w-1/2 md:w-1/3 flex justify-end items-center pointer-events-none z-0">
+           <img 
+              src="/images/Marimba_Watermark.png" 
+              alt="" 
+              // AJUSTES:
+              // translate-x-4: La movemos solo un poquito a la derecha para que se asome sutilmente.
+              // scale-125: Un poco más grande para que llene bien el espacio detrás de los botones.
+              className="h-[160%] w-auto object-contain object-right opacity-[0.08] grayscale mix-blend-multiply translate-x-4 md:translate-x-8"
+           />
+        </div>
+
+        {/* --- CONTENIDO (Texto y Botones) --- */}
+        {/* 'relative z-10' para asegurar que los botones estén ENCIMA de la imagen */}
+        <div className="relative z-10 flex justify-between items-center py-2 md:py-3"> 
           
           {/* 1. IZQUIERDA: LOGO E INFO */}
           <div className="flex items-center gap-4">
@@ -38,8 +37,7 @@ const Header = ({ lang, setLang, onMobileMenuOpen }) => {
               className="h-16 md:h-20 w-auto object-contain hover:scale-105 transition-transform drop-shadow-sm"
             />
             
-            {/* Barra vertical y texto (Visible en PC) */}
-            <div className="hidden md:flex flex-col justify-center border-l-2 border-gray-100 pl-4 h-12">
+            <div className="hidden md:flex flex-col justify-center border-l-2 border-gray-100 pl-4 h-12 bg-white/60 backdrop-blur-sm rounded-r-lg pr-2">
                <h2 className="text-iaspm-blue font-bold text-sm md:text-base uppercase tracking-tight leading-none">
                   San Cristóbal de Las Casas
                </h2>
@@ -52,8 +50,7 @@ const Header = ({ lang, setLang, onMobileMenuOpen }) => {
             </div>
           </div>
 
-          {/* 2. DERECHA: CONTROLES (Idioma, Admin, Menú) */}
-          {/* Agregamos fondos semitransparentes (backdrop-blur) para garantizar legibilidad perfecta sobre la marimba */}
+          {/* 2. DERECHA: CONTROLES */}
           <div className="flex items-center gap-3 md:gap-6">
              
              {/* Selector de Idioma */}
@@ -74,7 +71,7 @@ const Header = ({ lang, setLang, onMobileMenuOpen }) => {
                 </button>
              </div>
 
-             {/* Enlace Admin (Solo PC) */}
+             {/* Enlace Admin */}
              <a href="/admin" className="hidden md:flex items-center gap-2 text-gray-500 hover:text-iaspm-orange transition text-xs font-medium group bg-white/80 backdrop-blur-sm py-1 px-3 rounded-full border border-gray-200/60 hover:border-iaspm-orange/30 shadow-sm">
                 <div className="bg-gray-100 p-1 rounded-full group-hover:bg-iaspm-orange group-hover:text-white transition">
                    <User className="w-3 h-3" />
@@ -82,7 +79,7 @@ const Header = ({ lang, setLang, onMobileMenuOpen }) => {
                 <span>Admin</span>
              </a>
 
-             {/* Botón Hamburguesa (Móvil) */}
+             {/* Botón Hamburguesa */}
              <button 
                onClick={onMobileMenuOpen} 
                className="md:hidden p-2 text-gray-600 hover:bg-white hover:text-iaspm-blue rounded-lg transition bg-white/60 backdrop-blur-sm border border-transparent shadow-sm"

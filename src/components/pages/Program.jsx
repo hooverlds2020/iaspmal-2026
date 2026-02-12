@@ -3,29 +3,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import ScheduleView from './ScheduleView';
 import { 
-  Users, 
-  ChevronDown, 
-  ChevronUp, 
-  Printer, 
-  Loader2, 
-  Calendar, 
-  List, 
-  MapPin, 
-  Info 
+  Users, ChevronDown, Printer, Loader2, Calendar, 
+  List, MapPin, FileText, Mic2, Info, ChevronRight 
 } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print'; 
 import PrintableProgram from './PrintableProgram'; 
 
-// Función auxiliar para limpiar coordinadores (igual que en el PDF)
 const cleanCoordinators = (data) => {
   if (!data) return '';
   if (Array.isArray(data)) return data.join(', ');
   if (typeof data === 'string') {
-    // Intenta limpiar strings con formato JSON array si vienen sucios
-    if (data.startsWith('{') && data.endsWith('}')) {
-      return data.slice(1, -1).replace(/"/g, '').split(',').join(', ');
-    }
-    // Limpia corchetes y comillas de arrays stringificados
     return data.replace(/[\[\]"]/g, '').replace(/,/g, ', ');
   }
   return data;
@@ -34,15 +21,16 @@ const cleanCoordinators = (data) => {
 const Program = ({ lang }) => {
   const [view, setView] = useState('symposiums');
   const [symposiums, setSymposiums] = useState([]);      
+  const [sessions, setSessions] = useState([]); 
   const [loading, setLoading] = useState(true);
   const [expandedSymposium, setExpandedSymposium] = useState(null);
+  const [showPapers, setShowPapers] = useState({});
   const [isPrinting, setIsPrinting] = useState(false);
 
   const printRef = useRef(null);
 
-  // Configuración dinámica del PDF
   const typeToPrint = view === 'schedule' ? 'schedule' : 'symposiums';
-  const pdfTitle = view === 'schedule' ? 'Horario_IASPM_2026' : 'Simposios_IASPM_2026';
+  const pdfTitle = view === 'schedule' ? 'Agenda_IASPMAL_2026' : 'Simposios_IASPMAL_2026';
 
   const handlePrint = useReactToPrint({
     contentRef: printRef,
@@ -55,184 +43,182 @@ const Program = ({ lang }) => {
     onPrintError: (error) => console.error("Error al imprimir:", error)
   });
 
-  useEffect(() => {
-    fetchSymposiums();
-  }, []);
-
-  const fetchSymposiums = async () => {
+  const fetchDataSafe = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      const { data: sympData, error: sympError } = await supabase
         .from('symposiums')
         .select('*')
-        .order('number', { ascending: true });
-
-      if (error) throw error;
-      setSymposiums(data || []);
+        .order('id', { ascending: true });
       
+      if (sympError) throw sympError;
+
+      const { data: presData, error: presError } = await supabase
+        .from('presentations')
+        .select('*');
+      
+      if (presError) throw presError;
+
+      const combinedSympData = sympData.map(s => ({
+        ...s,
+        presentations: presData.filter(p => p.symposium_id === s.id).sort((a, b) => a.title.localeCompare(b.title))
+      }));
+      
+      setSymposiums(combinedSympData);
+
+      const { data: sessionData, error: sessionError } = await supabase
+        .from('sessions')
+        .select(`
+          *,
+          symposiums ( name ),
+          rooms ( name, venues ( name ) ),
+          presentations ( id, title, authors )
+        `)
+        .order('date', { ascending: true })
+        .order('start_time', { ascending: true });
+
+      if (sessionError) throw sessionError;
+      setSessions(sessionData || []);
+
     } catch (error) {
-      console.error('Error cargando datos:', error);
+      console.error('Error al cargar programa:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleSymposium = (id) => {
-    setExpandedSymposium(expandedSymposium === id ? null : id);
+  useEffect(() => { fetchDataSafe(); }, []);
+
+  const togglePapers = (e, id) => {
+    e.stopPropagation(); 
+    setShowPapers(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto pb-12">
+    <div className="space-y-8 max-w-5xl mx-auto pb-12 px-4">
       
-      {/* --- CABECERA SUPERIOR --- */}
-      <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-4 border-b border-gray-200 pb-4">
+      {/* CABECERA */}
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4 border-b pb-6">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">
+          <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">
             {lang === 'es' ? 'Programa Académico' : 'Academic Program'}
           </h2>
-          <p className="text-gray-500 text-sm mt-1">
-            {lang === 'es' ? 'Explora los simposios y la agenda general.' : 'Explore symposiums and general schedule.'}
-          </p>
         </div>
         
-        <button 
-           onClick={() => handlePrint()}
-           disabled={isPrinting || loading || symposiums.length === 0}
-           className={`
-             px-5 py-2.5 rounded-lg flex items-center gap-2 shadow-lg hover:shadow-xl transition-all text-sm font-bold cursor-pointer text-white transform hover:-translate-y-0.5
-             ${view === 'schedule' 
-                ? 'bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700' 
-                : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700'}
-             disabled:bg-gray-400 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none
-           `}
-        >
-           {isPrinting ? <Loader2 size={18} className="animate-spin"/> : <Printer size={18} />}
-           <span>
-             {lang === 'es' 
-                ? (view === 'schedule' ? 'Descargar Horario PDF' : 'Descargar Lista PDF')
-                : 'Download PDF'}
-           </span>
-        </button>
+        <div className="flex gap-3">
+          {/* BOTÓN ACTUALIZADO: AZUL MARINO XVII CONGRESO */}
+          <button 
+             onClick={() => handlePrint()}
+             disabled={isPrinting || loading}
+             className="px-5 py-2.5 bg-[#1e3a5f] text-white rounded-xl flex items-center gap-2 shadow-lg hover:bg-black transition-all text-sm font-bold disabled:opacity-50 active:scale-95"
+          >
+             {isPrinting ? <Loader2 size={18} className="animate-spin"/> : <Printer size={18} />}
+             <span>{lang === 'es' ? 'Descargar PDF' : 'Download PDF'}</span>
+          </button>
+
+          <div className="flex gap-2 bg-gray-100 p-1 rounded-xl">
+            <button onClick={() => setView('symposiums')} className={`px-4 py-2 rounded-lg font-bold text-sm transition ${view === 'symposiums' ? 'bg-white text-[#1e3a5f] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+              <List className="inline mr-2" size={16}/> {lang === 'es' ? 'Simposios' : 'Symposiums'}
+            </button>
+            <button onClick={() => setView('schedule')} className={`px-4 py-2 rounded-lg font-bold text-sm transition ${view === 'schedule' ? 'bg-white text-[#1e3a5f] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+              <Calendar className="inline mr-2" size={16}/> {lang === 'es' ? 'Agenda' : 'Schedule'}
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* --- TABS DE NAVEGACIÓN --- */}
-      <div className="flex gap-2 p-1 bg-gray-100 rounded-xl w-fit">
-        <button 
-            onClick={() => setView('symposiums')} 
-            className={`flex items-center gap-2 px-6 py-2.5 font-bold rounded-lg transition-all duration-200 ${view === 'symposiums' ? 'bg-white text-purple-700 shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200'}`}
-        >
-          <List size={18}/>
-          {lang === 'es' ? 'Listado Simposios' : 'Symposiums List'}
-        </button>
-        <button 
-            onClick={() => setView('schedule')} 
-            className={`flex items-center gap-2 px-6 py-2.5 font-bold rounded-lg transition-all duration-200 ${view === 'schedule' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200'}`}
-        >
-          <Calendar size={18}/>
-          {lang === 'es' ? 'Agenda General' : 'General Schedule'}
-        </button>
-      </div>
-
-      {/* --- VISTA: LISTA DE SIMPOSIOS (ESTILO MEJORADO) --- */}
-      {view === 'symposiums' ? (
-        <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          {loading ? (
-             <div className="py-20 text-center text-purple-600 flex flex-col items-center gap-3">
-                 <Loader2 size={40} className="animate-spin"/>
-                 <span className="font-medium">Cargando simposios...</span>
-             </div>
-          ) : (
-            symposiums.map((symposium) => (
-                <div 
-                    key={symposium.id} 
-                    className={`
-                        bg-white border rounded-xl overflow-hidden transition-all duration-300
-                        ${expandedSymposium === symposium.id ? 'shadow-lg border-purple-300 ring-1 ring-purple-100' : 'shadow-sm border-gray-200 hover:shadow-md'}
-                    `}
-                >
-                   {/* Header de la Tarjeta */}
-                   <div 
-                        className={`p-5 cursor-pointer flex justify-between items-center gap-4 transition-colors ${expandedSymposium === symposium.id ? 'bg-purple-50' : 'bg-white hover:bg-gray-50'}`} 
-                        onClick={() => toggleSymposium(symposium.id)}
-                   >
-                      <div className="flex items-center gap-4">
-                          {/* Badge del Número */}
-                          <div className={`
-                                flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-full font-black text-lg
-                                ${expandedSymposium === symposium.id ? 'bg-purple-600 text-white' : 'bg-purple-100 text-purple-700'}
-                          `}>
-                              S{symposium.number}
-                          </div>
-                          
-                          {/* Título */}
-                          <div>
-                              <h3 className="font-bold text-gray-900 text-lg leading-tight">
-                                  {lang === 'es' ? symposium.title_es : symposium.title_pt}
-                              </h3>
-                              {/* Subtítulo pequeño con sala si existe */}
-                              {symposium.room && (
-                                  <div className="flex items-center gap-1 text-xs text-gray-500 mt-1 font-medium">
-                                      <MapPin size={12} className="text-purple-500"/>
-                                      {symposium.room}
-                                  </div>
-                              )}
-                          </div>
-                      </div>
-
-                      {/* Icono Flecha */}
-                      <div className={`text-gray-400 transition-transform duration-300 ${expandedSymposium === symposium.id ? 'rotate-180 text-purple-600' : ''}`}>
-                          <ChevronDown size={24}/>
-                      </div>
-                   </div>
-
-                   {/* Contenido Expandible */}
-                   {expandedSymposium === symposium.id && (
-                       <div className="p-6 border-t border-purple-100 bg-white animate-in slide-in-from-top-2 duration-200">
-                           
-                           {/* Descripción */}
-                           <div className="mb-6 text-gray-700 leading-relaxed text-base">
-                               {lang === 'es' ? (symposium.description_es || "Sin descripción disponible.") : (symposium.description_pt || "No description available.")}
-                           </div>
-
-                           {/* Sección Coordinadores (Estilo Caja) */}
-                           {symposium.coordinators && (
-                               <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
-                                   <div className="flex items-start gap-3">
-                                       <div className="bg-white p-2 rounded-full shadow-sm text-purple-600 mt-0.5">
-                                           <Users size={18} />
-                                       </div>
-                                       <div>
-                                           <span className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
-                                               {lang === 'es' ? 'Coordinación' : 'Coordinators'}
-                                           </span>
-                                           <span className="text-sm font-semibold text-gray-800">
-                                               {cleanCoordinators(symposium.coordinators)}
-                                           </span>
-                                       </div>
-                                   </div>
-                               </div>
-                           )}
-                       </div>
-                   )}
+      {loading ? (
+        <div className="py-20 text-center"><Loader2 className="animate-spin mx-auto text-[#1e3a5f]" size={48}/></div>
+      ) : view === 'symposiums' ? (
+        <div className="space-y-4 animate-in fade-in duration-500">
+          {symposiums.map((s) => (
+            <div key={s.id} className="bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden transition-all">
+              
+              <div 
+                onClick={() => setExpandedSymposium(expandedSymposium === s.id ? null : s.id)}
+                className={`p-5 cursor-pointer flex items-center gap-4 transition-colors ${expandedSymposium === s.id ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+              >
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg flex-shrink-0 ${expandedSymposium === s.id ? 'bg-[#1e3a5f] text-white' : 'bg-blue-50 text-[#1e3a5f]'}`}>
+                  S{s.id}
                 </div>
-            ))
-          )}
+                <div className="flex-1">
+                  <h3 className="font-bold text-gray-900 leading-snug text-lg">
+                    {s.name}
+                  </h3>
+                  <div className="flex items-center gap-2 mt-1.5 text-xs text-gray-500 font-bold italic uppercase">
+                    <Users size={14} className="text-[#f4a261] flex-shrink-0"/>
+                    {cleanCoordinators(s.coordinator)}
+                  </div>
+                </div>
+                <ChevronDown className={`text-gray-400 transition-transform ${expandedSymposium === s.id ? 'rotate-180' : ''}`} size={24} />
+              </div>
+
+              {expandedSymposium === s.id && (
+                <div className="p-6 border-t border-gray-100 bg-white space-y-6">
+                  <div className="bg-gray-50 p-5 rounded-[2rem] border border-gray-100">
+                    <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                      <Info size={14}/> {lang === 'es' ? 'Sobre el Simposio' : 'About the Symposium'}
+                    </h4>
+                    <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-line">
+                      {s.description || "Descripción en proceso..."}
+                    </p>
+                  </div>
+
+                  <div>
+                    <button 
+                      onClick={(e) => togglePapers(e, s.id)}
+                      disabled={s.presentations.length === 0}
+                      className={`w-full flex items-center justify-between p-4 rounded-2xl font-bold text-sm transition-all border
+                        ${s.presentations.length > 0 
+                          ? 'bg-white border-blue-100 text-[#1e3a5f] hover:border-[#1e3a5f] shadow-sm' 
+                          : 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed'}
+                      `}
+                    >
+                      <span className="flex items-center gap-3">
+                        <Mic2 size={18}/>
+                        {lang === 'es' ? 'Ver Ponentes y Trabajos' : 'View Speakers and Papers'}
+                        {s.presentations.length > 0 && (
+                            <span className="bg-blue-50 text-[#1e3a5f] px-2 py-0.5 rounded-full text-[10px]">
+                                {s.presentations.length}
+                            </span>
+                        )}
+                      </span>
+                      {s.presentations.length > 0 && (
+                        <ChevronRight className={`transition-transform duration-200 ${showPapers[s.id] ? 'rotate-90' : ''}`} />
+                      )}
+                    </button>
+
+                    {showPapers[s.id] && s.presentations.length > 0 && (
+                      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 animate-in slide-in-from-top-2 duration-300">
+                        {s.presentations.map(p => (
+                          <div key={p.id} className="p-4 rounded-[1.5rem] border border-orange-50 bg-orange-50/20">
+                            <h5 className="font-bold text-gray-800 text-sm leading-tight mb-2 uppercase tracking-tight">{p.title}</h5>
+                            <div className="flex items-center gap-1 text-[#f4a261]">
+                                <Users size={12} className="flex-shrink-0"/>
+                                <p className="text-[11px] font-black uppercase tracking-tighter">{p.authors}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       ) : (
-        /* --- VISTA: AGENDA GENERAL --- */
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-           <ScheduleView embedded={true} lang={lang} />
-        </div>
+        <ScheduleView embedded={true} lang={lang} />
       )}
 
-      {/* --- COMPONENTE OCULTO DE IMPRESIÓN --- */}
+      {/* COMPONENTE DE IMPRESIÓN */}
       <div style={{ display: 'none' }}>
         <div ref={printRef}>
-            <PrintableProgram 
-                events={symposiums} 
-                type={typeToPrint}   
-                lang={lang} 
-            />
+          <PrintableProgram 
+            events={view === 'schedule' ? sessions : symposiums} 
+            type={typeToPrint}   
+            lang={lang} 
+          />
         </div>
       </div>
 

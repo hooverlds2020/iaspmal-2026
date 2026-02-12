@@ -1,149 +1,124 @@
+// src/components/admin/PresentationsManager.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import { Plus, Edit2, Trash2, User, Clock, FileText, Calendar, Building, Mail, Globe } from 'lucide-react';
+import { FileText, Search, User, Layers, Loader2, Plus, Edit, Trash2, X, Save } from 'lucide-react';
+import { toast } from 'sonner';
 
 const PresentationsManager = () => {
   const [presentations, setPresentations] = useState([]);
-  const [sessions, setSessions] = useState([]);
+  const [symposiums, setSymposiums] = useState([]); // Necesitamos la lista para el select
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Estado para el Modal (Crear/Editar)
   const [showModal, setShowModal] = useState(false);
   const [editingPresentation, setEditingPresentation] = useState(null);
   const [formData, setFormData] = useState({
-    session_id: '',
-    title_es: '',
-    title_pt: '',
-    abstract_es: '',
-    abstract_pt: '',
-    author_name: '',
-    author_institution: '',
-    author_email: '',
-    author_country: '',
-    duration_minutes: 20,
-    presentation_order: 1,
-    type: 'oral'
+    title: '',
+    authors: '',
+    symposium_id: ''
   });
 
   useEffect(() => {
-    fetchPresentations();
-    fetchSessions();
+    fetchData();
   }, []);
 
-  const fetchPresentations = async () => {
+  const fetchData = async () => {
     try {
-      const { data, error } = await supabase
+      setLoading(true);
+      
+      // 1. Cargar Ponencias
+      const { data: presData, error: presError } = await supabase
         .from('presentations')
         .select(`
-          *,
-          sessions (
-            session_number,
-            day,
-            start_time,
-            symposiums (number, title_es)
-          )
+          id, title, authors, symposium_id,
+          symposiums (name, id)
         `)
-        .order('created_at', { ascending: false });
+        .order('symposium_id', { ascending: true });
 
-      if (error) throw error;
-      setPresentations(data || []);
+      if (presError) throw presError;
+
+      // 2. Cargar Simposios (Para el formulario de agregar/editar)
+      const { data: sympData, error: sympError } = await supabase
+        .from('symposiums')
+        .select('id, name')
+        .order('id');
+
+      if (sympError) throw sympError;
+
+      setPresentations(presData);
+      setSymposiums(sympData);
+
     } catch (error) {
-      console.error('Error fetching presentations:', error);
-      alert('Error al cargar las ponencias');
+      console.error('Error:', error);
+      toast.error('Error al cargar datos');
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchSessions = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('sessions')
-        .select(`
-          id,
-          session_number,
-          day,
-          start_time,
-          symposiums (number, title_es)
-        `)
-        .order('day', { ascending: true });
+  // --- LÓGICA DEL CRUD ---
 
-      if (error) throw error;
-      setSessions(data || []);
-    } catch (error) {
-      console.error('Error fetching sessions:', error);
-    }
-  };
-
-  const handleOpenModal = (presentation = null) => {
+  // 1. ABRIR MODAL
+  const openModal = (presentation = null) => {
     if (presentation) {
+      // Modo Edición
       setEditingPresentation(presentation);
       setFormData({
-        session_id: presentation.session_id,
-        title_es: presentation.title_es || '',
-        title_pt: presentation.title_pt || '',
-        abstract_es: presentation.abstract_es || '',
-        abstract_pt: presentation.abstract_pt || '',
-        author_name: presentation.author_name || '',
-        author_institution: presentation.author_institution || '',
-        author_email: presentation.author_email || '',
-        author_country: presentation.author_country || '',
-        duration_minutes: presentation.duration_minutes || 20,
-        presentation_order: presentation.presentation_order || 1,
-        type: presentation.type || 'oral'
+        title: presentation.title,
+        authors: presentation.authors,
+        symposium_id: presentation.symposium_id
       });
     } else {
+      // Modo Crear
       setEditingPresentation(null);
-      setFormData({
-        session_id: '',
-        title_es: '',
-        title_pt: '',
-        abstract_es: '',
-        abstract_pt: '',
-        author_name: '',
-        author_institution: '',
-        author_email: '',
-        author_country: '',
-        duration_minutes: 20,
-        presentation_order: 1,
-        type: 'oral'
-      });
+      setFormData({ title: '', authors: '', symposium_id: '' });
     }
     setShowModal(true);
   };
 
+  // 2. GUARDAR (Crear o Actualizar)
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-
     try {
       if (editingPresentation) {
+        // ACTUALIZAR
         const { error } = await supabase
           .from('presentations')
-          .update(formData)
+          .update({
+            title: formData.title,
+            authors: formData.authors,
+            symposium_id: formData.symposium_id
+          })
           .eq('id', editingPresentation.id);
 
         if (error) throw error;
-        alert('Ponencia actualizada correctamente');
+        toast.success('Ponencia actualizada correctamente');
       } else {
+        // CREAR NUEVA
         const { error } = await supabase
           .from('presentations')
-          .insert([formData]);
+          .insert([{
+            title: formData.title,
+            authors: formData.authors,
+            symposium_id: formData.symposium_id
+          }]);
 
         if (error) throw error;
-        alert('Ponencia creada correctamente');
+        toast.success('Ponencia creada correctamente');
       }
 
       setShowModal(false);
-      fetchPresentations();
+      fetchData(); // Recargar la lista
     } catch (error) {
-      console.error('Error saving presentation:', error);
-      alert('Error al guardar la ponencia');
-    } finally {
-      setLoading(false);
+      console.error(error);
+      toast.error('Error al guardar la ponencia');
     }
   };
 
+  // 3. ELIMINAR
   const handleDelete = async (id) => {
-    if (!window.confirm('¿Estás seguro de eliminar esta ponencia?')) return;
+    if (!window.confirm('¿Seguro que quieres borrar esta ponencia? Esta acción no se puede deshacer.')) return;
 
     try {
       const { error } = await supabase
@@ -152,422 +127,194 @@ const PresentationsManager = () => {
         .eq('id', id);
 
       if (error) throw error;
-      alert('Ponencia eliminada correctamente');
-      fetchPresentations();
+      
+      toast.success('Ponencia eliminada');
+      // Actualizamos el estado local para que sea instantáneo
+      setPresentations(prev => prev.filter(p => p.id !== id));
     } catch (error) {
-      console.error('Error deleting presentation:', error);
-      alert('Error al eliminar la ponencia');
+      console.error(error);
+      toast.error('Error al eliminar');
     }
   };
 
-  const formatDate = (dateStr) => {
-    return new Date(dateStr).toLocaleDateString('es-MX', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
+  // Filtrado por buscador
+  const filteredPresentations = presentations.filter(p => 
+    (p.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (p.authors || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  const formatTime = (timeStr) => {
-    return timeStr?.substring(0, 5) || '';
-  };
-
-  const getTypeLabel = (type) => {
-    const types = {
-      'oral': 'Oral',
-      'poster': 'Póster',
-      'keynote': 'Magistral',
-      'workshop': 'Taller'
-    };
-    return types[type] || type;
-  };
-
-  const getTypeColor = (type) => {
-    const colors = {
-      'oral': 'bg-blue-100 text-blue-800',
-      'poster': 'bg-purple-100 text-purple-800',
-      'keynote': 'bg-amber-100 text-amber-800',
-      'workshop': 'bg-green-100 text-green-800'
-    };
-    return colors[type] || 'bg-gray-100 text-gray-800';
-  };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
-      </div>
-    );
-  }
+  if (loading) return <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-iaspm-blue w-8 h-8" /></div>;
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <p className="text-gray-600">Total: {presentations.length} ponencias</p>
-        <button
-          onClick={() => handleOpenModal()}
-          className="flex items-center gap-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors"
-        >
-          <Plus size={20} />
-          Nueva Ponencia
-        </button>
+    <div className="space-y-6">
+      
+      {/* --- HEADER Y BUSCADOR --- */}
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+        <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+          <FileText className="w-5 h-5 text-iaspm-blue" />
+          Ponencias Aceptadas ({presentations.length})
+        </h2>
+        
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="relative flex-1 md:w-64">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input 
+              type="text" 
+              placeholder="Buscar título o autor..." 
+              className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-iaspm-blue"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          {/* BOTÓN NUEVO: AGREGAR */}
+          <button 
+            onClick={() => openModal()}
+            className="bg-iaspm-blue text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-800 transition flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" /> Agregar
+          </button>
+        </div>
       </div>
 
-      <div className="space-y-4">
-        {presentations.map((presentation) => (
-          <div
-            key={presentation.id}
-            className="bg-gray-50 rounded-lg p-4 hover:shadow-md transition-shadow border border-gray-200"
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2 flex-wrap">
-                  <span className="bg-teal-100 text-teal-800 px-3 py-1 rounded-full text-xs font-semibold">
-                    S{presentation.sessions?.symposiums?.number || '?'}
-                  </span>
-                  <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold">
-                    Sesión {presentation.sessions?.session_number || '?'}
-                  </span>
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getTypeColor(presentation.type)}`}>
-                    {getTypeLabel(presentation.type)}
-                  </span>
-                  <span className="text-gray-500 text-xs">
-                    Orden: {presentation.presentation_order}
-                  </span>
-                </div>
-
-                <h3 className="text-lg font-bold text-gray-900 mb-1">
-                  {presentation.title_es || 'Sin título'}
-                </h3>
-                <p className="text-gray-600 italic mb-3 text-sm">
-                  {presentation.title_pt}
-                </p>
-
-                {presentation.author_name && (
-                  <div className="space-y-1 mb-3">
+      {/* --- TABLA DE DATOS --- */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-gray-50 border-b border-gray-100">
+              <tr>
+                <th className="px-6 py-3 font-semibold text-gray-600">Título</th>
+                <th className="px-6 py-3 font-semibold text-gray-600">Autor(es)</th>
+                <th className="px-6 py-3 font-semibold text-gray-600">Simposio</th>
+                <th className="px-6 py-3 font-semibold text-gray-600 text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {filteredPresentations.map((p) => (
+                <tr key={p.id} className="hover:bg-gray-50 transition group">
+                  <td className="px-6 py-4 font-medium text-gray-900 w-[40%]">
+                    {p.title}
+                  </td>
+                  <td className="px-6 py-4 text-gray-600 w-[25%]">
                     <div className="flex items-center gap-2">
-                      <User size={14} className="text-gray-500" />
-                      <span className="text-sm font-semibold text-gray-700">
-                        {presentation.author_name}
+                      <User className="w-3 h-3 text-gray-400" />
+                      {p.authors}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 w-[20%]">
+                    <div className="flex flex-col">
+                      <span className="bg-blue-50 text-iaspm-blue text-xs px-2 py-0.5 rounded-full w-fit font-bold flex items-center gap-1">
+                        <Layers className="w-3 h-3" /> ID: {p.symposium_id}
+                      </span>
+                      <span className="text-[10px] text-gray-400 mt-1 line-clamp-1" title={p.symposiums?.name}>
+                        {p.symposiums?.name}
                       </span>
                     </div>
-                    {presentation.author_institution && (
-                      <div className="flex items-center gap-2 ml-6">
-                        <Building size={14} className="text-gray-400" />
-                        <span className="text-sm text-gray-600">
-                          {presentation.author_institution}
-                        </span>
-                      </div>
-                    )}
-                    {presentation.author_country && (
-                      <div className="flex items-center gap-2 ml-6">
-                        <Globe size={14} className="text-gray-400" />
-                        <span className="text-sm text-gray-600">
-                          {presentation.author_country}
-                        </span>
-                      </div>
-                    )}
-                    {presentation.author_email && (
-                      <div className="flex items-center gap-2 ml-6">
-                        <Mail size={14} className="text-gray-400" />
-                        <span className="text-sm text-gray-600">
-                          {presentation.author_email}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {presentation.abstract_es && (
-                  <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                    {presentation.abstract_es}
-                  </p>
-                )}
-
-                <div className="flex flex-wrap gap-4 text-xs text-gray-600">
-                  {presentation.sessions?.day && (
-                    <div className="flex items-center gap-1">
-                      <Calendar size={14} className="text-teal-600" />
-                      <span>{formatDate(presentation.sessions.day)}</span>
+                  </td>
+                  {/* BOTONES DE EDICIÓN Y BORRADO (Aparecen al pasar el mouse) */}
+                  <td className="px-6 py-4 text-right w-[15%]">
+                    <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button 
+                        onClick={() => openModal(p)}
+                        className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition"
+                        title="Editar"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(p.id)}
+                        className="p-1.5 text-red-500 bg-red-50 hover:bg-red-100 rounded-md transition"
+                        title="Eliminar"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
-                  )}
-                  {presentation.sessions?.start_time && (
-                    <div className="flex items-center gap-1">
-                      <Clock size={14} className="text-teal-600" />
-                      <span>{formatTime(presentation.sessions.start_time)}</span>
-                    </div>
-                  )}
-                  {presentation.duration_minutes && (
-                    <div className="flex items-center gap-1">
-                      <Clock size={14} className="text-blue-600" />
-                      <span>{presentation.duration_minutes} min</span>
-                    </div>
-                  )}
-                </div>
-
-                {presentation.sessions?.symposiums?.title_es && (
-                  <div className="mt-2 text-xs text-gray-500">
-                    {presentation.sessions.symposiums.title_es}
-                  </div>
-                )}
-              </div>
-
-              <div className="flex gap-2 ml-4">
-                <button
-                  onClick={() => handleOpenModal(presentation)}
-                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                  title="Editar"
-                >
-                  <Edit2 size={18} />
-                </button>
-                <button
-                  onClick={() => handleDelete(presentation.id)}
-                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  title="Eliminar"
-                >
-                  <Trash2 size={18} />
-                </button>
-              </div>
-            </div>
-          </div>
-        ))}
-
-        {presentations.length === 0 && (
-          <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
-            <FileText size={48} className="mx-auto text-gray-400 mb-4" />
-            <p className="text-gray-600 text-lg">No hay ponencias creadas</p>
-            <p className="text-gray-500 text-sm mt-2">
-              Haz clic en "Nueva Ponencia" para crear la primera
-            </p>
-          </div>
-        )}
+                  </td>
+                </tr>
+              ))}
+              {filteredPresentations.length === 0 && (
+                <tr>
+                  <td colSpan="4" className="px-6 py-12 text-center text-gray-400">
+                    No se encontraron resultados.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
+      {/* --- MODAL DE EDICIÓN / CREACIÓN --- */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <h2 className="text-2xl font-bold mb-6">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+              <h3 className="font-bold text-lg text-gray-800">
                 {editingPresentation ? 'Editar Ponencia' : 'Nueva Ponencia'}
-              </h2>
-
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Sesión y Tipo */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Sesión *
-                    </label>
-                    <select
-                      required
-                      value={formData.session_id}
-                      onChange={(e) => setFormData({ ...formData, session_id: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                    >
-                      <option value="">Seleccionar sesión</option>
-                      {sessions.map((session) => (
-                        <option key={session.id} value={session.id}>
-                          S{session.symposiums?.number} - Sesión {session.session_number} - {formatDate(session.day)} {formatTime(session.start_time)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Tipo *
-                    </label>
-                    <select
-                      required
-                      value={formData.type}
-                      onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                    >
-                      <option value="oral">Oral</option>
-                      <option value="poster">Póster</option>
-                      <option value="keynote">Magistral</option>
-                      <option value="workshop">Taller</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Orden y Duración */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Orden de Presentación *
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      required
-                      value={formData.presentation_order}
-                      onChange={(e) => setFormData({ ...formData, presentation_order: parseInt(e.target.value) })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Duración (minutos) *
-                    </label>
-                    <input
-                      type="number"
-                      min="5"
-                      max="120"
-                      required
-                      value={formData.duration_minutes}
-                      onChange={(e) => setFormData({ ...formData, duration_minutes: parseInt(e.target.value) })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-
-                {/* Títulos */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Título (Español) *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.title_es}
-                    onChange={(e) => setFormData({ ...formData, title_es: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                    placeholder="Título de la ponencia"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Título (Portugués) *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.title_pt}
-                    onChange={(e) => setFormData({ ...formData, title_pt: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                    placeholder="Título da apresentação"
-                  />
-                </div>
-
-                {/* Información del Autor */}
-                <div className="border-t pt-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Información del Autor/Ponente</h3>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Nombre Completo *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.author_name}
-                        onChange={(e) => setFormData({ ...formData, author_name: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                        placeholder="Ej: Dr. María García López"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Institución
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.author_institution}
-                        onChange={(e) => setFormData({ ...formData, author_institution: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                        placeholder="Ej: Universidad Nacional Autónoma de México"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Email
-                        </label>
-                        <input
-                          type="email"
-                          value={formData.author_email}
-                          onChange={(e) => setFormData({ ...formData, author_email: e.target.value })}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                          placeholder="autor@universidad.edu"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          País
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.author_country}
-                          onChange={(e) => setFormData({ ...formData, author_country: e.target.value })}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                          placeholder="Ej: México"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Resúmenes */}
-                <div className="border-t pt-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Resumen/Abstract</h3>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Resumen (Español)
-                      </label>
-                      <textarea
-                        value={formData.abstract_es}
-                        onChange={(e) => setFormData({ ...formData, abstract_es: e.target.value })}
-                        rows={4}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                        placeholder="Resumen o abstract de la ponencia"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Resumen (Portugués)
-                      </label>
-                      <textarea
-                        value={formData.abstract_pt}
-                        onChange={(e) => setFormData({ ...formData, abstract_pt: e.target.value })}
-                        rows={4}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                        placeholder="Resumo ou sumário"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Botones */}
-                <div className="flex justify-end gap-3 pt-6 border-t">
-                  <button
-                    type="button"
-                    onClick={() => setShowModal(false)}
-                    className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
-                  >
-                    {loading ? 'Guardando...' : editingPresentation ? 'Actualizar' : 'Crear'}
-                  </button>
-                </div>
-              </form>
+              </h3>
+              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-red-500">
+                <X className="w-5 h-5" />
+              </button>
             </div>
+            
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Simposio</label>
+                <select 
+                  required
+                  className="w-full border-gray-300 rounded-lg text-sm focus:ring-iaspm-blue"
+                  value={formData.symposium_id}
+                  onChange={(e) => setFormData({...formData, symposium_id: e.target.value})}
+                >
+                  <option value="">-- Seleccionar Simposio --</option>
+                  {symposiums.map(s => (
+                    <option key={s.id} value={s.id}>{s.id}. {s.name.substring(0, 60)}...</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Título de la Ponencia</label>
+                <textarea 
+                  required
+                  rows="3"
+                  className="w-full border-gray-300 rounded-lg text-sm focus:ring-iaspm-blue"
+                  value={formData.title}
+                  onChange={(e) => setFormData({...formData, title: e.target.value})}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Autor(es)</label>
+                <input 
+                  type="text" 
+                  required
+                  placeholder="Ej: PÉREZ, Juan y GÓMEZ, María"
+                  className="w-full border-gray-300 rounded-lg text-sm focus:ring-iaspm-blue"
+                  value={formData.authors}
+                  onChange={(e) => setFormData({...formData, authors: e.target.value})}
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-3">
+                <button 
+                  type="button" 
+                  onClick={() => setShowModal(false)}
+                  className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit"
+                  className="px-4 py-2 text-sm bg-iaspm-blue text-white rounded-lg hover:bg-blue-800 transition flex items-center gap-2 font-medium"
+                >
+                  <Save className="w-4 h-4" /> Guardar
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
+
     </div>
   );
 };

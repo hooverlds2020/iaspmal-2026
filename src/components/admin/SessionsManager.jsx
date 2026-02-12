@@ -1,416 +1,390 @@
+// src/components/admin/SessionsManager.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import { Plus, Edit2, Trash2, Calendar, Clock, MapPin, Users } from 'lucide-react';
+import { Calendar, Clock, MapPin, Plus, Trash2, Save, X, FileText, CheckSquare, Square, Edit, Filter } from 'lucide-react';
+import { toast } from 'sonner';
 
 const SessionsManager = () => {
   const [sessions, setSessions] = useState([]);
   const [symposiums, setSymposiums] = useState([]);
-  const [rooms, setRooms] = useState([]);
+  const [rooms, setRooms] = useState([]); 
   const [loading, setLoading] = useState(true);
+  
+  // Modal y Datos
   const [showModal, setShowModal] = useState(false);
   const [editingSession, setEditingSession] = useState(null);
+
   const [formData, setFormData] = useState({
     symposium_id: '',
-    notes_es: '',
-    notes_pt: '',
-    day: '',
-    start_time: '',
-    end_time: '',
+    name: '',
     room_id: '',
-    session_number: 1
+    date: '',
+    start_time: '',
+    end_time: ''
   });
 
+  // Estados Derivados
+  const [availableRooms, setAvailableRooms] = useState([]);
+  const [selectedVenueName, setSelectedVenueName] = useState('');
+  
+  // ESTADO PARA PONENCIAS
+  const [symposiumPresentations, setSymposiumPresentations] = useState([]); 
+  const [selectedPresentationIds, setSelectedPresentationIds] = useState([]); 
+
   useEffect(() => {
-    fetchSessions();
-    fetchSymposiums();
-    fetchRooms();
+    fetchData();
   }, []);
 
-  const fetchSessions = async () => {
+  const fetchData = async () => {
     try {
-      const { data, error } = await supabase
+      setLoading(true);
+      // Cargar Sesiones
+      const { data: sessionsData, error: sError } = await supabase
         .from('sessions')
-        .select(`
-          *,
-          symposiums (number, title_es),
-          rooms (name)
-        `)
-        .order('day', { ascending: true })
-        .order('start_time', { ascending: true });
+        .select(`*, symposiums (name, venue_id), rooms (name, venue_id, venues (name))`)
+        .order('date', { ascending: true });
+      if (sError) throw sError;
 
-      if (error) throw error;
-      setSessions(data || []);
+      // Cargar Simposios
+      const { data: sympData, error: symError } = await supabase
+        .from('symposiums').select('*').order('id');
+      if (symError) throw symError;
+
+      // Cargar Salas
+      const { data: roomData, error: rError } = await supabase
+        .from('rooms').select('*, venues(name, id)');
+      if (rError) throw rError;
+
+      setSessions(sessionsData);
+      setSymposiums(sympData);
+      setRooms(roomData);
     } catch (error) {
-      console.error('Error fetching sessions:', error);
-      alert('Error al cargar las sesiones');
+      console.error(error);
+      toast.error('Error cargando datos base');
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchSymposiums = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('symposiums')
-        .select('id, number, title_es')
-        .order('number');
+  // Lógica: Cargar Ponencias cuando cambia el Simposio
+  const handleSymposiumChange = async (symposiumId) => {
+    setFormData(prev => ({ ...prev, symposium_id: symposiumId, room_id: '' }));
+    
+    // 1. Filtrar Salas (Sedes)
+    const selectedSymp = symposiums.find(s => s.id.toString() === symposiumId);
+    if (selectedSymp && selectedSymp.venue_id) {
+      const filtered = rooms.filter(r => r.venue_id === selectedSymp.venue_id);
+      setAvailableRooms(filtered);
+      setSelectedVenueName(filtered[0]?.venues?.name || '');
+    } else {
+      setAvailableRooms([]);
+      setSelectedVenueName('');
+    }
 
-      if (error) throw error;
-      setSymposiums(data || []);
-    } catch (error) {
-      console.error('Error fetching symposiums:', error);
+    // 2. Cargar Ponencias
+    if (symposiumId) {
+      // Traemos TODAS las del simposio (incluyendo su session_id para saber si están ocupadas)
+      const { data, error } = await supabase
+        .from('presentations')
+        .select('id, title, authors, session_id')
+        .eq('symposium_id', symposiumId)
+        .order('title'); 
+
+      if (!error) {
+        setSymposiumPresentations(data);
+      }
+    } else {
+      setSymposiumPresentations([]);
     }
   };
 
-  const fetchRooms = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('rooms')
-        .select('id, name')
-        .order('name');
-
-      if (error) throw error;
-      setRooms(data || []);
-    } catch (error) {
-      console.error('Error fetching rooms:', error);
-    }
-  };
-
-  const handleOpenModal = (session = null) => {
+  // Abrir Modal
+  const openModal = async (session = null) => {
     if (session) {
       setEditingSession(session);
       setFormData({
         symposium_id: session.symposium_id,
-        notes_es: session.notes_es || '',
-        notes_pt: session.notes_pt || '',
-        day: session.day,
+        name: session.name,
+        room_id: session.room_id,
+        date: session.date,
         start_time: session.start_time,
-        end_time: session.end_time,
-        room_id: session.room_id || '',
-        session_number: session.session_number
+        end_time: session.end_time
       });
+      
+      await handleSymposiumChange(session.symposium_id.toString());
+      setFormData(prev => ({ ...prev, room_id: session.room_id }));
+
+      // Pre-seleccionar las de esta mesa
+      const { data: currentPres } = await supabase
+        .from('presentations')
+        .select('id')
+        .eq('session_id', session.id);
+      
+      if (currentPres) {
+        setSelectedPresentationIds(currentPres.map(p => p.id));
+      }
+
     } else {
       setEditingSession(null);
-      setFormData({
-        symposium_id: '',
-        notes_es: '',
-        notes_pt: '',
-        day: '',
-        start_time: '',
-        end_time: '',
-        room_id: '',
-        session_number: 1
-      });
+      setFormData({ symposium_id: '', name: '', room_id: '', date: '', start_time: '', end_time: '' });
+      setSelectedPresentationIds([]);
+      setSymposiumPresentations([]);
+      setAvailableRooms([]);
     }
     setShowModal(true);
   };
 
+  const togglePresentation = (id) => {
+    if (selectedPresentationIds.includes(id)) {
+      setSelectedPresentationIds(prev => prev.filter(pId => pId !== id));
+    } else {
+      setSelectedPresentationIds(prev => [...prev, id]);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-
     try {
+      let sessionId;
+
+      // 1. Guardar Mesa
       if (editingSession) {
-        const { error } = await supabase
-          .from('sessions')
-          .update(formData)
-          .eq('id', editingSession.id);
-
+        const { error } = await supabase.from('sessions').update(formData).eq('id', editingSession.id);
         if (error) throw error;
-        alert('Sesión actualizada correctamente');
+        sessionId = editingSession.id;
       } else {
-        const { error } = await supabase
-          .from('sessions')
-          .insert([formData]);
-
+        const { data, error } = await supabase.from('sessions').insert([formData]).select();
         if (error) throw error;
-        alert('Sesión creada correctamente');
+        sessionId = data[0].id;
       }
 
+      // 2. Asignar Ponencias
+      // A) Limpiar las que eran de esta mesa pero se desmarcaron
+      await supabase
+        .from('presentations')
+        .update({ session_id: null })
+        .eq('session_id', sessionId);
+
+      // B) Asignar las nuevas seleccionadas
+      if (selectedPresentationIds.length > 0) {
+        const { error: presError } = await supabase
+          .from('presentations')
+          .update({ session_id: sessionId })
+          .in('id', selectedPresentationIds);
+        if (presError) throw presError;
+      }
+
+      toast.success(editingSession ? 'Mesa actualizada' : 'Mesa creada exitosamente');
       setShowModal(false);
-      fetchSessions();
+      fetchData(); 
     } catch (error) {
-      console.error('Error saving session:', error);
-      alert('Error al guardar la sesión');
-    } finally {
-      setLoading(false);
+      console.error(error);
+      toast.error('Error al guardar');
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('¿Estás seguro de eliminar esta sesión?')) return;
-
+    if (!confirm('¿Borrar mesa? Las ponencias quedarán libres.')) return;
     try {
-      const { error } = await supabase
-        .from('sessions')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-      alert('Sesión eliminada correctamente');
-      fetchSessions();
+      await supabase.from('presentations').update({ session_id: null }).eq('session_id', id);
+      await supabase.from('sessions').delete().eq('id', id);
+      toast.success('Mesa eliminada');
+      setSessions(prev => prev.filter(s => s.id !== id));
     } catch (error) {
-      console.error('Error deleting session:', error);
-      alert('Error al eliminar la sesión');
+      toast.error('Error al borrar');
     }
   };
 
-  const formatDate = (dateStr) => {
-    return new Date(dateStr).toLocaleDateString('es-MX', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
-
-  const formatTime = (timeStr) => {
-    return timeStr.substring(0, 5);
-  };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
-      </div>
-    );
-  }
+  // --- FILTRO VISUAL: MAGIA AQUÍ ---
+  // Solo mostramos ponencias que:
+  // 1. No tienen session_id (están libres)
+  // 2. O pertenecen a ESTA mesa que estamos editando (para poder verlas y quitarlas si queremos)
+  const availablePresentations = symposiumPresentations.filter(p => 
+    p.session_id === null || (editingSession && p.session_id === editingSession.id)
+  );
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <p className="text-gray-600">Total: {sessions.length} sesiones</p>
-        <button
-          onClick={() => handleOpenModal()}
-          className="flex items-center gap-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors"
-        >
-          <Plus size={20} />
-          Nueva Sesión
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-bold text-gray-800">Gestión de Mesas y Horarios</h2>
+        <button onClick={() => openModal()} className="bg-iaspm-blue text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-800 transition">
+          <Plus className="w-4 h-4" /> Nueva Mesa
         </button>
       </div>
 
-      <div className="space-y-4">
+      {/* Grid de Mesas */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {sessions.map((session) => (
-          <div
-            key={session.id}
-            className="bg-gray-50 rounded-lg p-4 hover:shadow-md transition-shadow border border-gray-200"
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="bg-teal-100 text-teal-800 px-3 py-1 rounded-full text-sm font-semibold">
-                    S{session.symposiums?.number || 'N/A'}
-                  </span>
-                  <span className="text-gray-500 text-sm">
-                    Sesión {session.session_number}
-                  </span>
-                </div>
-
-                <h3 className="text-lg font-bold text-gray-900 mb-1">
-                  {session.symposiums?.title_es || 'Sin título'}
-                </h3>
-
-                {session.notes_es && (
-                  <p className="text-gray-700 text-sm mb-3">
-                    {session.notes_es}
-                  </p>
-                )}
-
-                <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                  <div className="flex items-center gap-2">
-                    <Calendar size={16} className="text-teal-600" />
-                    <span>{formatDate(session.day)}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Clock size={16} className="text-teal-600" />
-                    <span>
-                      {formatTime(session.start_time)} - {formatTime(session.end_time)}
-                    </span>
-                  </div>
-                  {session.rooms && (
-                    <div className="flex items-center gap-2">
-                      <MapPin size={16} className="text-teal-600" />
-                      <span>{session.rooms.name}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex gap-2 ml-4">
-                <button
-                  onClick={() => handleOpenModal(session)}
-                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                  title="Editar"
-                >
-                  <Edit2 size={18} />
-                </button>
-                <button
-                  onClick={() => handleDelete(session.id)}
-                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  title="Eliminar"
-                >
-                  <Trash2 size={18} />
-                </button>
+          <div key={session.id} className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition relative group">
+            <div className="absolute top-4 right-4 flex gap-2">
+               <button onClick={() => openModal(session)} className="text-blue-600 bg-blue-50 p-2 rounded-full hover:bg-blue-100">
+                 <Edit className="w-4 h-4" />
+               </button>
+               <button onClick={() => handleDelete(session.id)} className="text-red-400 bg-red-50 p-2 rounded-full hover:bg-red-100">
+                 <Trash2 className="w-4 h-4" />
+               </button>
+            </div>
+            <div className="mb-3 pr-20">
+              <span className="bg-blue-50 text-iaspm-blue text-[10px] font-bold px-2 py-1 rounded-full uppercase">
+                {session.rooms?.venues?.name || 'Sede ?'}
+              </span>
+            </div>
+            <h3 className="font-bold text-gray-900 mb-1 text-lg">{session.name}</h3>
+            <p className="text-xs text-gray-500 mb-4 line-clamp-2 h-8">{session.symposiums?.name}</p>
+            <div className="space-y-2 text-sm text-gray-600 border-t border-gray-100 pt-3">
+              <div className="flex items-center gap-2"><MapPin className="w-4 h-4 text-iaspm-orange" /> <span className="font-medium">{session.rooms?.name}</span></div>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-gray-400" /> <span>{session.date}</span></div>
+                <div className="flex items-center gap-2"><Clock className="w-4 h-4 text-gray-400" /> <span>{session.start_time?.slice(0,5)} - {session.end_time?.slice(0,5)}</span></div>
               </div>
             </div>
           </div>
         ))}
-
-        {sessions.length === 0 && (
-          <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
-            <Users size={48} className="mx-auto text-gray-400 mb-4" />
-            <p className="text-gray-600 text-lg">No hay sesiones creadas</p>
-            <p className="text-gray-500 text-sm mt-2">
-              Haz clic en "Nueva Sesión" para crear la primera
-            </p>
-          </div>
-        )}
       </div>
 
+      {/* --- MODAL OPTIMIZADO CON SCROLL --- */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <h2 className="text-2xl font-bold mb-6">
-                {editingSession ? 'Editar Sesión' : 'Nueva Sesión'}
-              </h2>
-
-              <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          
+          {/* Contenedor Principal: Max Height fijo para forzar scroll interno */}
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col animate-in zoom-in-95 duration-200 overflow-hidden">
+            
+            {/* Header Modal */}
+            <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center shrink-0">
+              <h3 className="font-bold text-xl text-gray-800 flex items-center gap-2">
+                {editingSession ? <Edit className="w-5 h-5 text-iaspm-blue"/> : <Plus className="w-5 h-5 text-iaspm-blue"/>}
+                {editingSession ? 'Editar Mesa y Asignar Ponencias' : 'Programar Nueva Mesa'}
+              </h3>
+              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-red-500 bg-white p-1 rounded-full">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            {/* Cuerpo del Modal: Flex para dividir izquierda/derecha */}
+            <form onSubmit={handleSubmit} className="flex-1 flex flex-col md:flex-row overflow-hidden">
+              
+              {/* IZQUIERDA: Formulario (Fijo o con scroll independiente si es muy pequeño) */}
+              <div className="p-6 md:w-[350px] border-r border-gray-100 bg-white overflow-y-auto shrink-0 space-y-5">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Simposio *
-                  </label>
-                  <select
-                    required
-                    value={formData.symposium_id}
-                    onChange={(e) => setFormData({ ...formData, symposium_id: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Simposio</label>
+                  <select 
+                    required disabled={!!editingSession}
+                    className="w-full border-gray-300 rounded-lg text-sm focus:ring-iaspm-blue disabled:bg-gray-100"
+                    value={formData.symposium_id} onChange={(e) => handleSymposiumChange(e.target.value)}
                   >
-                    <option value="">Seleccionar simposio</option>
-                    {symposiums.map((symposium) => (
-                      <option key={symposium.id} value={symposium.id}>
-                        S{symposium.number} - {symposium.title_es}
-                      </option>
-                    ))}
+                    <option value="">-- Seleccionar --</option>
+                    {symposiums.map(s => <option key={s.id} value={s.id}>{s.id}. {s.name.substring(0, 30)}...</option>)}
                   </select>
                 </div>
 
+                {/* Campos restantes del form... */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Número de Sesión *
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    required
-                    value={formData.session_number}
-                    onChange={(e) => setFormData({ ...formData, session_number: parseInt(e.target.value) })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  />
+                   <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Sala</label>
+                   <select required disabled={!formData.symposium_id} className="w-full border-gray-300 rounded-lg text-sm"
+                     value={formData.room_id} onChange={(e) => setFormData({...formData, room_id: e.target.value})}>
+                     <option value="">-- Seleccionar --</option>
+                     {availableRooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                   </select>
                 </div>
-
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Notas (Español)
-                  </label>
-                  <textarea
-                    value={formData.notes_es}
-                    onChange={(e) => setFormData({ ...formData, notes_es: e.target.value })}
-                    rows={3}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                    placeholder="Notas o descripción de la sesión"
-                  />
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nombre Mesa</label>
+                  <input type="text" required placeholder="Mesa 1" className="w-full border-gray-300 rounded-lg text-sm"
+                    value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
                 </div>
-
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Notas (Portugués)
-                  </label>
-                  <textarea
-                    value={formData.notes_pt}
-                    onChange={(e) => setFormData({ ...formData, notes_pt: e.target.value })}
-                    rows={3}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                    placeholder="Notas ou descrição da sessão"
-                  />
+                   <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Fecha</label>
+                   <input type="date" required className="w-full border-gray-300 rounded-lg text-sm"
+                    value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                   <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Inicio</label>
+                   <input type="time" required className="w-full border-gray-300 rounded-lg text-sm"
+                    value={formData.start_time} onChange={(e) => setFormData({...formData, start_time: e.target.value})} /></div>
+                   <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Fin</label>
+                   <input type="time" required className="w-full border-gray-300 rounded-lg text-sm"
+                    value={formData.end_time} onChange={(e) => setFormData({...formData, end_time: e.target.value})} /></div>
+                </div>
+              </div>
+
+              {/* DERECHA: Lista de Ponencias (CON SCROLL REPARADO) */}
+              <div className="flex-1 bg-gray-50 flex flex-col min-h-0 overflow-hidden relative">
+                
+                {/* Header de la Lista */}
+                <div className="px-6 py-3 border-b border-gray-200 bg-white flex justify-between items-center shrink-0 z-10 shadow-sm">
+                   <div className="flex items-center gap-2 text-gray-700 font-bold text-sm">
+                     <Filter className="w-4 h-4 text-iaspm-blue" />
+                     Ponencias Disponibles
+                   </div>
+                   <div className="flex gap-2">
+                     <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-full font-bold">
+                       {availablePresentations.length} Libres
+                     </span>
+                     <span className="text-xs bg-iaspm-blue text-white px-2 py-1 rounded-full font-bold">
+                       {selectedPresentationIds.length} Seleccionadas
+                     </span>
+                   </div>
+                </div>
+                
+                {/* ÁREA DE SCROLL (Aquí es donde ocurre la magia) */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                   {!formData.symposium_id && (
+                     <div className="h-full flex flex-col items-center justify-center text-gray-400">
+                        <FileText className="w-12 h-12 mb-2 opacity-20" />
+                        <p>Selecciona un Simposio primero</p>
+                     </div>
+                   )}
+                   
+                   {/* Mensaje si ya no quedan libres */}
+                   {formData.symposium_id && availablePresentations.length === 0 && (
+                     <div className="h-full flex flex-col items-center justify-center text-green-600 bg-green-50 rounded-lg border border-green-100 m-4">
+                        <CheckSquare className="w-12 h-12 mb-2 opacity-50" />
+                        <p className="font-bold">¡Todo asignado!</p>
+                        <p className="text-sm">No quedan ponencias pendientes en este simposio.</p>
+                     </div>
+                   )}
+
+                   {availablePresentations.map((pres) => {
+                     const isSelected = selectedPresentationIds.includes(pres.id);
+                     return (
+                       <div 
+                         key={pres.id}
+                         onClick={() => togglePresentation(pres.id)}
+                         className={`p-3 rounded-lg border cursor-pointer flex items-start gap-3 select-none transition-all
+                           ${isSelected 
+                             ? 'bg-white border-iaspm-blue ring-1 ring-iaspm-blue shadow-md z-10 relative' 
+                             : 'bg-white border-gray-200 hover:border-blue-400'
+                           }
+                         `}
+                       >
+                         <div className={`mt-0.5 text-iaspm-blue ${isSelected ? 'scale-110' : 'opacity-30'}`}>
+                           {isSelected ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
+                         </div>
+                         <div className="flex-1">
+                           <p className={`text-sm font-medium leading-snug ${isSelected ? 'text-iaspm-blue' : 'text-gray-700'}`}>
+                             {pres.title}
+                           </p>
+                           <p className="text-xs text-gray-500 mt-1">{pres.authors}</p>
+                         </div>
+                       </div>
+                     );
+                   })}
+                   
+                   {/* Espacio extra al final para que no se pegue al botón */}
+                   <div className="h-16"></div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Fecha *
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={formData.day}
-                    onChange={(e) => setFormData({ ...formData, day: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Hora Inicio *
-                    </label>
-                    <input
-                      type="time"
-                      required
-                      value={formData.start_time}
-                      onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Hora Fin *
-                    </label>
-                    <input
-                      type="time"
-                      required
-                      value={formData.end_time}
-                      onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Sala
-                  </label>
-                  <select
-                    value={formData.room_id}
-                    onChange={(e) => setFormData({ ...formData, room_id: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  >
-                    <option value="">Sin asignar</option>
-                    {rooms.map((room) => (
-                      <option key={room.id} value={room.id}>
-                        {room.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="flex justify-end gap-3 pt-6 border-t">
-                  <button
-                    type="button"
-                    onClick={() => setShowModal(false)}
-                    className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
+                {/* Footer Flotante (Botones) */}
+                <div className="absolute bottom-0 left-0 right-0 p-4 bg-white/95 backdrop-blur-sm border-t border-gray-200 flex justify-end gap-3 z-20">
+                  <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition font-medium">
                     Cancelar
                   </button>
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
-                  >
-                    {loading ? 'Guardando...' : editingSession ? 'Actualizar' : 'Crear'}
+                  <button type="submit" className="px-8 py-2 text-sm bg-iaspm-blue text-white rounded-lg hover:bg-blue-800 transition font-bold shadow-lg shadow-blue-900/20">
+                    {editingSession ? 'Guardar Cambios' : 'Crear Mesa'}
                   </button>
                 </div>
-              </form>
-            </div>
+
+              </div>
+            </form>
           </div>
         </div>
       )}
