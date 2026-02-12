@@ -1,0 +1,83 @@
+// src/components/layout/Footer.jsx
+import React from 'react';
+
+const Footer = ({ lang }) => {
+  return (
+    // CAMBIOS:
+    // 1. pt-6 pb-4: Mucho menos relleno vertical (antes seguramente era py-12 o más).
+    // 2. border-t-4 border-iaspm-orange: Mantenemos la línea naranja de identidad arriba.
+    <footer className="bg-iaspm-blue text-white pt-6 pb-4 border-t-4 border-iaspm-orange font-sans text-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        {/* GRID PRINCIPAL
+            En móvil: grid-cols-1 (una columna) pero con gap pequeño (gap-6).
+            En PC: grid-cols-3.
+        */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 mb-6">
+          
+          {/* COLUMNA 1: INFORMACIÓN (Más compacta) */}
+          <div className="md:col-span-1">
+            <h3 className="text-base font-bold mb-2 tracking-wide text-white">
+              IASPM-AL 2026
+            </h3>
+            <div className="text-xs text-blue-100 space-y-1 leading-relaxed opacity-90">
+              <p>XVII Congreso de la Asociación Internacional para el Estudio de la Música Popular, Rama Latinoamericana.</p>
+              <p className="font-semibold text-iaspm-orange mt-1">San Cristóbal de Las Casas, Chiapas, México.</p>
+            </div>
+          </div>
+
+          {/* COLUMNA 2: ENLACES (Lista compacta) */}
+          <div>
+            <h4 className="text-sm font-bold mb-2 text-blue-200 uppercase tracking-wider text-[10px]">
+              {lang === 'es' ? 'Enlaces Rápidos' : 'Links Rápidos'}
+            </h4>
+            <ul className="space-y-1.5 text-xs text-blue-50">
+              <li>
+                <a href="#home" className="hover:text-iaspm-orange transition-colors flex items-center gap-2">
+                  <span className="w-1 h-1 bg-iaspm-orange rounded-full"></span>
+                  {lang === 'es' ? 'Inicio' : 'Início'}
+                </a>
+              </li>
+              <li>
+                <a href="#programa" className="hover:text-iaspm-orange transition-colors flex items-center gap-2">
+                  <span className="w-1 h-1 bg-iaspm-orange rounded-full"></span>
+                  {lang === 'es' ? 'Programa' : 'Programa'}
+                </a>
+              </li>
+              <li>
+                <a href="#cuotas" className="hover:text-iaspm-orange transition-colors flex items-center gap-2">
+                  <span className="w-1 h-1 bg-iaspm-orange rounded-full"></span>
+                  {lang === 'es' ? 'Inscripción' : 'Inscrição'}
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          {/* COLUMNA 3: CONTACTO / LEGAL (Compacto) */}
+          <div>
+            <h4 className="text-sm font-bold mb-2 text-blue-200 uppercase tracking-wider text-[10px]">
+              {lang === 'es' ? 'Contacto' : 'Contato'}
+            </h4>
+            <div className="text-xs text-blue-100 space-y-1">
+              <p className="hover:text-white transition-colors cursor-pointer">contacto@iaspmal2026.org</p>
+              <a href="/aviso-privacidad" className="block text-blue-300 hover:text-white underline mt-2">
+                {lang === 'es' ? 'Aviso de Privacidad' : 'Aviso de Privacidade'}
+              </a>
+            </div>
+          </div>
+
+        </div>
+
+        {/* BARRA INFERIOR (COPYRIGHT) */}
+        {/* Línea divisoria muy sutil y texto minúsculo */}
+        <div className="border-t border-blue-900/50 pt-4 flex flex-col md:flex-row justify-between items-center gap-2 text-[10px] text-blue-300">
+          <p>© 2026 IASPM-AL. {lang === 'es' ? 'Todos los derechos reservados.' : 'Todos os direitos reservados.'}</p>
+          <p className="opacity-60">{lang === 'es' ? 'Desarrollado para el XVII Congreso' : 'Desenvolvido para o XVII Congresso'}</p>
+        </div>
+
+      </div>
+    </footer>
+  );
+};
+
+export default Footer;

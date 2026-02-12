@@ -1,227 +1,169 @@
 // src/components/pages/Program.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Download, List, Calendar, ChevronDown, Clock } from 'lucide-react';
+import ScheduleView from './ScheduleView'; // Importamos la Agenda que ya creamos
 import { supabase } from '../../lib/supabaseClient';
-import ScheduleView from './ScheduleView';
-import { 
-  Users, ChevronDown, Printer, Loader2, Calendar, 
-  List, MapPin, FileText, Mic2, Info, ChevronRight 
-} from 'lucide-react';
-import { useReactToPrint } from 'react-to-print'; 
-import PrintableProgram from './PrintableProgram'; 
 
-const cleanCoordinators = (data) => {
-  if (!data) return '';
-  if (Array.isArray(data)) return data.join(', ');
-  if (typeof data === 'string') {
-    return data.replace(/[\[\]"]/g, '').replace(/,/g, ', ');
-  }
-  return data;
-};
-
-const Program = ({ lang }) => {
-  const [view, setView] = useState('symposiums');
-  const [symposiums, setSymposiums] = useState([]);      
-  const [sessions, setSessions] = useState([]); 
-  const [loading, setLoading] = useState(true);
-  const [expandedSymposium, setExpandedSymposium] = useState(null);
-  const [showPapers, setShowPapers] = useState({});
-  const [isPrinting, setIsPrinting] = useState(false);
-
-  const printRef = useRef(null);
-
-  const typeToPrint = view === 'schedule' ? 'schedule' : 'symposiums';
-  const pdfTitle = view === 'schedule' ? 'Agenda_IASPMAL_2026' : 'Simposios_IASPMAL_2026';
-
-  const handlePrint = useReactToPrint({
-    contentRef: printRef,
-    documentTitle: pdfTitle,
-    onBeforeGetContent: () => {
-        setIsPrinting(true);
-        return Promise.resolve();
-    },
-    onAfterPrint: () => setIsPrinting(false),
-    onPrintError: (error) => console.error("Error al imprimir:", error)
+const Program = () => {
+  // 1. ESTADO CON MEMORIA (Persistencia)
+  // Al iniciar, buscamos si hay algo guardado en el navegador. Si no, empezamos en 'simposios'.
+  const [activeTab, setActiveTab] = useState(() => {
+    // Si es la primera vez, devuelve null, entonces usa 'simposios'
+    return localStorage.getItem('program_active_tab') || 'simposios';
   });
 
-  const fetchDataSafe = async () => {
-    try {
-      setLoading(true);
-      const { data: sympData, error: sympError } = await supabase
-        .from('symposiums')
-        .select('*')
-        .order('id', { ascending: true });
-      
-      if (sympError) throw sympError;
-
-      const { data: presData, error: presError } = await supabase
-        .from('presentations')
-        .select('*');
-      
-      if (presError) throw presError;
-
-      const combinedSympData = sympData.map(s => ({
-        ...s,
-        presentations: presData.filter(p => p.symposium_id === s.id).sort((a, b) => a.title.localeCompare(b.title))
-      }));
-      
-      setSymposiums(combinedSympData);
-
-      const { data: sessionData, error: sessionError } = await supabase
-        .from('sessions')
-        .select(`
-          *,
-          symposiums ( name ),
-          rooms ( name, venues ( name ) ),
-          presentations ( id, title, authors )
-        `)
-        .order('date', { ascending: true })
-        .order('start_time', { ascending: true });
-
-      if (sessionError) throw sessionError;
-      setSessions(sessionData || []);
-
-    } catch (error) {
-      console.error('Error al cargar programa:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { fetchDataSafe(); }, []);
-
-  const togglePapers = (e, id) => {
-    e.stopPropagation(); 
-    setShowPapers(prev => ({ ...prev, [id]: !prev[id] }));
+  // 2. FUNCIÓN PARA CAMBIAR Y GUARDAR
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    localStorage.setItem('program_active_tab', tab); // Guardamos la elección para el futuro
   };
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto pb-12 px-4">
+    <div className="min-h-screen bg-gray-50/50 pb-20 animate-in fade-in duration-700">
       
-      {/* CABECERA */}
-      <div className="flex flex-col md:flex-row justify-between items-center gap-4 border-b pb-6">
-        <div>
-          <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">
-            {lang === 'es' ? 'Programa Académico' : 'Academic Program'}
-          </h2>
-        </div>
-        
-        <div className="flex gap-3">
-          {/* BOTÓN ACTUALIZADO: AZUL MARINO XVII CONGRESO */}
-          <button 
-             onClick={() => handlePrint()}
-             disabled={isPrinting || loading}
-             className="px-5 py-2.5 bg-[#1e3a5f] text-white rounded-xl flex items-center gap-2 shadow-lg hover:bg-black transition-all text-sm font-bold disabled:opacity-50 active:scale-95"
-          >
-             {isPrinting ? <Loader2 size={18} className="animate-spin"/> : <Printer size={18} />}
-             <span>{lang === 'es' ? 'Descargar PDF' : 'Download PDF'}</span>
-          </button>
+      {/* HEADER Y CONTROLES (Sticky) */}
+      <div className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm/50 backdrop-blur-md bg-white/90">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-6">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            
+            <div>
+              <h1 className="text-2xl md:text-3xl font-black text-[#1e3a5f] tracking-tight">
+                Programa Académico
+              </h1>
+              <p className="text-sm text-gray-500 font-medium mt-1">
+                XVIII Congreso IASPM-AL 2026
+              </p>
+            </div>
 
-          <div className="flex gap-2 bg-gray-100 p-1 rounded-xl">
-            <button onClick={() => setView('symposiums')} className={`px-4 py-2 rounded-lg font-bold text-sm transition ${view === 'symposiums' ? 'bg-white text-[#1e3a5f] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-              <List className="inline mr-2" size={16}/> {lang === 'es' ? 'Simposios' : 'Symposiums'}
-            </button>
-            <button onClick={() => setView('schedule')} className={`px-4 py-2 rounded-lg font-bold text-sm transition ${view === 'schedule' ? 'bg-white text-[#1e3a5f] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-              <Calendar className="inline mr-2" size={16}/> {lang === 'es' ? 'Agenda' : 'Schedule'}
-            </button>
+            <div className="flex items-center gap-2 bg-gray-100 p-1.5 rounded-xl shadow-inner">
+              {/* Botón Descargar (Decorativo por ahora) */}
+              <button className="flex items-center gap-2 px-4 py-2 bg-[#1e3a5f] text-white rounded-lg text-xs font-bold shadow-md hover:bg-black transition-all hover:scale-105 active:scale-95">
+                <Download size={14} /> <span className="hidden sm:inline">PDF</span>
+              </button>
+              
+              <div className="w-px h-6 bg-gray-300 mx-2"></div>
+
+              {/* BOTONES DE NAVEGACIÓN PERSISTENTE */}
+              <button 
+                onClick={() => handleTabChange('simposios')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                  activeTab === 'simposios' 
+                    ? 'bg-white text-[#1e3a5f] shadow-sm scale-105' 
+                    : 'text-gray-400 hover:text-[#1e3a5f] hover:bg-gray-200/50'
+                }`}
+              >
+                <List size={16} /> Simposios
+              </button>
+
+              <button 
+                onClick={() => handleTabChange('agenda')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                  activeTab === 'agenda' 
+                    ? 'bg-white text-[#1e3a5f] shadow-sm scale-105' 
+                    : 'text-gray-400 hover:text-[#1e3a5f] hover:bg-gray-200/50'
+                }`}
+              >
+                <Calendar size={16} /> Agenda
+              </button>
+            </div>
+
           </div>
         </div>
       </div>
 
-      {loading ? (
-        <div className="py-20 text-center"><Loader2 className="animate-spin mx-auto text-[#1e3a5f]" size={48}/></div>
-      ) : view === 'symposiums' ? (
-        <div className="space-y-4 animate-in fade-in duration-500">
-          {symposiums.map((s) => (
-            <div key={s.id} className="bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden transition-all">
-              
-              <div 
-                onClick={() => setExpandedSymposium(expandedSymposium === s.id ? null : s.id)}
-                className={`p-5 cursor-pointer flex items-center gap-4 transition-colors ${expandedSymposium === s.id ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
-              >
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg flex-shrink-0 ${expandedSymposium === s.id ? 'bg-[#1e3a5f] text-white' : 'bg-blue-50 text-[#1e3a5f]'}`}>
-                  S{s.id}
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-gray-900 leading-snug text-lg">
-                    {s.name}
-                  </h3>
-                  <div className="flex items-center gap-2 mt-1.5 text-xs text-gray-500 font-bold italic uppercase">
-                    <Users size={14} className="text-[#f4a261] flex-shrink-0"/>
-                    {cleanCoordinators(s.coordinator)}
-                  </div>
-                </div>
-                <ChevronDown className={`text-gray-400 transition-transform ${expandedSymposium === s.id ? 'rotate-180' : ''}`} size={24} />
-              </div>
+      {/* CONTENIDO PRINCIPAL */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        {/* Renderizado Condicional: Muestra uno u otro según el estado */}
+        {activeTab === 'simposios' ? (
+          <SymposiumsList /> 
+        ) : (
+          <ScheduleView />
+        )}
 
-              {expandedSymposium === s.id && (
-                <div className="p-6 border-t border-gray-100 bg-white space-y-6">
-                  <div className="bg-gray-50 p-5 rounded-[2rem] border border-gray-100">
-                    <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-2">
-                      <Info size={14}/> {lang === 'es' ? 'Sobre el Simposio' : 'About the Symposium'}
-                    </h4>
-                    <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-line">
-                      {s.description || "Descripción en proceso..."}
-                    </p>
-                  </div>
-
-                  <div>
-                    <button 
-                      onClick={(e) => togglePapers(e, s.id)}
-                      disabled={s.presentations.length === 0}
-                      className={`w-full flex items-center justify-between p-4 rounded-2xl font-bold text-sm transition-all border
-                        ${s.presentations.length > 0 
-                          ? 'bg-white border-blue-100 text-[#1e3a5f] hover:border-[#1e3a5f] shadow-sm' 
-                          : 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed'}
-                      `}
-                    >
-                      <span className="flex items-center gap-3">
-                        <Mic2 size={18}/>
-                        {lang === 'es' ? 'Ver Ponentes y Trabajos' : 'View Speakers and Papers'}
-                        {s.presentations.length > 0 && (
-                            <span className="bg-blue-50 text-[#1e3a5f] px-2 py-0.5 rounded-full text-[10px]">
-                                {s.presentations.length}
-                            </span>
-                        )}
-                      </span>
-                      {s.presentations.length > 0 && (
-                        <ChevronRight className={`transition-transform duration-200 ${showPapers[s.id] ? 'rotate-90' : ''}`} />
-                      )}
-                    </button>
-
-                    {showPapers[s.id] && s.presentations.length > 0 && (
-                      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 animate-in slide-in-from-top-2 duration-300">
-                        {s.presentations.map(p => (
-                          <div key={p.id} className="p-4 rounded-[1.5rem] border border-orange-50 bg-orange-50/20">
-                            <h5 className="font-bold text-gray-800 text-sm leading-tight mb-2 uppercase tracking-tight">{p.title}</h5>
-                            <div className="flex items-center gap-1 text-[#f4a261]">
-                                <Users size={12} className="flex-shrink-0"/>
-                                <p className="text-[11px] font-black uppercase tracking-tighter">{p.authors}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      ) : (
-        <ScheduleView embedded={true} lang={lang} />
-      )}
-
-      {/* COMPONENTE DE IMPRESIÓN */}
-      <div style={{ display: 'none' }}>
-        <div ref={printRef}>
-          <PrintableProgram 
-            events={view === 'schedule' ? sessions : symposiums} 
-            type={typeToPrint}   
-            lang={lang} 
-          />
-        </div>
       </div>
+    </div>
+  );
+};
 
+// --- COMPONENTE INTERNO: LISTA DE SIMPOSIOS (ACORDEÓN) ---
+// Este componente carga la lista de simposios desde Supabase
+const SymposiumsList = () => {
+  const [simposios, setSimposios] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [openId, setOpenId] = useState(null); 
+
+  useEffect(() => {
+    const fetchSimposios = async () => {
+      try {
+        const { data, error } = await supabase.from('symposiums').select('*').order('id');
+        if (error) throw error;
+        setSimposios(data || []);
+      } catch (e) {
+        console.error("Error cargando simposios", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSimposios();
+  }, []);
+
+  const toggleAccordion = (id) => {
+    setOpenId(openId === id ? null : id);
+  };
+
+  if (loading) return <div className="py-20 text-center"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#1e3a5f] mx-auto"></div></div>;
+
+  return (
+    <div className="space-y-4 animate-in slide-in-from-bottom-4 duration-500 max-w-4xl mx-auto">
+      {simposios.map((s, index) => (
+        <div key={s.id} className="bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-all overflow-hidden group">
+          
+          {/* Cabecera del Acordeón */}
+          <button 
+            onClick={() => toggleAccordion(s.id)}
+            className="w-full text-left p-6 flex items-start gap-4 focus:outline-none"
+          >
+            <div className={`flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm transition-colors ${openId === s.id ? 'bg-[#1e3a5f] text-white' : 'bg-blue-50 text-[#1e3a5f] group-hover:bg-[#1e3a5f] group-hover:text-white'}`}>
+              S{index + 1}
+            </div>
+            <div className="flex-1 pt-1">
+              <h3 className="font-bold text-[#1e3a5f] text-lg leading-tight group-hover:text-black transition-colors">{s.name}</h3>
+              <p className="text-xs text-gray-400 font-bold mt-1 uppercase tracking-wide">
+                {s.coordinators || "Coordinación por definir"}
+              </p>
+            </div>
+            <ChevronDown 
+              className={`text-gray-300 transition-transform duration-300 mt-2 ${openId === s.id ? 'rotate-180 text-[#f4a261]' : ''}`} 
+            />
+          </button>
+
+          {/* Contenido del Acordeón (Detalles) */}
+          {openId === s.id && (
+            <div className="px-6 pb-8 pt-0 pl-[5.5rem]">
+              <div className="pt-4 border-t border-gray-50 space-y-4">
+                <p className="text-gray-600 text-sm leading-relaxed text-justify">
+                  {s.description || "La descripción detallada de este simposio estará disponible próximamente."}
+                </p>
+                
+                {/* Botón de acción dentro del simposio */}
+                <div className="flex gap-3 pt-2">
+                    <button 
+                        onClick={() => {
+                            // Truco para cambiar de tab desde aquí
+                            localStorage.setItem('program_active_tab', 'agenda');
+                            window.location.reload(); // Recargamos para que el useEffect lo detecte
+                        }}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-orange-50 border border-orange-100 rounded-xl text-xs font-black text-[#f4a261] hover:bg-[#f4a261] hover:text-white transition-colors"
+                    >
+                        <Clock size={14}/> VER EN LA AGENDA
+                    </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   );
 };
