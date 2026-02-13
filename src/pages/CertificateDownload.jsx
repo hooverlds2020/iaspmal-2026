@@ -27,10 +27,15 @@ const CertificateDownload = () => {
     setDebugInfo('');
     setUserData(null);
 
-    // Limpieza inteligente del código
+    // --- LÓGICA DE LIMPIEZA CORREGIDA ---
+    // 1. Quitamos espacios y pasamos a mayúsculas
     let rawInput = code.toUpperCase().trim().replace(/\s/g, '');
+    
+    // 2. Si el usuario escribe "IASP-XXXXXX", se lo quitamos para quedarnos con el código limpio
     let cleanHex = rawInput.replace(/^IASP[-]?/, '');
-    const searchCode = `IASP-${cleanHex}`;
+    
+    // 3. Buscamos EXACTAMENTE el código limpio (ej: AEA584)
+    const searchCode = cleanHex; 
 
     if (!cleanHex) {
         setError('Por favor ingresa un código válido.');
@@ -42,7 +47,7 @@ const CertificateDownload = () => {
       const { data, error } = await supabase
         .from('registrations')
         .select('*')
-        .ilike('attendance_code', searchCode)
+        .ilike('attendance_code', searchCode) // Buscamos coincidencia exacta (case-insensitive)
         .maybeSingle(); 
 
       if (error) throw error;
@@ -177,14 +182,14 @@ const CertificateDownload = () => {
                     id="code"
                     required
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition font-mono uppercase tracking-widest text-center text-lg placeholder-gray-300"
-                    placeholder="Ej: D487B5" 
+                    placeholder="Ej: AEA584" 
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
                   />
                   <Search className="w-5 h-5 text-gray-400 absolute left-3 top-3.5" />
                 </div>
                 <p className="text-xs text-gray-500 mt-1 text-center">
-                  Puedes escribir: <strong>IASP-XXXXXX</strong> o solo <strong>XXXXXX</strong>
+                  Ingresa los 6 caracteres de tu código (letras y números)
                 </p>
               </div>
               

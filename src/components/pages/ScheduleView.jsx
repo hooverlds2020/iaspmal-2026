@@ -1,152 +1,240 @@
-// src/components/pages/ScheduleView.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import { Clock, MapPin, Users, ChevronLeft, ChevronRight, X, FileText, CalendarDays, ArrowLeft, Building2 } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, X, FileText, ChevronRight, ArrowLeft, User, Timer } from 'lucide-react';
 
-const ScheduleView = ({ embedded = false, lang: propLang }) => {
+const ScheduleView = ({ onDataLoaded }) => {
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [currentDayIndex, setCurrentDayIndex] = useState(0);
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [uniqueDates, setUniqueDates] = useState([]);
+  
+  // Estados del Modal
   const [selectedSession, setSelectedSession] = useState(null);
-  const [selectedPresentation, setSelectedPresentation] = useState(null); 
-  const [lang, setLang] = useState(propLang || 'es');
-  const daysContainerRef = useRef(null);
-
-  const START_HOUR = 9; const END_HOUR = 20; const TOTAL_HOURS = END_HOUR - START_HOUR; const PIXELS_PER_HOUR = 120; 
-
-  useEffect(() => { if (propLang) setLang(propLang); }, [propLang]);
-  useEffect(() => { daysContainerRef.current?.children[currentDayIndex]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); }, [currentDayIndex]);
-
-  const days = [
-    { date: '2026-09-28', label_es: 'Lun 28', label_pt: 'Seg 28' },
-    { date: '2026-09-29', label_es: 'Mar 29', label_pt: 'Ter 29' },
-    { date: '2026-09-30', label_es: 'Mié 30', label_pt: 'Qua 30' },
-    { date: '2026-10-01', label_es: 'Jue 01', label_pt: 'Qui 01' },
-    { date: '2026-10-02', label_es: 'Vie 02', label_pt: 'Sex 02' }
-  ];
+  const [selectedPaper, setSelectedPaper] = useState(null);
 
   useEffect(() => {
-    setLoading(true);
-    supabase.from('sessions').select(`*, rooms(id, name, venues(name)), symposiums(id, name), presentations(*)`).order('start_time')
-      .then(({data}) => { setSessions(data || []); setLoading(false); });
+    fetchSessions();
   }, []);
 
-  const currentDay = days[currentDayIndex];
-  const daySessions = sessions.filter(s => s.date === currentDay.date);
-  const activeRoomIds = [...new Set(daySessions.map(s => s.room_id))];
-  const activeRooms = activeRoomIds.map(id => daySessions.find(s => s.room_id === id).rooms).sort((a,b) => a.name.localeCompare(b.name));
+  const fetchSessions = async () => {
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase
+        .from('sessions')
+        .select(`
+          *,
+          rooms (name),
+          symposiums (name, coordinators),
+          presentations (
+            id, 
+            title, 
+            authors, 
+            abstract_text, 
+            start_time, 
+            end_time, 
+            duration_minutes
+          ) 
+        `)
+        .order('date', { ascending: true })
+        .order('start_time', { ascending: true });
 
-  const getGridPosition = (start, end) => {
-    if (!start || !end) return { top: 0, height: 0 };
-    const [sH, sM] = start.split(':').map(Number); const [eH, eM] = end.split(':').map(Number);
-    const startMin = (Math.max(sH, START_HOUR) - START_HOUR) * 60 + sM;
-    const durMin = ((eH * 60 + eM) - (sH * 60 + sM));
-    return { top: `${(startMin / 60) * PIXELS_PER_HOUR}px`, height: `${(durMin / 60) * PIXELS_PER_HOUR}px` };
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        setSessions(data);
+        const dates = [...new Set(data.map(s => s.date))];
+        setUniqueDates(dates);
+        if (dates.length > 0) setSelectedDate(dates[0]);
+        // Enviar datos al componente padre para el PDF
+        if (onDataLoaded) onDataLoaded(data);
+      }
+    } catch (error) {
+      console.error('Error cargando agenda:', error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const getSessionStyle = (id) => {
-    const styles = ['bg-purple-50 border-purple-600 text-purple-900', 'bg-blue-50 border-blue-600 text-blue-900', 'bg-emerald-50 border-emerald-600 text-emerald-900', 'bg-amber-50 border-amber-600 text-amber-900'];
-    return `border-l-4 ${styles[id % styles.length]}`;
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString + 'T00:00:00'); 
+    return new Intl.DateTimeFormat('es-MX', { weekday: 'short', day: 'numeric' }).format(date).toUpperCase();
   };
+
+  const formatTime = (timeString) => {
+    if (!timeString) return '';
+    return timeString.slice(0, 5);
+  };
+
+  const closeModals = () => {
+    setSelectedSession(null);
+    setSelectedPaper(null);
+  };
+
+  const filteredSessions = sessions.filter(s => s.date === selectedDate);
+  const sessionsByTime = filteredSessions.reduce((acc, session) => {
+    const timeKey = session.start_time;
+    if (!acc[timeKey]) acc[timeKey] = [];
+    acc[timeKey].push(session);
+    return acc;
+  }, {});
+  const sortedTimeKeys = Object.keys(sessionsByTime).sort();
+
+  if (loading) return <div className="p-8 text-center text-xs text-gray-400 italic">Cargando agenda...</div>;
 
   return (
-    <div className="bg-white">
-      {/* 1. NAV DÍAS: Sticky justo debajo del header principal (aprox 50px) */}
-      <div className="bg-white border-b border-gray-200 sticky top-[50px] z-40 py-1 shadow-sm">
-        <div className="flex items-center gap-1 px-1">
-            <button onClick={() => setCurrentDayIndex(Math.max(0, currentDayIndex - 1))} disabled={currentDayIndex === 0} className="p-2 text-[#1e3a5f] disabled:opacity-20"><ChevronLeft size={20}/></button>
-            <div ref={daysContainerRef} className="flex-1 flex gap-2 overflow-x-auto hide-scrollbar items-center scroll-smooth">
-              {days.map((day, i) => (
-                <button key={day.date} onClick={() => setCurrentDayIndex(i)} className={`px-3 py-1.5 rounded-md font-bold text-xs whitespace-nowrap border ${i === currentDayIndex ? 'bg-[#1e3a5f] text-white border-[#1e3a5f]' : 'bg-gray-50 text-gray-500 border-gray-100'}`}>{lang === 'es' ? day.label_es : day.label_pt}</button>
-              ))}
-            </div>
-            <button onClick={() => setCurrentDayIndex(Math.min(days.length - 1, currentDayIndex + 1))} disabled={currentDayIndex === days.length - 1} className="p-2 text-[#1e3a5f] disabled:opacity-20"><ChevronRight size={20}/></button>
-        </div>
+    <div className="relative min-h-[60vh]">
+      
+      {/* 1. MENÚ DE DÍAS (STICKY) */}
+      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-gray-200 py-2 -mx-2 sm:-mx-6 px-2 sm:px-6 mb-2 overflow-x-auto hide-scrollbar flex gap-2 shadow-sm">
+        {uniqueDates.map((date) => (
+          <button
+            key={date}
+            onClick={() => setSelectedDate(date)}
+            className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-black transition-all border ${selectedDate === date ? 'bg-[#1e3a5f] text-white border-[#1e3a5f] shadow-md transform scale-105' : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100'}`}
+          >
+            {formatDate(date)}
+          </button>
+        ))}
       </div>
 
-      {loading ? <div className="py-40 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1e3a5f]"></div></div> : 
-       daySessions.length === 0 ? <div className="py-20 text-center text-gray-400 text-sm">Sin actividad.</div> : (
-        
-        <div className="relative">
-            <div className="overflow-x-auto custom-scrollbar touch-pan-x">
-                <div className="min-w-[800px] relative"> 
-                    
-                    {/* 2. HEADER SALAS: Sticky debajo de Nav Días (aprox 90px total) */}
-                    <div className="flex sticky top-[92px] z-30 bg-gray-50 border-b border-gray-300">
-                        <div className="w-10 flex-shrink-0 border-r border-gray-200 bg-white"></div>
-                        {activeRooms.map(r => (
-                            <div key={r.id} className="flex-1 min-w-[160px] p-1 text-center border-r border-gray-200 flex flex-col justify-center h-10">
-                                <span className="block text-[7px] font-black uppercase text-gray-400 truncate">{r.venues?.name}</span>
-                                <h4 className="font-bold text-[#1e3a5f] text-[10px] leading-tight uppercase truncate">{r.name}</h4>
-                            </div>
-                        ))}
-                    </div>
+      {/* 2. LISTA DE TARJETAS */}
+      <div className="space-y-6 pb-12">
+        {sortedTimeKeys.map((timeKey) => (
+          <div key={timeKey}>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="text-gray-400 text-[10px] font-black uppercase tracking-widest flex items-center gap-1">
+                {formatTime(timeKey)} HRS
+              </div>
+              <div className="h-px bg-gray-100 flex-1"></div>
+            </div>
 
-                    {/* CUERPO GRILLA: pt-8 asegura que 9:00 AM no quede tapada */}
-                    <div className="flex relative pt-8" style={{ height: `${(TOTAL_HOURS * PIXELS_PER_HOUR) + 50}px` }}>
-                        <div className="w-10 flex-shrink-0 border-r border-gray-200 bg-white sticky left-0 z-20 text-center">
-                            {Array.from({ length: TOTAL_HOURS + 1 }).map((_, i) => (
-                                <div key={i} className="absolute w-full text-[9px] font-bold text-gray-400 -mt-1.5 bg-white" style={{ top: `${(i * PIXELS_PER_HOUR) + 32}px` }}>{START_HOUR + i}:00</div>
-                            ))}
-                        </div>
-                        <div className="absolute inset-0 z-0 pointer-events-none pl-10 pt-8">
-                            {Array.from({ length: TOTAL_HOURS + 1 }).map((_, i) => (
-                                <div key={i} className="border-b border-dashed border-gray-100 w-full absolute" style={{ top: `${i * PIXELS_PER_HOUR}px` }}></div>
-                            ))}
-                        </div>
-                        {activeRooms.map(room => (
-                            <div key={room.id} className="flex-1 min-w-[160px] border-r border-gray-200 relative pt-8">
-                                {daySessions.filter(s => s.room_id === room.id).map(s => {
-                                    const pos = getGridPosition(s.start_time, s.end_time);
-                                    return (
-                                        <div key={s.id} onClick={() => setSelectedSession(s)} className={`absolute inset-x-0.5 rounded-sm shadow-sm cursor-pointer hover:brightness-95 flex flex-col justify-between p-1.5 overflow-hidden ${getSessionStyle(s.symposium_id || 0)}`} style={{ top: `calc(${pos.top} + 32px)`, height: pos.height }}>
-                                            <div>
-                                                <div className="flex justify-between items-start mb-0.5 opacity-80 border-b border-black/5 pb-0.5"><span className="text-[7px] font-black uppercase tracking-wider truncate">{s.symposiums?.name ? "Simposio" : "Mesa"}</span><div className="bg-white/40 px-1 rounded text-[7px] font-bold">{s.start_time?.substring(0,5)}</div></div>
-                                                <h5 className="font-extrabold text-[9px] leading-tight uppercase mb-0.5 line-clamp-2 opacity-90">{s.symposiums?.name || "General"}</h5>
-                                                <p className="text-[8px] font-medium leading-tight line-clamp-2">{s.name}</p>
-                                            </div>
-                                            <div className="flex items-center justify-between mt-0.5 pt-0.5 border-t border-black/5"><span className="text-[7px] font-bold bg-white/40 px-1 rounded-full">{s.presentations?.length || 0} P</span></div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        ))}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {sessionsByTime[timeKey].map((session) => (
+                <div 
+                  key={session.id} 
+                  onClick={() => setSelectedSession(session)}
+                  className="bg-white border border-gray-200 rounded-xl p-3.5 shadow-sm active:scale-[0.99] transition-all cursor-pointer flex flex-col gap-2 group hover:border-blue-300"
+                >
+                  <div className="flex justify-between items-start">
+                    <span className="bg-blue-50 text-[#1e3a5f] text-[9px] font-bold px-2 py-0.5 rounded border border-blue-100 uppercase truncate max-w-[75%]">
+                      {session.rooms?.name || 'Sala TBD'}
+                    </span>
+                    <span className="text-[9px] text-gray-400 font-medium">
+                      Fin: {formatTime(session.end_time)}
+                    </span>
+                  </div>
+
+                  <h4 className="font-bold text-gray-800 text-xs sm:text-sm leading-snug line-clamp-2 group-hover:text-[#1e3a5f]">
+                    {session.symposiums?.name || session.name}
+                  </h4>
+
+                  <div className="flex items-center justify-between mt-auto border-t border-gray-50 pt-2">
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-500 group-hover:text-blue-600">
+                      <FileText size={10} />
+                      {session.presentations?.length || 0} Ponencias
                     </div>
+                    <ChevronRight size={14} className="text-gray-300 group-hover:text-blue-500" />
+                  </div>
                 </div>
+              ))}
             </div>
-        </div>
-      )}
+          </div>
+        ))}
+      </div>
 
+      {/* 3. MODAL DE DETALLES */}
       {selectedSession && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4" onClick={() => setSelectedSession(null)}>
-          <div className="bg-white rounded-2xl w-full max-w-2xl h-[85vh] overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95" onClick={e=>e.stopPropagation()}>
-            <div className="p-4 border-b bg-[#1e3a5f] text-white flex justify-between items-center shrink-0">
-               <div className="flex items-center gap-3">
-                 {selectedPresentation && <button onClick={()=>setSelectedPresentation(null)}><ArrowLeft/></button>}
-                 <h2 className="text-sm font-bold truncate max-w-[200px] sm:max-w-md">{selectedPresentation ? selectedPresentation.title : selectedSession.name}</h2>
-               </div>
-               <button onClick={()=>setSelectedSession(null)}><X/></button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-               {!selectedPresentation ? (
-                 selectedSession.presentations?.map(p => (
-                   <div key={p.id} onClick={()=>setSelectedPresentation(p)} className="p-3 bg-white border rounded-xl hover:border-[#1e3a5f] cursor-pointer">
-                     <h5 className="font-bold text-xs text-[#1e3a5f]">{p.title}</h5>
-                     <p className="text-[10px] text-gray-500">{p.authors}</p>
-                   </div>
-                 ))
-               ) : (
-                 <div className="space-y-4">
-                    <div className="bg-white p-4 rounded-xl border"><h4 className="font-bold text-[#1e3a5f] text-sm">{selectedPresentation.authors}</h4><p className="text-xs italic">{selectedPresentation.author_affiliation}</p></div>
-                    <div className="bg-white p-4 rounded-xl border text-xs leading-relaxed text-justify">{selectedPresentation.abstract_text}</div>
-                    {selectedPresentation.pdf_url && <a href={selectedPresentation.pdf_url} target="_blank" className="block w-full py-3 bg-[#1e3a5f] text-white text-center rounded-xl font-bold text-xs">Descargar PDF</a>}
-                 </div>
-               )}
-            </div>
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 sm:p-4">
+          <div className="bg-white w-full sm:max-w-lg h-[85vh] sm:h-auto sm:max-h-[85vh] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-200">
+            
+            {!selectedPaper ? (
+              <>
+                <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-start shrink-0">
+                  <div className="pr-6">
+                    <span className="text-[9px] font-black uppercase text-blue-600 bg-blue-50 px-2 py-0.5 rounded mb-1.5 inline-block">Mesa / Sesión</span>
+                    <h3 className="font-bold text-gray-900 text-sm leading-tight mb-1">{selectedSession.symposiums?.name || selectedSession.name}</h3>
+                    {selectedSession.symposiums?.coordinators && <p className="text-[10px] text-gray-500 line-clamp-2 leading-relaxed font-medium">Coord: {selectedSession.symposiums.coordinators}</p>}
+                  </div>
+                  <button onClick={() => setSelectedSession(null)} className="p-1.5 bg-white border border-gray-200 rounded-full text-gray-400 hover:text-red-500 transition-colors"><X size={16}/></button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-4 bg-gray-50/30">
+                  <div className="space-y-3">
+                    {selectedSession.presentations?.sort((a, b) => (a.start_time || '').localeCompare(b.start_time || '')).map((paper) => (
+                      <button 
+                        key={paper.id} 
+                        onClick={() => setSelectedPaper(paper)} 
+                        className="w-full text-left bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:border-orange-300 transition-all group relative"
+                      >
+                         {/* ETIQUETA NARANJA DE TIEMPO */}
+                         {paper.start_time && (
+                           <div className="inline-flex items-center gap-1.5 bg-orange-500 text-white text-[10px] font-black px-2 py-1 rounded-md mb-2 shadow-sm">
+                             <Clock size={12} strokeWidth={3} />
+                             {formatTime(paper.start_time)} - {formatTime(paper.end_time)}
+                           </div>
+                         )}
+
+                         <p className="font-bold text-gray-800 text-xs mb-2 leading-tight">{paper.title}</p>
+                         <div className="flex items-center gap-1.5 text-gray-500">
+                            <User size={10} />
+                            <p className="text-[10px] uppercase truncate font-bold tracking-tight">{paper.authors}</p>
+                         </div>
+                         <div className="absolute right-3 bottom-4 text-gray-300 group-hover:text-orange-500"><ChevronRight size={16} /></div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="p-3 border-t bg-white shrink-0"><button onClick={() => setSelectedSession(null)} className="w-full py-3 bg-gray-100 text-gray-600 text-xs font-bold rounded-xl">Cerrar</button></div>
+              </>
+            ) : (
+              /* FICHA TÉCNICA */
+              <>
+                <div className="p-4 border-b border-gray-100 bg-orange-50 flex items-center gap-3 shrink-0">
+                  <button onClick={() => setSelectedPaper(null)} className="p-1.5 bg-white border border-orange-200 rounded-lg text-orange-600 shadow-sm"><ArrowLeft size={16} /></button>
+                  <h3 className="text-xs font-black text-orange-700 uppercase tracking-wider">Ficha Técnica</h3>
+                </div>
+                <div className="flex-1 overflow-y-auto p-6 bg-white">
+                  <h2 className="text-lg font-bold text-[#1e3a5f] leading-tight mb-6">{selectedPaper.title}</h2>
+                  
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    <div className="bg-orange-500 text-white px-3 py-2 rounded-xl flex items-center gap-2 shadow-md">
+                      <Clock size={16} strokeWidth={3} />
+                      <div className="leading-none">
+                        <p className="text-[8px] font-black uppercase opacity-80">Horario</p>
+                        <p className="text-xs font-black">{formatTime(selectedPaper.start_time)} - {formatTime(selectedPaper.end_time)}</p>
+                      </div>
+                    </div>
+                    {selectedPaper.duration_minutes && (
+                      <div className="bg-gray-100 text-gray-700 px-3 py-2 rounded-xl flex items-center gap-2">
+                        <Timer size={16} />
+                        <div className="leading-none">
+                          <p className="text-[8px] font-black uppercase opacity-60">Duración</p>
+                          <p className="text-xs font-black">{selectedPaper.duration_minutes} min</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 mb-6">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-2"><Users size={14}/> Autor(es)</p>
+                    <p className="text-sm font-bold text-gray-800 leading-snug">{selectedPaper.authors}</p>
+                  </div>
+
+                  {selectedPaper.abstract_text && (
+                    <div className="space-y-2">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2"><FileText size={14}/> Resumen</p>
+                      <p className="text-sm text-gray-600 leading-relaxed text-justify">{selectedPaper.abstract_text}</p>
+                    </div>
+                  )}
+                </div>
+                <div className="p-3 border-t bg-white shrink-0"><button onClick={() => setSelectedPaper(null)} className="w-full py-3 bg-[#1e3a5f] text-white text-xs font-bold rounded-xl shadow-lg">Volver a la lista</button></div>
+              </>
+            )}
           </div>
         </div>
       )}
-      <style dangerouslySetInnerHTML={{ __html: `.custom-scrollbar::-webkit-scrollbar { height: 4px; } .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; } .hide-scrollbar::-webkit-scrollbar { display: none; }`}} />
     </div>
   );
 };

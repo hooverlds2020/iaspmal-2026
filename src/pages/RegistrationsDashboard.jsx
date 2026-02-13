@@ -7,6 +7,17 @@ import { QRCodeCanvas } from 'qrcode.react';
 import { jsPDF } from 'jspdf';
 import { toast } from 'sonner';
 
+// --- FUNCIÓN GENERADORA DE 6 DÍGITOS ---
+const generateSixCharID = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  // Ciclo exacto de 6 vueltas para 6 caracteres
+  for (let i = 0; i < 6; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+};
+
 const TableSkeleton = () => (
   <div className="animate-pulse space-y-4">
     {[...Array(5)].map((_, i) => (
@@ -29,21 +40,17 @@ const RegistrationsDashboard = () => {
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Selección y Edición
   const [selectedRegistration, setSelectedRegistration] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({});
 
-  // Estados de pago
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentCurrency, setPaymentCurrency] = useState('MXN');
   const [paymentMethod, setPaymentMethod] = useState('transferencia');
   
-  // Modales
   const [showForceAuth, setShowForceAuth] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false); // <--- NUEVO ESTADO PARA EL POP-UP
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // Pestañas y Logs
   const [activeTab, setActiveTab] = useState('details'); 
   const [auditLogs, setAuditLogs] = useState([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
@@ -64,11 +71,10 @@ const RegistrationsDashboard = () => {
         });
         setIsEditing(false); 
         setShowForceAuth(false);
-        setShowDeleteConfirm(false); // Reseteamos al abrir uno nuevo
+        setShowDeleteConfirm(false);
     }
   }, [selectedRegistration]);
 
-  // --- LÓGICA DE NOTIFICACIONES ---
   const updateAppBadge = (count) => {
     if ('setAppBadge' in navigator) {
       if (count > 0) navigator.setAppBadge(count).catch(e => console.error(e));
@@ -147,37 +153,23 @@ const RegistrationsDashboard = () => {
       } catch (error) { toast.error("Error al guardar cambios"); }
   };
 
-  // --- NUEVA LÓGICA DE ELIMINACIÓN ---
-  // Paso 1: El botón de basura solo abre el modal
   const openDeleteModal = () => {
       setShowDeleteConfirm(true);
   };
 
-  // Paso 2: Esta función es la que realmente borra (se llama desde el modal)
   const confirmDelete = async () => {
       try {
           const { error } = await supabase.from('registrations').delete().eq('id', selectedRegistration.id);
           if (error) throw error;
           
           toast.success("Registro eliminado correctamente");
-          setShowDeleteConfirm(false); // Cerrar modal
-          setSelectedRegistration(null); // Cerrar detalle
+          setShowDeleteConfirm(false); 
+          setSelectedRegistration(null); 
           setRegistrations(prev => prev.filter(r => r.id !== selectedRegistration.id));
       } catch (error) { 
           console.error(error);
           toast.error("Error al eliminar el registro"); 
       }
-  };
-
-  const waitForCode = async (id) => {
-    let attempts = 0;
-    while (attempts < 5) { 
-      const { data, error } = await supabase.from('registrations').select('attendance_code').eq('id', id).single();
-      if (!error && data?.attendance_code) return data.attendance_code; 
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      attempts++;
-    }
-    return null; 
   };
 
   const attemptApproval = () => {
@@ -192,28 +184,37 @@ const RegistrationsDashboard = () => {
     }
   };
 
+  // --- LÓGICA DE APROBACIÓN CORREGIDA ---
   const executeStatusUpdate = async (id, newStatus) => {
     setShowForceAuth(false);
     const { data: currentReg } = await supabase.from('registrations').select('*').eq('id', id).single();
+    
     const processUpdate = async () => {
       const updateData = { 
         status: newStatus,
         payment_date: newStatus === 'paid' ? new Date().toISOString().split('T')[0] : null
       };
       
+      let finalCode = currentReg.attendance_code;
+
+      // Generamos el código nosotros para asegurar 6 caracteres
       if (newStatus === 'paid') {
         updateData.payment_amount = parseFloat(paymentAmount);
         updateData.payment_currency = paymentCurrency;
         updateData.payment_method = paymentMethod;
+        
+        // CORRECCIÓN: Si el código es nulo, mayor a 6 o tiene IASP, lo regeneramos.
+        if (!finalCode || finalCode.length > 6 || finalCode.startsWith('IASP')) {
+            finalCode = generateSixCharID(); // Genera Ej: A1B2C3
+            updateData.attendance_code = finalCode; // Lo guardamos limpio
+        }
       }
       
       const { error } = await supabase.from('registrations').update(updateData).eq('id', id);
       if (error) throw error;
 
       if (newStatus === 'paid') {
-        const finalCode = await waitForCode(id);
-        const codeToSend = finalCode || 'CODIGO-EN-PROCESO';
-        await sendPaymentApproval(currentReg.email, currentReg.full_name, codeToSend, currentReg.category);
+        await sendPaymentApproval(currentReg.email, currentReg.full_name, finalCode, currentReg.category);
       } else if (newStatus === 'rejected') {
         await sendRejectionNotice(currentReg.email, currentReg.full_name);
         const note = currentReg.payment_proof_url ? "Rechazado por Admin" : "Rechazado: Faltaba archivo adjunto";
@@ -224,16 +225,27 @@ const RegistrationsDashboard = () => {
     };
 
     toast.promise(processUpdate(), {
-      loading: newStatus === 'paid' ? 'Verificando y generando QR...' : 'Actualizando...',
+      loading: newStatus === 'paid' ? 'Generando QR de 6 dígitos...' : 'Actualizando...',
       success: (msg) => msg,
       error: 'Error al actualizar.'
     });
   };
 
+  // --- LÓGICA DE REENVÍO CORREGIDA ---
   const handleResendEmail = async (reg) => {
     if (!reg.attendance_code) { toast.error('Sin código generado aún.'); return; }
+    
+    // Auto-corrección: Si tiene IASP o es muy largo, lo arreglamos antes de enviar
+    let codeToUse = reg.attendance_code;
+    if (codeToUse.length > 6 || codeToUse.startsWith('IASP')) {
+        const newCode = generateSixCharID();
+        await supabase.from('registrations').update({ attendance_code: newCode }).eq('id', reg.id);
+        codeToUse = newCode;
+        toast.info("Código corregido a 6 dígitos automáticamente.");
+    }
+
     const process = async () => {
-        await sendPaymentApproval(reg.email, reg.full_name, reg.attendance_code, reg.category);
+        await sendPaymentApproval(reg.email, reg.full_name, codeToUse, reg.category);
         const timeLog = new Date().toLocaleString('es-MX');
         const newNote = (reg.notes || '') + `\n[Sistema] Correo reenviado el: ${timeLog}`;
         const { error } = await supabase.from('registrations').update({ notes: newNote }).eq('id', reg.id);
@@ -390,7 +402,6 @@ const RegistrationsDashboard = () => {
           )}
         </div>
 
-        {/* MODAL PRINCIPAL */}
         {selectedRegistration && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
             <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl relative">
@@ -407,7 +418,6 @@ const RegistrationsDashboard = () => {
                     {!isEditing && (
                         <>
                             <button onClick={() => setIsEditing(true)} className="p-2 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded-full transition" title="Editar datos"><Edit className="w-4 h-4" /></button>
-                            {/* AQUI ESTA EL CAMBIO: Ahora llama a openDeleteModal */}
                             <button onClick={openDeleteModal} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition" title="Eliminar registro"><Trash2 className="w-4 h-4" /></button>
                         </>
                     )}
@@ -447,7 +457,7 @@ const RegistrationsDashboard = () => {
                                                 <option value="institucion_convocante">Inst. Convocante</option>
                                                 <option value="asistente">Asistente</option>
                                             </select>
-                                        ) : <p className="font-medium">{getCategoryLabel(selectedRegistration.category)}</p>}
+                                            ) : <p className="font-medium">{getCategoryLabel(selectedRegistration.category)}</p>}
                                     </div>
                                     <div className="col-span-2"><p className="text-xs text-gray-500">Comprobante</p>{selectedRegistration.payment_proof_url ? <a href={selectedRegistration.payment_proof_url} target="_blank" rel="noopener noreferrer" className="text-sm text-teal-600 hover:underline flex items-center gap-1"><Download className="w-3 h-3" /> Ver archivo</a> : <span className="text-sm text-red-500 bg-red-50 px-2 py-0.5 rounded flex items-center gap-1 w-fit"><AlertTriangle className="w-3 h-3"/> No adjuntado</span>}</div>
                                 </div>
@@ -495,7 +505,6 @@ const RegistrationsDashboard = () => {
               </div>
             </div>
 
-            {/* MODAL 1: APROBACIÓN MANUAL (Z-60) */}
             {showForceAuth && (
               <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in zoom-in-95 duration-200">
                 <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full border border-gray-100">
@@ -514,7 +523,6 @@ const RegistrationsDashboard = () => {
               </div>
             )}
 
-            {/* MODAL 2: CONFIRMACIÓN DE ELIMINACIÓN (Z-60) - ¡NUEVO Y BONITO! */}
             {showDeleteConfirm && (
               <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in zoom-in-95 duration-200">
                 <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full border-2 border-red-100">

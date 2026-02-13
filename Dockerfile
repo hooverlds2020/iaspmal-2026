@@ -17,10 +17,19 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
+# Definimos los argumentos que recibiremos desde docker-compose
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_ANON_KEY
+
+# Los convertimos en variables de entorno para que Vite los vea al compilar
+ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
+ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
+
 COPY package*.json ./
 RUN npm install
 
 COPY . .
+# Ahora, al ejecutar build, las variables estarán disponibles
 RUN npm run build
 
 # Etapa de producción

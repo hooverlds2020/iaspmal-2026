@@ -51,6 +51,13 @@ const PrintableProgram = ({ events, type, lang }) => {
                   <div className="space-y-3">
                     {s.presentations.map((p) => (
                       <div key={p.id} className="text-sm">
+                        {/* AJUSTE: Hora en la vista de simposios */}
+                        {p.start_time && (
+                          <p className="text-[10px] font-bold text-gray-600 mb-0.5">
+                            {p.start_time.substring(0, 5)} - {p.end_time.substring(0, 5)} 
+                            {p.duration_minutes ? ` (${p.duration_minutes} min)` : ''}
+                          </p>
+                        )}
                         <p className="font-bold leading-tight">" {p.title} "</p>
                         <p className="text-xs uppercase mt-1 italic">{p.authors}</p>
                       </div>
@@ -77,23 +84,25 @@ const PrintableProgram = ({ events, type, lang }) => {
             <tbody>
               {sortedEvents.map((session) => (
                 <tr key={session.id} className="avoid-break">
-                  {/* Columna Horario */}
                   <td className="border border-black p-3 text-center align-top font-bold">
                     {session.start_time.substring(0, 5)} - {session.end_time.substring(0, 5)}
                   </td>
                   
-                  {/* Columna Detalles (Mesa, Simposio y Ponencias) */}
                   <td className="border border-black p-3 align-top">
                     <div className="font-black text-base uppercase mb-1">{session.name}</div>
                     <div className="text-xs italic text-gray-700 mb-3 border-b border-gray-100 pb-1">
                       {session.symposiums?.name}
                     </div>
                     
-                    {/* Lista de Ponencias dentro de la celda */}
                     {session.presentations && session.presentations.length > 0 ? (
                       <ul className="space-y-2 ml-2">
-                        {session.presentations.map(p => (
-                          <li key={p.id} className="text-[11px] leading-tight">
+                        {session.presentations.sort((a,b) => (a.start_time || '').localeCompare(b.start_time || '')).map(p => (
+                          <li key={p.id} className="text-[11px] leading-tight mb-2">
+                            {/* AJUSTE: Bloque de hora solicitado */}
+                            <div className="text-[9px] font-bold text-gray-500 uppercase mb-0.5">
+                              Hora: {p.start_time?.substring(0, 5)} - {p.end_time?.substring(0, 5)} 
+                              {p.duration_minutes ? ` (${p.duration_minutes} min)` : ''}
+                            </div>
                             <span className="font-bold uppercase tracking-tighter">• {p.authors}:</span>
                             <span className="ml-1 italic">"{p.title}"</span>
                           </li>
@@ -104,7 +113,6 @@ const PrintableProgram = ({ events, type, lang }) => {
                     )}
                   </td>
 
-                  {/* Columna Ubicación */}
                   <td className="border border-black p-3 align-top">
                     <div className="font-bold text-xs uppercase text-teal-800">
                       {session.rooms?.venues?.name}

@@ -1,11 +1,14 @@
 version: '3.8'
 
 services:
+  # Servicio de Desarrollo (Puerto 5173)
   iaspmal_2026-dev:
     build:
       context: .
       target: development
     container_name: iaspmal_2026-dev
+    env_file:
+      - .env
     ports:
       - "5173:5173"
     volumes:
@@ -16,13 +19,21 @@ services:
     command: npm run dev -- --host
     restart: unless-stopped
 
+  # Servicio de Producción (Puerto 8080)
   iaspmal_2026-prod:
     build:
       context: .
       target: production
     container_name: iaspmal_2026-prod
+    env_file:
+      - .env
     ports:
       - "8080:80"
     profiles:
       - production
     restart: unless-stopped
+
+networks:
+  # Definimos la red por si el archivo es usado de forma independiente
+  default:
+    name: iaspmal_network
