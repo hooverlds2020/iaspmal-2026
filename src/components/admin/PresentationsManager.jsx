@@ -2,211 +2,115 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { 
-  Plus, Edit2, Trash2, Save, X, Search, 
-  FileText, Building2, AlignLeft, link as LinkIcon 
+  Plus, Edit2, Trash2, X, Search, 
+  FileText, Link as LinkIcon // <--- CORRECCIÓN IMPORTANTE: 'Link' con mayúscula y alias para no chocar
 } from 'lucide-react';
 
 const PresentationsManager = () => {
   const [presentations, setPresentations] = useState([]);
   const [symposiums, setSymposiums] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-
-  // Estado del formulario con los nuevos campos
+  
   const [formData, setFormData] = useState({
-    title: '',
-    authors: '',
-    author_affiliation: '', // Nuevo
-    abstract_text: '',      // Nuevo
-    pdf_url: '',            // Nuevo
-    symposium_id: ''
+    title: '', authors: '', author_affiliation: '', abstract_text: '', symposium_id: '', pdf_url: ''
   });
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const { data: presData } = await supabase.from('presentations').select('*, symposiums(name)').order('id');
-      const { data: sympData } = await supabase.from('symposiums').select('id, name');
-      setPresentations(presData || []);
-      setSymposiums(sympData || []);
-    } catch (error) {
-      console.error('Error:', error);
-    } finally {
-      setLoading(false);
-    }
+      const [presRes, sympRes] = await Promise.all([
+        supabase.from('presentations').select('*, symposiums(name)').order('created_at', { ascending: false }),
+        supabase.from('symposiums').select('id, name').order('name')
+      ]);
+      setPresentations(presRes.data || []);
+      setSymposiums(sympRes.data || []);
+    } catch (error) { console.error('Error:', error); } finally { setLoading(false); }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      if (editingId) {
-        await supabase.from('presentations').update(formData).eq('id', editingId);
-      } else {
-        await supabase.from('presentations').insert([formData]);
-      }
-      setIsModalOpen(false);
-      resetForm();
+      const query = editingId 
+        ? supabase.from('presentations').update(formData).eq('id', editingId)
+        : supabase.from('presentations').insert([formData]);
+      
+      const { error } = await query;
+      if (error) throw error;
+      
+      setIsModalOpen(false); setEditingId(null);
+      setFormData({ title: '', authors: '', author_affiliation: '', abstract_text: '', symposium_id: '', pdf_url: '' });
       fetchData();
-    } catch (error) {
-      alert('Error al guardar');
-    }
+    } catch (error) { alert('Error al guardar'); }
   };
 
-  const resetForm = () => {
-    setFormData({ title: '', authors: '', author_affiliation: '', abstract_text: '', pdf_url: '', symposium_id: '' });
-    setEditingId(null);
-  };
-
-  const handleEdit = (p) => {
+  const handleEdit = (pres) => {
+    setEditingId(pres.id);
     setFormData({
-      title: p.title,
-      authors: p.authors,
-      author_affiliation: p.author_affiliation || '',
-      abstract_text: p.abstract_text || '',
-      pdf_url: p.pdf_url || '',
-      symposium_id: p.symposium_id || ''
+      title: pres.title, authors: pres.authors, author_affiliation: pres.author_affiliation,
+      abstract_text: pres.abstract_text, symposium_id: pres.symposium_id, pdf_url: pres.pdf_url || ''
     });
-    setEditingId(p.id);
     setIsModalOpen(true);
   };
 
+  const handleDelete = async (id) => {
+    if (confirm('¿Eliminar?')) {
+      await supabase.from('presentations').delete().eq('id', id);
+      fetchData();
+    }
+  };
+
+  const filtered = presentations.filter(p => p.title?.toLowerCase().includes(searchTerm.toLowerCase()));
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-[#1e3a5f]">Gestión de Ponencias</h2>
-        <button 
-          onClick={() => { resetForm(); setIsModalOpen(true); }}
-          className="bg-[#1e3a5f] text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-black transition-all"
-        >
-          <Plus size={20} /> Nueva Ponencia
-        </button>
+      <div className="flex justify-between items-center gap-4 flex-wrap">
+        <h2 className="text-2xl font-bold text-[#1e3a5f]">Ponencias</h2>
+        <div className="flex gap-2 w-full md:w-auto">
+          <input type="text" placeholder="Buscar..." className="flex-1 px-4 py-2 rounded-xl border" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+          <button onClick={() => { setEditingId(null); setFormData({title:'', authors:'', author_affiliation:'', abstract_text:'', symposium_id:'', pdf_url:''}); setIsModalOpen(true); }} className="bg-[#1e3a5f] text-white px-4 py-2 rounded-xl flex items-center gap-2"><Plus size={20} /> Nueva</button>
+        </div>
       </div>
 
-      {/* Buscador */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-        <input 
-          type="text" 
-          placeholder="Buscar por título o autor..." 
-          className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-[#f4a261] outline-none"
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
+      <div className="bg-white rounded-2xl border shadow-sm overflow-x-auto">
+        <table className="w-full text-left">
+          <thead className="bg-gray-50 border-b">
+            <tr><th className="p-4 text-xs uppercase text-gray-400">Título</th><th className="p-4 text-xs uppercase text-gray-400">Autores</th><th className="p-4 text-right"></th></tr>
+          </thead>
+          <tbody className="divide-y">
+            {filtered.map(p => (
+              <tr key={p.id} className="hover:bg-gray-50">
+                <td className="p-4"><p className="font-bold text-[#1e3a5f] text-sm line-clamp-2">{p.title}</p><span className="text-[10px] bg-blue-50 text-blue-600 px-2 rounded-full">{p.symposiums?.name}</span></td>
+                <td className="p-4"><p className="text-xs font-bold">{p.authors}</p></td>
+                <td className="p-4 text-right flex justify-end gap-2">
+                  <button onClick={() => handleEdit(p)} className="p-2 text-blue-600 bg-blue-50 rounded-lg"><Edit2 size={16}/></button>
+                  <button onClick={() => handleDelete(p.id)} className="p-2 text-red-600 bg-red-50 rounded-lg"><Trash2 size={16}/></button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
-      {/* Listado */}
-      <div className="grid grid-cols-1 gap-4">
-        {presentations.filter(p => p.title.toLowerCase().includes(searchTerm.toLowerCase()) || p.authors.toLowerCase().includes(searchTerm.toLowerCase())).map(p => (
-          <div key={p.id} className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm flex justify-between items-center hover:shadow-md transition-all">
-            <div className="flex-1">
-              <span className="text-[10px] font-black text-[#f4a261] uppercase">{p.symposiums?.name || 'Sin Simposio'}</span>
-              <h3 className="font-bold text-[#1e3a5f] text-lg leading-tight">{p.title}</h3>
-              <p className="text-sm text-gray-500 font-medium italic">{p.authors}</p>
-              {p.author_affiliation && (
-                <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
-                  <Building2 size={12}/> {p.author_affiliation}
-                </p>
-              )}
-            </div>
-            <div className="flex gap-2 ml-4">
-              <button onClick={() => handleEdit(p)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit2 size={18}/></button>
-              <button className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={18}/></button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* MODAL DE EDICIÓN / CREACIÓN */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2.5rem] w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
-            <div className="p-6 border-b bg-[#1e3a5f] text-white flex justify-between items-center">
-              <h3 className="font-bold text-xl">{editingId ? 'Editar Ponencia' : 'Nueva Ponencia'}</h3>
-              <button onClick={() => setIsModalOpen(false)}><X size={24}/></button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="p-8 overflow-y-auto space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Título */}
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-black text-gray-400 uppercase mb-2 ml-2">Título de la Ponencia</label>
-                  <input 
-                    required 
-                    className="w-full px-5 py-3 rounded-2xl border border-gray-200 focus:border-[#f4a261] outline-none transition-all"
-                    value={formData.title}
-                    onChange={(e) => setFormData({...formData, title: e.target.value})}
-                  />
-                </div>
-
-                {/* Autores */}
-                <div>
-                  <label className="block text-xs font-black text-gray-400 uppercase mb-2 ml-2">Autor(es)</label>
-                  <input 
-                    required 
-                    className="w-full px-5 py-3 rounded-2xl border border-gray-200 focus:border-[#f4a261] outline-none"
-                    value={formData.authors}
-                    onChange={(e) => setFormData({...formData, authors: e.target.value})}
-                  />
-                </div>
-
-                {/* Filiación */}
-                <div>
-                  <label className="block text-xs font-black text-gray-400 uppercase mb-2 ml-2">Filiación / Institución</label>
-                  <input 
-                    className="w-full px-5 py-3 rounded-2xl border border-gray-200 focus:border-[#f4a261] outline-none"
-                    value={formData.author_affiliation}
-                    onChange={(e) => setFormData({...formData, author_affiliation: e.target.value})}
-                    placeholder="Ej: UNAM, México"
-                  />
-                </div>
-
-                {/* Resumen (Textarea) */}
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-black text-gray-400 uppercase mb-2 ml-2">Resumen del Trabajo</label>
-                  <textarea 
-                    rows="6"
-                    className="w-full px-5 py-3 rounded-2xl border border-gray-200 focus:border-[#f4a261] outline-none resize-none"
-                    value={formData.abstract_text}
-                    onChange={(e) => setFormData({...formData, abstract_text: e.target.value})}
-                    placeholder="Escribe o pega aquí el resumen..."
-                  />
-                </div>
-
-                {/* Simposio y PDF */}
-                <div>
-                  <label className="block text-xs font-black text-gray-400 uppercase mb-2 ml-2">Simposio Asignado</label>
-                  <select 
-                    className="w-full px-5 py-3 rounded-2xl border border-gray-200 outline-none"
-                    value={formData.symposium_id}
-                    onChange={(e) => setFormData({...formData, symposium_id: e.target.value})}
-                  >
-                    <option value="">Seleccionar Simposio...</option>
-                    {symposiums.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-black text-gray-400 uppercase mb-2 ml-2">Enlace PDF (Opcional)</label>
-                  <input 
-                    type="url"
-                    className="w-full px-5 py-3 rounded-2xl border border-gray-200 focus:border-[#f4a261] outline-none"
-                    value={formData.pdf_url}
-                    onChange={(e) => setFormData({...formData, pdf_url: e.target.value})}
-                    placeholder="https://..."
-                  />
-                </div>
-              </div>
-
-              <div className="pt-4">
-                <button type="submit" className="w-full bg-[#1e3a5f] text-white py-4 rounded-2xl font-bold hover:bg-black transition-all flex items-center justify-center gap-2 shadow-lg">
-                  <Save size={20}/> Guardar Ponencia
-                </button>
-              </div>
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between mb-4"><h3 className="font-bold text-lg">Ponencia</h3><button onClick={()=>setIsModalOpen(false)}><X/></button></div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <textarea placeholder="Título" required className="w-full p-2 border rounded-lg" value={formData.title} onChange={e=>setFormData({...formData, title:e.target.value})} />
+              <select required className="w-full p-2 border rounded-lg" value={formData.symposium_id} onChange={e=>setFormData({...formData, symposium_id:e.target.value})}>
+                <option value="">Simposio...</option>
+                {symposiums.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+              <input placeholder="Autores" required className="w-full p-2 border rounded-lg" value={formData.authors} onChange={e=>setFormData({...formData, authors:e.target.value})} />
+              <input placeholder="Filiación" className="w-full p-2 border rounded-lg" value={formData.author_affiliation} onChange={e=>setFormData({...formData, author_affiliation:e.target.value})} />
+              <textarea placeholder="Resumen..." className="w-full p-2 border rounded-lg" rows="4" value={formData.abstract_text} onChange={e=>setFormData({...formData, abstract_text:e.target.value})} />
+              <div className="relative"><LinkIcon className="absolute left-3 top-2.5 text-gray-400" size={16}/><input placeholder="URL PDF" className="w-full pl-9 p-2 border rounded-lg" value={formData.pdf_url} onChange={e=>setFormData({...formData, pdf_url:e.target.value})} /></div>
+              <button type="submit" className="w-full bg-[#1e3a5f] text-white py-3 rounded-xl font-bold">Guardar</button>
             </form>
           </div>
         </div>
