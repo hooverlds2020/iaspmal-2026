@@ -1,81 +1,116 @@
 // src/components/layout/Sidebar.jsx
 import React from 'react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { 
+  Home, Info, Mic, Ticket, Users, FileText, Calendar, 
+  BookOpen, MapPin, Building, ChevronDown, ChevronRight, Briefcase, Globe 
+} from 'lucide-react';
 
 const Sidebar = ({ menuItems, currentPage, setCurrentPage, submenuOpen, toggleSubmenu, lang }) => {
+  
+  // Mapa de iconos según el ID del menú
+  const getIcon = (id) => {
+    const icons = {
+      'home': Home,
+      'llamada': Info,
+      'conferenciantes': Mic,
+      'cuotas': Ticket,
+      'comite-academico': Users,
+      'comite-organizador': Users,
+      'programa': Calendar,
+      'talleres': Briefcase,
+      'presentaciones-libros': BookOpen,
+      'actividades-congreso': Calendar,
+      'info-complementaria': Info,
+      'sedes': MapPin,
+      'instituciones-convocantes': Building,
+      'organizaciones': Users,
+      'alojamiento': Home,
+      'san-cristobal': MapPin,
+      'cartel': FileText
+    };
+    return icons[id] || ChevronRight;
+  };
+
   return (
-    // AJUSTE: top-28 (aprox 112px).
-    // Es la altura necesaria para que el menú no quede oculto ni flotando.
-    <aside className="hidden md:block w-[280px] shrink-0 sticky top-28 max-h-[calc(100vh-8rem)] overflow-y-auto custom-scrollbar self-start">
-      
-      <nav className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <aside className="hidden md:block relative h-full">
+      {/* sticky top-[88px]: Se queda fijo al bajar, justo debajo del Header.
+         max-h-[calc...]: Permite scroll independiente si el menú es muy largo.
+      */}
+      <nav className="sticky top-[88px] max-h-[calc(100vh-100px)] overflow-y-auto custom-scrollbar pr-3 pb-10">
         
-        {/* Encabezado del Menú */}
-        <div className="p-4 bg-iaspm-blue text-white font-bold text-lg border-b border-white/10 shadow-sm">
-          {lang === 'es' ? 'Menú Principal' : 'Menu Principal'}
-        </div>
-        
-        <ul className="py-2">
+        <div className="space-y-1">
           {menuItems.map((item) => {
             const isActive = currentPage === item.id;
+            const Icon = getIcon(item.id);
             const hasSubmenu = item.submenu && item.submenu.length > 0;
             const isSubmenuOpen = submenuOpen[item.id];
             const isChildActive = hasSubmenu && item.submenu.some(sub => sub.id === currentPage);
 
             return (
-              <li key={item.id} className="border-b border-gray-50 last:border-0">
+              <div key={item.id} className="group mb-1">
                 <button
                   onClick={() => hasSubmenu ? toggleSubmenu(item.id) : setCurrentPage(item.id)}
-                  className={`w-full text-left px-5 py-3.5 transition-all flex items-center justify-between group relative overflow-hidden
+                  className={`
+                    w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 text-sm font-medium
                     ${isActive || isChildActive
-                      ? 'bg-blue-50 text-iaspm-blue font-bold' 
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-iaspm-blue'
-                    }`}
+                      ? 'bg-[#1e3a5f] text-white shadow-lg shadow-blue-900/10 transform scale-[1.02]' 
+                      : 'text-gray-600 hover:bg-white hover:text-[#1e3a5f] hover:shadow-sm'
+                    }
+                  `}
                 >
-                  {(isActive || isChildActive) && (
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-iaspm-orange"></div>
-                  )}
+                  <div className="flex items-center gap-3">
+                    <Icon size={18} className={`transition-colors ${isActive || isChildActive ? 'text-orange-400' : 'text-gray-400 group-hover:text-orange-500'}`} />
+                    <span className="leading-snug text-left">
+                      {lang === 'es' ? item.label : item.label_pt}
+                    </span>
+                  </div>
 
-                  <span className="leading-tight z-10">{lang === 'pt' ? item.label_pt : item.label}</span>
-                  
                   {hasSubmenu && (
-                    <div className="bg-gray-100/50 rounded-full p-1 group-hover:bg-gray-200/50 transition">
-                      {isSubmenuOpen 
-                        ? <ChevronDown className="w-4 h-4 text-iaspm-orange" /> 
-                        : <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-iaspm-blue" />
-                      }
-                    </div>
+                    <ChevronDown size={15} className={`transition-transform duration-200 opacity-60 ${isSubmenuOpen ? 'rotate-180' : ''}`} />
                   )}
                 </button>
 
+                {/* Submenú con animación suave */}
                 {hasSubmenu && isSubmenuOpen && (
-                  <ul className="bg-gray-50/50 border-t border-gray-100 shadow-inner">
-                    {item.submenu.map((subItem) => {
-                      const isSubActive = currentPage === subItem.id;
-                      return (
-                        <li key={subItem.id}>
-                          <button
-                            onClick={() => setCurrentPage(subItem.id)}
-                            className={`w-full text-left pl-10 pr-4 py-3 text-sm transition-colors border-l-2
-                              ${isSubActive 
-                                ? 'border-iaspm-orange text-iaspm-orange font-bold bg-white' 
-                                : 'border-transparent text-gray-500 hover:text-iaspm-blue hover:bg-gray-100 hover:border-gray-300'
-                              }`}
-                          >
-                            {lang === 'pt' ? subItem.label_pt : subItem.label}
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                  <div className="mt-1 ml-4 pl-4 border-l-2 border-gray-100 space-y-1 animate-in slide-in-from-top-1 duration-200">
+                    {item.submenu.map((sub) => (
+                      <button
+                        key={sub.id}
+                        onClick={() => setCurrentPage(sub.id)}
+                        className={`
+                          w-full text-left px-3 py-2 rounded-lg text-xs transition-all block
+                          ${currentPage === sub.id 
+                            ? 'text-orange-600 font-bold bg-orange-50' 
+                            : 'text-gray-500 hover:text-[#1e3a5f] hover:bg-gray-50'
+                          }
+                        `}
+                      >
+                        {lang === 'es' ? sub.label : sub.label_pt}
+                      </button>
+                    ))}
+                  </div>
                 )}
-              </li>
+              </div>
             );
           })}
-        </ul>
-        
-        <div className="h-1.5 bg-gradient-to-r from-iaspm-blue via-iaspm-lightblue to-iaspm-orange"></div>
+        </div>
+
+        {/* Tarjeta decorativa al final */}
+        <div className="mt-8 mx-2 p-4 bg-gradient-to-br from-[#1e3a5f]/5 to-transparent rounded-2xl border border-[#1e3a5f]/10 text-center">
+            <Globe className="w-6 h-6 text-[#1e3a5f] mx-auto mb-2 opacity-50" />
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">IASPM-AL</p>
+            <p className="text-xs font-black text-[#1e3a5f] mt-1">Chiapas 2026</p>
+        </div>
+
       </nav>
+
+      {/* Estilos para scrollbar invisible pero funcional */}
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: transparent; border-radius: 20px; }
+        .custom-scrollbar:hover::-webkit-scrollbar-thumb { background-color: #e2e8f0; }
+      `}</style>
     </aside>
   );
 };

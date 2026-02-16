@@ -5,18 +5,18 @@ import { Toaster } from 'sonner';
 import { Ticket } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
 
+// Pages - Tools
 import AttendanceCheck from './pages/AttendanceCheck';
 import StaffAttendance from './pages/StaffAttendance';
 import CertificateDownload from './pages/CertificateDownload';
 
-// Layout components
-// NOTA: Ya no importamos TopBar
+// Layout Components
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
 import MobileSidebar from './components/layout/MobileSidebar';
 import Footer from './components/layout/Footer';
 
-// Page components
+// Page Components
 import HomeLanding from './components/pages/HomeLanding';
 import CallForParticipation from './components/pages/CallForParticipation';
 import ScientificCommittee from './components/pages/ScientificCommittee';
@@ -26,7 +26,7 @@ import ScheduleView from './components/pages/ScheduleView';
 import RegistrationForm from './components/pages/RegistrationForm';
 import VenuesPage from './components/pages/VenuesPage';
 
-// Admin pages
+// Admin Pages
 import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
 
@@ -61,7 +61,6 @@ const MainLayout = ({ lang, setLang }) => {
         setCurrentPage('home');
       }
     };
-
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
@@ -69,7 +68,7 @@ const MainLayout = ({ lang, setLang }) => {
   const menuItems = [
     { id: 'home', label: 'Inicio', label_pt: 'Início' },
     { id: 'llamada', label: 'Acerca del Congreso', label_pt: 'Sobre o Congresso' },
-    { id: 'conferenciantes', label: 'Conferencias magistrales y conversatorios', label_pt: 'Conferências magistrais e conversatórios' },
+    { id: 'conferenciantes', label: 'Conferencias magistrales', label_pt: 'Conferências magistrais' },
     { id: 'cuotas', label: 'Inscripción', label_pt: 'Inscrição' },
     { id: 'comite-academico', label: 'Comité Académico', label_pt: 'Comitê Acadêmico' },
     { id: 'comite-organizador', label: 'Comité Organizador', label_pt: 'Comitê Organizador' },
@@ -78,7 +77,7 @@ const MainLayout = ({ lang, setLang }) => {
     { id: 'presentaciones-libros', label: 'Presentaciones de libros', label_pt: 'Apresentações de livros' },
     {
       id: 'actividades-congreso',
-      label: 'Actividades previas y posteriores al Congreso',
+      label: 'Actividades previas y posteriores',
       label_pt: 'Atividades pré e pós-Congresso',
       submenu: [
         { id: 'actividad1', label: 'Actividad 1', label_pt: 'Atividade 1' },
@@ -104,124 +103,147 @@ const MainLayout = ({ lang, setLang }) => {
     setSubmenuOpen(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
+  const getPageTitle = () => {
+    const titles = {
+      'home': { es: 'Bienvenidos', pt: 'Bem-vindos' },
+      'llamada': { es: 'Acerca del Congreso', pt: 'Sobre o Congresso' },
+      'conferenciantes': { es: 'Conferencias magistrales', pt: 'Conferências magistrais' },
+      'cuotas': { es: 'Inscripción y Costos', pt: 'Inscrição e Custos' },
+      'comite-academico': { es: 'Comité Académico', pt: 'Comitê Acadêmico' },
+      'comite-organizador': { es: 'Comité Organizador', pt: 'Comitê Organizador' },
+      'programa': { es: 'Programa General', pt: 'Programa Geral' },
+      'inscripcion': { es: 'Inscripción', pt: 'Inscrição' },
+      'talleres': { es: 'Talleres', pt: 'Oficinas' },
+      'presentaciones-libros': { es: 'Presentaciones de libros', pt: 'Apresentações de livros' },
+      'actividad1': { es: 'Actividad 1', pt: 'Atividade 1' },
+      'actividad2': { es: 'Actividad 2', pt: 'Atividade 2' },
+      'sedes': { es: 'Sedes del Congreso', pt: 'Locais do Congresso' },
+      'instituciones-convocantes': { es: 'Instituciones convocantes', pt: 'Instituições convocantes' },
+      'organizaciones': { es: 'Organizaciones colaboradoras', pt: 'Organizações colaboradoras' },
+      'alojamiento': { es: 'Alojamiento', pt: 'Hospedagem' },
+      'san-cristobal': { es: 'San Cristóbal de Las Casas', pt: 'San Cristóbal de Las Casas' },
+      'cartel': { es: 'Cartel Oficial', pt: 'Cartaz Oficial' }
+    };
+    const titleObj = titles[currentPage];
+    if (!titleObj) return lang === 'es' ? 'Contenido' : 'Conteúdo';
+    return titleObj[lang];
+  };
+
   const renderContent = () => {
     switch (currentPage) {
       case 'home': return <HomeLanding lang={lang} setCurrentPage={setCurrentPage} />;
       case 'llamada': return <CallForParticipation lang={lang} />;
       case 'formatos': return <AcceptedFormats lang={lang} />;
-      case 'conferenciantes': return <div className="space-y-4"><p className="text-gray-700">{lang === 'es' ? 'Información sobre conferencias magistrales y mesas plenarias próximamente.' : 'Information about keynote lectures and plenary sessions coming soon.'}</p></div>;
-      
+      case 'conferenciantes': return <div className="space-y-4 text-gray-600"><p>{lang === 'es' ? 'Información próximamente.' : 'Informação em breve.'}</p></div>;
+
       case 'cuotas': return (
-          <div className="space-y-6 animate-in fade-in duration-300">
-            <div className="overflow-x-auto">
-              <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
-                <thead className="bg-iaspm-blue text-white">
+          <div className="space-y-8 animate-in fade-in duration-300">
+            <div className="overflow-x-auto shadow-sm rounded-xl border border-gray-200 bg-white">
+              <table className="w-full text-sm text-left min-w-[600px]">
+                <thead className="bg-[#1e3a5f] text-white uppercase text-xs tracking-wider">
                   <tr>
-                    <th className="p-3 text-left">{lang === 'es' ? 'Categoría' : 'Categoria'}</th>
-                    <th className="p-3 text-center">{lang === 'es' ? 'Pago antes del 31/05/26' : 'Pagamento antes de 31/05/26'}</th>
-                    <th className="p-3 text-center">{lang === 'es' ? 'Después del 01/06/26' : 'Depois de 01/06/26'}</th>
+                    <th className="px-6 py-4">{lang === 'es' ? 'Categoría' : 'Categoria'}</th>
+                    <th className="px-6 py-4 text-center">{lang === 'es' ? 'Hasta 31/05/26' : 'Até 31/05/26'}</th>  
+                    <th className="px-6 py-4 text-center">{lang === 'es' ? 'Desde 01/06/26' : 'Desde 01/06/26'}</th>
                   </tr>
                 </thead>
-                <tbody>
-                  <tr className="border-t bg-white hover:bg-gray-50"><td className="p-3">{lang === 'es' ? 'Investigador/a del sur global' : 'Pesquisador/a do sul global'}</td><td className="p-3 text-center font-semibold">$800</td><td className="p-3 text-center font-semibold">$1,000</td></tr>
-                  <tr className="border-t bg-white hover:bg-gray-50"><td className="p-3">{lang === 'es' ? 'Investigador/a del norte global' : 'Pesquisador/a do norte global'}</td><td className="p-3 text-center font-semibold">$1,300</td><td className="p-3 text-center font-semibold">$1,500</td></tr>
-                  <tr className="border-t bg-white hover:bg-gray-50"><td className="p-3">{lang === 'es' ? 'Investigador/a de institución convocante' : 'Pesquisador/a de institución convocante'}</td><td className="p-3 text-center font-semibold">$400</td><td className="p-3 text-center font-semibold">$600</td></tr>
-                  <tr className="border-t bg-white hover:bg-gray-50"><td className="p-3">{lang === 'es' ? 'Asistente' : 'Assistente'}</td><td className="p-3 text-center font-semibold">$200</td><td className="p-3 text-center font-semibold">$300</td></tr>
+                <tbody className="divide-y divide-gray-100">
+                  <tr className="bg-white hover:bg-gray-50 transition"><td className="px-6 py-5 font-bold text-gray-700">{lang === 'es' ? 'Investigador/a del sur global' : 'Pesquisador/a do sul global'}</td><td className="px-6 py-5 text-center font-black text-[#1e3a5f] text-lg">$800</td><td className="px-6 py-5 text-center font-bold text-gray-400">$1,000</td></tr>
+                  <tr className="bg-white hover:bg-gray-50 transition"><td className="px-6 py-5 font-bold text-gray-700">{lang === 'es' ? 'Investigador/a del norte global' : 'Pesquisador/a do norte global'}</td><td className="px-6 py-5 text-center font-black text-[#1e3a5f] text-lg">$1,300</td><td className="px-6 py-5 text-center font-bold text-gray-400">$1,500</td></tr>
+                  <tr className="bg-white hover:bg-gray-50 transition"><td className="px-6 py-5 font-bold text-gray-700">{lang === 'es' ? 'Investigador/a de institución convocante' : 'Pesquisador/a de instituição convocante'}</td><td className="px-6 py-5 text-center font-black text-[#1e3a5f] text-lg">$400</td><td className="px-6 py-5 text-center font-bold text-gray-400">$600</td></tr>
+                  <tr className="bg-white hover:bg-gray-50 transition"><td className="px-6 py-5 font-bold text-gray-700">{lang === 'es' ? 'Asistente / Estudiante' : 'Assistente / Estudante'}</td><td className="px-6 py-5 text-center font-black text-[#1e3a5f] text-lg">$200</td><td className="px-6 py-5 text-center font-bold text-gray-400">$300</td></tr>
                 </tbody>
               </table>
             </div>
-            
-            <div className="flex justify-center">
-              <button onClick={() => setShowRegistration(true)} className="bg-iaspm-orange hover:bg-orange-600 text-white font-bold py-4 px-8 rounded-lg text-lg transition shadow-lg hover:shadow-xl flex items-center gap-2 transform hover:-translate-y-1">
-                <Ticket className="w-6 h-6" /> 
-                <span>{lang === 'es' ? 'Registrarse al Congreso' : 'Inscrever-se no Congresso'}</span>
+
+            <div className="flex justify-center py-6">
+              <button 
+                onClick={() => setShowRegistration(true)} 
+                className="group relative bg-[#1e3a5f] hover:bg-black text-white font-bold py-4 px-10 rounded-full text-lg transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1 flex items-center gap-3 overflow-hidden"
+              >
+                <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
+                <Ticket className="w-6 h-6" />
+                <span className="tracking-wide uppercase text-sm font-black">{lang === 'es' ? 'Registrarse Ahora' : 'Inscrever-se Agora'}</span>
               </button>
             </div>
 
             {showRegistration && (
-              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-                <div className="bg-white rounded-xl max-w-3xl w-full my-8 relative">
-                  <button onClick={() => setShowRegistration(false)} className="absolute top-4 right-4 bg-gray-100 hover:bg-gray-200 rounded-full w-10 h-10 flex items-center justify-center font-bold text-gray-600 z-10">✕</button>
-                  <div className="p-6"><RegistrationForm lang={lang} onSuccess={() => setShowRegistration(false)} /></div>
+              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+                <div className="absolute inset-0 bg-[#1e3a5f]/80 backdrop-blur-sm transition-opacity" onClick={() => setShowRegistration(false)}></div>
+                <div className="relative w-full max-w-xl z-10 animate-in zoom-in-95 duration-200">
+                    <RegistrationForm 
+                        lang={lang} 
+                        onClose={() => setShowRegistration(false)} 
+                        onSuccess={() => setShowRegistration(false)} 
+                    />
                 </div>
               </div>
             )}
           </div>
         );
+
       case 'comite-academico': return <div className="space-y-4"><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">Lizette Alegre</p><p className="text-sm text-gray-600">Facultad de Música, UNAM, México</p></div><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">Natalia Bieletto Bueno</p><p className="text-sm text-gray-600">Centro de Investigación en Artes y Humanidades, Universidad Mayor, Chile</p></div></div></div>;
       case 'comite-organizador': return <div className="space-y-4"><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">María Luisa de la Garza Chávez</p><p className="text-sm text-gray-600">CESMECA-UNICACH</p></div><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">Roberto Campos Velázquez</p><p className="text-sm text-gray-600">CIMSUR-UNAM</p></div></div></div>;
       case 'programa': return <Program lang={lang} />;
-      case 'talleres': return <div className="space-y-4"><p className="text-gray-700">{lang === 'es' ? 'Información sobre talleres próximamente.' : 'Information about workshops coming soon.'}</p></div>;
-      case 'presentaciones-libros': return <div className="space-y-4"><p className="text-gray-700">{lang === 'es' ? 'Información sobre presentaciones de libros próximamente.' : 'Information about book presentations coming soon.'}</p></div>;
-      case 'actividad1': case 'actividad2': return <div className="space-y-4"><p className="text-gray-700">{lang === 'es' ? 'Información sobre actividades próximamente.' : 'Information about activities coming soon.'}</p></div>;
       case 'sedes': return <VenuesPage lang={lang} />;
-      case 'instituciones-convocantes': return <div className="space-y-4"><p className="text-gray-700">{lang === 'es' ? 'Información sobre instituciones convocantes próximamente.' : 'Information about convening institutions coming soon.'}</p></div>;
-      case 'organizaciones': return <div className="space-y-4"><p className="text-gray-700">{lang === 'es' ? 'Información sobre organizaciones colaboradoras próximamente.' : 'Information about partner organizations coming soon.'}</p></div>;
-      case 'alojamiento': return <div className="space-y-4"><p className="text-gray-700">{lang === 'es' ? 'Información sobre alojamiento próximamente.' : 'Information about accommodation coming soon.'}</p></div>;
-      case 'san-cristobal': return <div className="space-y-4"><p className="text-gray-700">{lang === 'es' ? 'Información sobre San Cristóbal de Las Casas próximamente.' : 'Information about San Cristóbal de Las Casas coming soon.'}</p></div>;
-      case 'cartel': return <div className="space-y-4"><p className="text-gray-700">{lang === 'es' ? 'Cartel del congreso próximamente.' : 'Congress poster coming soon.'}</p></div>;
       
-      case 'inscripcion': return renderContent('cuotas'); 
-      
-      default: return <p className="text-gray-600">{lang === 'es' ? 'Contenido en preparación.' : 'Content in preparation.'}</p>;
+      default: return <div className="p-8 text-center text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-300">{lang === 'es' ? 'Contenido en preparación.' : 'Conteúdo em preparação.'}</div>;      
     }
   };
 
-  const getPageTitle = () => {
-    const titles = {
-      'home': { es: 'Bienvenidos', en: 'Welcome' },
-      'llamada': { es: 'Acerca del Congreso', en: 'Sobre o Congresso' },
-      'formatos': { es: 'Formatos admitidos', en: 'Formatos aceitos' },
-      'conferenciantes': { es: 'Conferencias magistrales y conversatorios', en: 'Conferências magistrais e conversatórios' },
-      'cuotas': { es: 'Inscripción', en: 'Inscrição' },
-      'comite-academico': { es: 'Comité Académico', en: 'Comitê Acadêmico' },
-      'comite-organizador': { es: 'Comité Organizador', en: 'Comitê Organizador' },
-      'programa': { es: 'Programa', en: 'Programa' },
-      'inscripcion': { es: 'Inscripción', en: 'Inscrição' },
-      'talleres': { es: 'Talleres', en: 'Oficinas' },
-      'presentaciones-libros': { es: 'Presentaciones de libros', en: 'Apresentações de livros' },
-      'actividad1': { es: 'Actividad 1', en: 'Atividade 1' },
-      'actividad2': { es: 'Actividad 2', en: 'Atividade 2' },
-      'sedes': { es: 'Las sedes del Congreso', en: 'Locais do Congresso' },
-      'instituciones-convocantes': { es: 'Instituciones convocantes', en: 'Instituições convocantes' },
-      'organizaciones': { es: 'Organizaciones colaboradoras', en: 'Organizações colaboradoras' },
-      'alojamiento': { es: 'Alojamiento', en: 'Hospedagem' },
-      'san-cristobal': { es: 'San Cristóbal de Las Casas', en: 'San Cristóbal de Las Casas' },
-      'cartel': { es: 'Cartel del congreso', en: 'Cartaz do congresso' }
-    };
-    return titles[currentPage]?.[lang] || (lang === 'es' ? 'Contenido' : 'Content');
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col" dir="ltr">
-      
-      {/* CAMBIO: Pasamos todas las funciones de control al Header */}
-      <Header 
-        lang={lang} 
-        setLang={setLang} 
-        onMobileMenuOpen={() => setIsMobileOpen(true)} 
-      />
-      
-      <main className="flex-1 max-w-7xl mx-auto px-6 pb-16 w-full py-6">
-        
-        <div className="grid grid-cols-1 md:grid-cols-[280px,1fr] gap-8 items-start">
-          <Sidebar menuItems={menuItems} currentPage={currentPage} setCurrentPage={setCurrentPage} submenuOpen={submenuOpen} toggleSubmenu={toggleSubmenu} lang={lang} />
-          <MobileSidebar isOpen={isMobileOpen} onClose={() => setIsMobileOpen(false)} menuItems={menuItems} currentPage={currentPage} setCurrentPage={setCurrentPage} submenuOpen={submenuOpen} toggleSubmenu={toggleSubmenu} lang={lang} />
-          
-          <section className="bg-white rounded-xl shadow-sm border border-gray-200 relative overflow-hidden">
-            
-            <div 
-              className="absolute inset-0 z-0 opacity-[0.03] bg-[url('/images/Marimba_Watermark.png')] bg-cover bg-center bg-no-repeat grayscale pointer-events-none"
-            ></div>
+    <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900" dir="ltr">
 
-            <div className="relative z-10">
+      <Header
+        lang={lang}
+        setLang={setLang}
+        onMobileMenuOpen={() => setIsMobileOpen(true)}
+      />
+
+      {/* CAMBIO 1: px-3 en móvil (antes px-4). Ganas espacio lateral. */}
+      <main className="flex-1 max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 w-full py-6 md:py-8">
+
+        <div className="grid grid-cols-1 md:grid-cols-[280px,1fr] gap-8 items-start">
+          
+          <Sidebar 
+            menuItems={menuItems} 
+            currentPage={currentPage} 
+            setCurrentPage={setCurrentPage} 
+            submenuOpen={submenuOpen} 
+            toggleSubmenu={toggleSubmenu} 
+            lang={lang} 
+          />
+          
+          <MobileSidebar 
+            isOpen={isMobileOpen} 
+            onClose={() => setIsMobileOpen(false)} 
+            menuItems={menuItems} 
+            currentPage={currentPage} 
+            setCurrentPage={setCurrentPage} 
+            submenuOpen={submenuOpen} 
+            toggleSubmenu={toggleSubmenu} 
+            lang={lang} 
+          />
+
+          <section className="bg-white rounded-2xl shadow-xl min-h-[600px] relative overflow-hidden transition-all duration-300">
+            <div className="absolute inset-0 z-0 opacity-[0.02] bg-[url('/images/Marimba_Watermark.png')] bg-cover bg-center bg-no-repeat pointer-events-none"></div>
+
+            <div className="relative z-10 flex flex-col h-full">
+                
                 {currentPage !== 'home' && (
-                    <div className="bg-gray-50/90 px-6 py-4 border-b border-gray-200 backdrop-blur-sm">
-                    <h2 className="text-iaspm-blue text-xl font-bold font-sans">{getPageTitle()}</h2>
+                    <div className="bg-white/95 backdrop-blur-sm px-6 sm:px-8 py-6 border-b border-gray-100 sticky top-0 z-20">
+                      <h2 className="text-[#1e3a5f] text-xl sm:text-2xl font-black font-sans tracking-tight uppercase italic">
+                        {getPageTitle()}
+                      </h2>
+                      <div className="h-1.5 w-16 bg-iaspm-orange mt-2 rounded-full"></div>
                     </div>
                 )}
-                <div className="p-6">
-                  <div className="prose max-w-none">{renderContent()}</div>
+                
+                {/* CAMBIO 2: p-4 en móvil (antes p-6). Ganas más espacio interno para la imagen. */}
+                <div className="p-4 sm:p-10 flex-1">
+                  <div className="prose prose-slate max-w-none prose-headings:font-black prose-headings:text-[#1e3a5f] prose-a:text-iaspm-orange hover:prose-a:text-orange-600 prose-img:rounded-xl">
+                    {renderContent()}
+                  </div>
                 </div>
             </div>
           </section>
@@ -251,29 +273,32 @@ const App = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-iaspm-orange"></div>
+        <div className="flex flex-col items-center gap-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-[#1e3a5f]"></div>
+            <p className="text-gray-400 text-sm font-bold tracking-widest uppercase">Cargando...</p>
+        </div>
       </div>
     );
   }
 
   return (
     <Router>
-      <Toaster position="top-center" richColors />
+      <Toaster position="top-center" richColors closeButton theme="light" />
       <Routes>
         <Route path="/" element={<MainLayout lang={lang} setLang={setLang} />} />
         <Route path="/schedule" element={<ScheduleView />} />
         <Route path="/asistencia" element={<AttendanceCheck />} />
         <Route path="/constancias" element={<CertificateDownload />} />
         <Route path="/staff/attendance" element={<StaffAttendance />} />
-        <Route 
-          path="/admin" 
+        <Route
+          path="/admin"
           element={
             user ? (
               <AdminDashboard user={user} onLogout={() => setUser(null)} />
             ) : (
               <Login onLogin={setUser} />
             )
-          } 
+          }
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
