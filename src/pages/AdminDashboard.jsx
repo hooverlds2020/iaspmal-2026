@@ -25,7 +25,7 @@ const AdminDashboard = ({ user, onLogout }) => {
     onLogout();
   };
 
-  // Componente de Botón de Navegación (Para limpiar el código)
+  // Componente de Botón de Navegación
   const NavButton = ({ id, label, icon: Icon }) => {
     const isActive = activeSection === id;
     return (
@@ -47,7 +47,8 @@ const AdminDashboard = ({ user, onLogout }) => {
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
 
       {/* --- HEADER --- */}
-      <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-30">
+      {/* Ajustado a z-20 para no tapar modales */}
+      <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
              <div className="bg-[#1e3a5f] w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-blue-900/20">
@@ -83,14 +84,15 @@ const AdminDashboard = ({ user, onLogout }) => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
           {/* SIDEBAR DE NAVEGACIÓN */}
-          <aside className="lg:col-span-3 sticky top-24 z-20">
+          {/* Ajustado a z-10: Prioridad baja para que las modales ganen la capa superior */}
+          <aside className="lg:col-span-3 sticky top-24 z-10">
             <nav className="bg-gray-100/50 p-1 rounded-2xl border border-gray-200/60">
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 space-y-1">
-                 
+
                  <div className="px-4 py-2 mb-2">
                     <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Académico</h2>
                  </div>
-                 
+
                  <NavButton id="sedes" label="Sedes y Asignación" icon={MapPin} />
                  <NavButton id="simposios" label="Gestión de Simposios" icon={Users} />
                  <NavButton id="sesiones" label="Agenda / Mesas" icon={Calendar} />
@@ -104,18 +106,15 @@ const AdminDashboard = ({ user, onLogout }) => {
 
                  <NavButton id="registros" label="Inscripciones" icon={LayoutGrid} />
                  <NavButton id="finanzas" label="Finanzas" icon={DollarSign} />
-                 
-                 {/* Botón extra para configuración futura */}
-                 {/* <NavButton id="config" label="Configuración" icon={Settings} /> */}
               </div>
             </nav>
           </aside>
 
-          {/* ÁREA DE TRABAJO (Aquí se renderizan los componentes que ya editamos) */}
+          {/* ÁREA DE TRABAJO */}
           <main className="lg:col-span-9">
-            {/* Contenedor blanco con sombra suave donde viven los módulos */}
-            <div className="bg-white rounded-[2rem] border border-gray-200/80 p-6 md:p-8 shadow-xl shadow-gray-200/40 min-h-[600px] relative overflow-hidden">
-              
+            {/* Se eliminó 'overflow-hidden' para permitir que las modales respiren correctamente */}
+            <div className="bg-white rounded-[2rem] border border-gray-200/80 p-6 md:p-8 shadow-xl shadow-gray-200/40 min-h-[600px] relative">
+
               {/* Fondo decorativo sutil */}
               <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50/50 rounded-bl-full -z-0 pointer-events-none opacity-50"></div>
 
