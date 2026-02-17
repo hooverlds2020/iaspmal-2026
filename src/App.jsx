@@ -1,7 +1,7 @@
 // src/App.jsx
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from 'sonner'; // Librería de alertas
+import { Toaster } from 'sonner'; 
 import { Ticket } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
 
@@ -21,8 +21,7 @@ import HomeLanding from './components/pages/HomeLanding';
 import CallForParticipation from './components/pages/CallForParticipation';
 import ScientificCommittee from './components/pages/ScientificCommittee';
 import AcceptedFormats from './components/pages/AcceptedFormats';
-import Program from './components/pages/Program';
-import ScheduleView from './components/pages/ScheduleView';
+import Program from './components/pages/Program'; 
 import RegistrationForm from './components/pages/RegistrationForm';
 import VenuesPage from './components/pages/VenuesPage';
 
@@ -184,6 +183,7 @@ const MainLayout = ({ lang, setLang }) => {
 
       case 'comite-academico': return <div className="space-y-4"><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">Lizette Alegre</p><p className="text-sm text-gray-600">Facultad de Música, UNAM, México</p></div><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">Natalia Bieletto Bueno</p><p className="text-sm text-gray-600">Centro de Investigación en Artes y Humanidades, Universidad Mayor, Chile</p></div></div></div>;
       case 'comite-organizador': return <div className="space-y-4"><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">María Luisa de la Garza Chávez</p><p className="text-sm text-gray-600">CESMECA-UNICACH</p></div><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">Roberto Campos Velázquez</p><p className="text-sm text-gray-600">CIMSUR-UNAM</p></div></div></div>;
+      
       case 'programa': return <Program lang={lang} />;
       case 'sedes': return <VenuesPage lang={lang} />;
 
@@ -225,12 +225,14 @@ const MainLayout = ({ lang, setLang }) => {
           />
 
           <section className="bg-white rounded-2xl shadow-xl min-h-[600px] relative overflow-hidden transition-all duration-300">      
+
             <div className="absolute inset-0 z-0 opacity-[0.02] bg-[url('/images/Marimba_Watermark.png')] bg-cover bg-center bg-no-repeat pointer-events-none"></div>
 
             <div className="relative z-10 flex flex-col h-full">
 
                 {currentPage !== 'home' && (
                     <div className="bg-white/95 backdrop-blur-sm px-6 sm:px-8 py-6 border-b border-gray-100 sticky top-0 z-20">        
+
                       <h2 className="text-[#1e3a5f] text-xl sm:text-2xl font-black font-sans tracking-tight uppercase italic">        
                         {getPageTitle()}
                       </h2>
@@ -281,22 +283,21 @@ const App = () => {
 
   return (
     <Router>
-      {/* CONFIGURACIÓN DE ALERTAS MEJORADA (Visible en móvil y PC) */}
-      <Toaster 
-        position="top-center" 
-        richColors 
-        closeButton 
+      <Toaster
+        position="top-center"
+        richColors
+        closeButton
         expand={true}
         theme="light"
         gap={12}
         toastOptions={{
-          style: { 
-            marginTop: '16px', 
-            padding: '16px 20px', // Más relleno para que sea "grandecito"
+          style: {
+            marginTop: '16px',
+            padding: '16px 20px',
             borderRadius: '16px',
             border: 'none',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-            fontSize: '15px' // Letra base un poco más grande
+            fontSize: '15px'
           },
           classNames: {
             title: 'text-base font-black tracking-tight mb-1',
@@ -308,7 +309,7 @@ const App = () => {
       
       <Routes>
         <Route path="/" element={<MainLayout lang={lang} setLang={setLang} />} />
-        <Route path="/schedule" element={<ScheduleView />} />
+        {/* RUTA DE SCHEDULEVIEW ELIMINADA */}
         <Route path="/asistencia" element={<AttendanceCheck />} />
         <Route path="/constancias" element={<CertificateDownload />} />
         <Route path="/staff/attendance" element={<StaffAttendance />} />

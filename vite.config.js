@@ -1,4 +1,3 @@
-// vite.config.js
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -7,22 +6,30 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
-      // Actualizamos los activos incluidos
-      includeAssets: ['favicon.png', 'images/logo-pwa.png'], 
+      registerType: 'autoUpdate', // Importante: Actualización automática
+      includeAssets: ['favicon.png', 'images/logo-pwa.png'],
+      
+      // --- CONFIGURACIÓN "ANTI-ZOMBIE" ---
+      workbox: {
+        cleanupOutdatedCaches: true, // Borra versiones viejas
+        skipWaiting: true,           // Fuerza la instalación inmediata
+        clientsClaim: true,          // Toma el control sin recargar
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024, // Sube límite a 4MB
+      },
+      // -----------------------------------
+
       manifest: {
-        name: 'XVII Congreso IASPM-AL 2026', // Ajustado a XVII según tu logo
+        name: 'XVII Congreso IASPM-AL 2026',
         short_name: 'IASPM 2026',
-        description: 'App oficial del XVII Congreso de la IASPM-AL en San Cristóbal de Las Casas',
-        theme_color: '#ffffff', // Fondo blanco para que el logo XVII luzca mejor
+        description: 'App oficial del XVII Congreso de la IASPM-AL',
+        theme_color: '#ffffff',
         background_color: '#ffffff',
-        display: 'standalone', 
+        display: 'standalone',
         orientation: 'portrait',
         start_url: '/',
         icons: [
           {
-            // Ruta al nuevo logo XVII que subiste
-            src: 'images/logo-pwa.png', 
+            src: 'images/logo-pwa.png',
             sizes: '192x192',
             type: 'image/png'
           },
@@ -30,12 +37,6 @@ export default defineConfig({
             src: 'images/logo-pwa.png',
             sizes: '512x512',
             type: 'image/png'
-          },
-          {
-            src: 'images/logo-pwa.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any maskable' 
           }
         ]
       }

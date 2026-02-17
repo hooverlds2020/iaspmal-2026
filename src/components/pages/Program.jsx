@@ -1,7 +1,7 @@
 // src/components/pages/Program.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import { Search, Users, ChevronDown, Download, Calendar, List, MapPin, Clock, X, FileText, User } from 'lucide-react';
+import { Search, Users, ChevronDown, Download, Calendar, List, MapPin, Clock, X, FileText, User, ChevronRight, ArrowLeft, LayoutList } from 'lucide-react';
 
 // FECHAS DEL CONGRESO
 const CONGRESS_DATES = [
@@ -14,35 +14,40 @@ const CONGRESS_DATES = [
 
 const Program = () => {
   const [activeTab, setActiveTab] = useState('simposios');
-  const [selectedDate, setSelectedDate] = useState('2026-09-28'); 
-  
+  const [selectedDate, setSelectedDate] = useState('2026-09-28');
+
+  // Datos
   const [simposios, setSimposios] = useState([]);
   const [filteredSimposios, setFilteredSimposios] = useState([]);
   const [scheduleData, setScheduleData] = useState([]);
-  const [filteredSchedule, setFilteredSchedule] = useState([]); 
-  
+  const [filteredSchedule, setFilteredSchedule] = useState([]);
+
+  // Estados de Vista (Navegación Profunda en lugar de Modales)
+  const [selectedSession, setSelectedSession] = useState(null);
+  const [selectedPaper, setSelectedPaper] = useState(null);
+
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [openId, setOpenId] = useState(null);
-  const [selectedSession, setSelectedSession] = useState(null);
 
   useEffect(() => {
     fetchData();
     fetchScheduleData();
   }, []);
 
+  // Scroll al top cuando cambiamos de vista
   useEffect(() => {
-    document.body.style.overflow = selectedSession ? 'hidden' : 'unset';
-  }, [selectedSession]);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [selectedSession, selectedPaper, activeTab]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from('symposiums')
-        .select(`*, venues (name), presentations (id, title, authors, author_affiliation, abstract_text, start_time, end_time)`);
+        .select(`*, venues (name), presentations (id, title, authors, author_affiliation, abstract_text, start_time, end_time)`);      
       if (error) throw error;
-      
+
       const sortedData = (data || []).sort((a, b) => a.id - b.id);
       const finalData = sortedData.map(symp => ({
         ...symp,
@@ -57,33 +62,27 @@ const Program = () => {
   };
 
   const fetchScheduleData = async () => {
-      // Nos aseguramos de traer todos los campos posibles de fecha/hora
       const { data } = await supabase
         .from('sessions')
         .select(`*, date, start_time, end_time, rooms(name, venues(name)), symposiums(id, name), presentations(*)`)
         .order('start_time');
-      
-      console.log("Datos Agenda Cargados:", data); // Para depuración en consola
       setScheduleData(data || []);
   };
 
-  // Filtrado de Simposios
+  // Filtrado
   useEffect(() => {
     const term = searchTerm.toLowerCase();
     const filtered = simposios.filter(s => 
-      s.name.toLowerCase().includes(term) ||
+      s.name.toLowerCase().includes(term) || 
       s.presentations.some(p => p.title.toLowerCase().includes(term) || p.authors.toLowerCase().includes(term))
     );
     setFilteredSimposios(filtered);
   }, [searchTerm, simposios]);
 
-  // --- FILTRADO DE AGENDA (LÓGICA CORREGIDA) ---
   useEffect(() => {
     if (scheduleData.length > 0) {
        const dayEvents = scheduleData.filter(ev => {
-         // 1. Verificar si existe campo 'date' exacto (ej: '2026-09-28')
          if (ev.date && ev.date === selectedDate) return true;
-         // 2. Verificar si 'start_time' es ISO y empieza con la fecha
          if (ev.start_time && ev.start_time.startsWith(selectedDate)) return true;
          return false;
        });
@@ -98,17 +97,19 @@ const Program = () => {
       setTimeout(() => {
         const el = document.getElementById(`symp-${id}`);
         if (el) {
-          const top = el.getBoundingClientRect().top + window.scrollY - 80;
+          const top = el.getBoundingClientRect().top + window.scrollY - 100;
           window.scrollTo({ top, behavior: 'smooth' });
         }
       }, 100);
     }
   };
 
-  // --- IMPRESIÓN (VENTANA NUEVA) ---
+  // =========================================================================
+  // LOGICA DE IMPRESIÓN MEJORADA (Sin caracteres especiales que fallan)
+  // =========================================================================
   const handlePrint = () => {
     const isSymposium = activeTab === 'simposios';
-    const dataToPrint = isSymposium ? filteredSimposios : filteredSchedule; 
+    const dataToPrint = isSymposium ? filteredSimposios : filteredSchedule;
     const title = isSymposium ? "RELACIÓN DE SIMPOSIOS Y PONENCIAS" : `AGENDA - ${CONGRESS_DATES.find(d=>d.value===selectedDate)?.label}`;
 
     const printWindow = window.open('', '_blank', 'width=1100,height=800');
@@ -117,60 +118,80 @@ const Program = () => {
     let htmlContent = `
       <html><head><title>Reporte IASPM-AL 2026</title>
       <style>
-        body { font-family: 'Times New Roman', serif; padding: 30px; color: #000; font-size: 10pt; }
-        h1 { font-size: 14pt; text-align: center; margin: 0; text-transform: uppercase; }
-        .meta { text-align: center; font-size: 9pt; margin-bottom: 20px; border-bottom: 2px solid #000; pb: 10px; text-transform: uppercase; }
-        .badge { background: #eee; color: #000; padding: 2px 6px; font-weight: bold; font-size: 8pt; text-transform: uppercase; border: 1px solid #999; display: inline-block; }
+        body { font-family: 'Helvetica', 'Arial', sans-serif; padding: 40px; color: #1a1a1a; font-size: 10pt; line-height: 1.4; }
+        h1 { font-size: 16pt; text-align: center; margin: 0 0 5px 0; text-transform: uppercase; color: #1e3a5f; }
+        .meta { text-align: center; font-size: 10pt; margin-bottom: 30px; border-bottom: 2px solid #1e3a5f; padding-bottom: 15px; text-transform: uppercase; font-weight: bold; color: #555; }
         
-        /* Tabla Agenda */
+        .badge { background: #1e3a5f; color: #fff; padding: 2px 6px; font-weight: bold; font-size: 8pt; text-transform: uppercase; border-radius: 4px; display: inline-block; }
+        .badge-gray { background: #eee; color: #555; padding: 2px 6px; font-weight: bold; font-size: 8pt; text-transform: uppercase; border-radius: 4px; border: 1px solid #ddd; }
+
         table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 10px; }
-        th, td { border: 1px solid #000; padding: 5px; vertical-align: top; }
-        th { background: #eee; font-weight: bold; text-align: left; }
-        .tc { text-align: center; font-weight: bold; width: 85px; }
-        .p-time { font-family: monospace; font-size: 8pt; background: #f0f0f0; padding: 0 4px; border: 1px solid #ddd; margin-right: 5px; font-weight: bold; }
+        th { background: #f0f4f8; font-weight: bold; text-align: left; padding: 8px; border: 1px solid #dde2e5; color: #1e3a5f; text-transform: uppercase; font-size: 8pt; }
+        td { border: 1px solid #dde2e5; padding: 8px; vertical-align: top; }
         
-        /* Lista Simposios */
-        .symp { margin-bottom: 20px; page-break-inside: avoid; border-bottom: 1px dashed #ccc; padding-bottom: 10px; }
-        .symp-name { font-weight: bold; font-size: 12pt; margin-left: 5px; }
+        .col-time { text-align: center; font-weight: bold; width: 70px; color: #1e3a5f; }
+        .col-loc { width: 200px; font-size: 8.5pt; color: #444; }
+        
+        .mesa-info { font-weight: bold; color: #e65100; font-size: 8.5pt; text-transform: uppercase; margin: 4px 0; display: block; border-top: 1px solid #eee; padding-top: 2px; }
+        .p-time { font-family: monospace; font-size: 7.5pt; background: #f0f0f0; padding: 0 4px; border: 1px solid #ddd; margin-right: 5px; font-weight: bold; border-radius: 3px; }
+
+        .symp { margin-bottom: 25px; page-break-inside: avoid; border-bottom: 1px solid #eee; padding-bottom: 15px; }
+        .symp-name { font-weight: bold; font-size: 11pt; color: #000; margin-left: 10px; }
+        .symp-meta { font-size: 9pt; color: #666; margin-top: 5px; margin-bottom: 8px; }
+        .symp-venue-box { font-weight: bold; color: #1e3a5f; font-size: 8.5pt; text-transform: uppercase; margin-top: 4px; display: block; }
       </style>
       </head><body>
         <h1>XVIII Congreso IASPM-AL 2026</h1>
-        <div class="meta">San Cristóbal de las Casas • 28 Sep - 2 Oct 2026<br><b>${title}</b></div>`;
+        <div class="meta">San Cristóbal de las Casas • 28 Sep - 2 Oct 2026<br><span style="color:#e65100">${title}</span></div>`;
 
     if (isSymposium) {
       dataToPrint.forEach(s => {
         htmlContent += `
         <div class="symp">
           <div><span class="badge">Simposio ${s.id}</span><span class="symp-name">${s.name}</span></div>
-          <div style="font-size:9pt; font-style:italic; margin:4px 0;">Coord: ${s.coordinators || 'N/A'}</div>
+          <div class="symp-meta">
+            Coord: ${s.coordinators || 'N/A'} <br>
+            ${s.venues?.name ? `<span class="symp-venue-box">SEDE: ${s.venues.name}</span>` : ''}
+          </div>
           ${s.presentations?.map((p,i)=>`
-            <div style="margin-left:15px; margin-top:4px;">
+            <div style="margin-left:15px; margin-top:6px; padding-left:10px; border-left: 2px solid #f0f0f0;">
               <strong>${i+1}. ${p.title}</strong><br>
-              ${p.start_time ? `<span class="p-time">${p.start_time.slice(0,5)} - ${p.end_time?.slice(0,5)}</span>` : ''}
-              <span style="font-size:9pt; text-transform:uppercase;">${p.authors}</span>
-            </div>`).join('') || '<i style="margin-left:15px">Sin ponencias</i>'}
+              <span style="font-size:9pt; text-transform:uppercase; color: #555;">${p.authors}</span>
+            </div>`).join('') || '<div style="margin-left:15px; color:#999;">Sin ponencias registradas</div>'}
         </div>`;
       });
     } else {
-      if(dataToPrint.length === 0) htmlContent += `<p style="text-align:center">No hay actividades para este día.</p>`;
+      if(dataToPrint.length === 0) htmlContent += `<p style="text-align:center; color:#666; padding: 40px;">No hay actividades programadas.</p>`;
       else {
-        htmlContent += `<table><thead><tr><th>HORA</th><th>ACTIVIDAD</th><th>SEDE</th></tr></thead><tbody>`;
+        htmlContent += `<table><thead><tr><th>HORARIO</th><th>ACTIVIDAD / MESA</th><th>UBICACIÓN</th></tr></thead><tbody>`;
         dataToPrint.sort((a,b)=>(a.start_time||'').localeCompare(b.start_time||'')).forEach(ev => {
           htmlContent += `<tr>
-            <td class="tc">${ev.start_time?.slice(0,5)}<br>-<br>${ev.end_time?.slice(0,5)}</td>
+            <td class="col-time">${ev.start_time?.slice(0,5)}<br>a<br>${ev.end_time?.slice(0,5)}</td>
             <td>
-              ${ev.symposiums ? `<span class="badge">Simposio ${ev.symposiums.id}</span>` : ''}
-              <div style="font-weight:bold; font-size:10pt; margin-top:3px;">${ev.name}</div>
-              <div style="font-style:italic; font-size:9pt; margin-bottom:6px;">${ev.symposiums?.name||''}</div>
-              ${ev.presentations?.length > 0 ? `<ul style="margin:0; padding-left:15px;">
+              ${ev.symposiums ? `<span class="badge">Simposio ${ev.symposiums.id}</span>` : '<span class="badge-gray">GENERAL</span>'}
+              <div style="font-size:10pt; font-weight:bold; margin-top:4px;">${ev.symposiums?.name || ev.name}</div>
+              
+              <span class="mesa-info">MESA: ${ev.name}</span>
+
+              ${ev.presentations?.length > 0 ? `<div style="margin-top:8px;">
                 ${ev.presentations.sort((a,b)=>(a.start_time||'').localeCompare(b.start_time||'')).map(p=>`
-                  <li style="margin-bottom:3px;">
-                    ${p.start_time ? `<span class="p-time">${p.start_time.slice(0,5)}-${p.end_time?.slice(0,5)}</span>` : ''}
-                    <b>"${p.title}"</b> - ${p.authors}
-                  </li>`).join('')}
-              </ul>`:''}
+                  <div style="margin-bottom:6px; font-size:8.5pt;">
+                    ${p.start_time ? `<span class="p-time">${p.start_time.slice(0,5)}</span>` : ''}
+                    <b>${p.title}</b><br>
+                    <span style="color:#666; text-transform:uppercase; font-size:8pt; padding-left:20px; display:block;">${p.authors}</span>
+                  </div>`).join('')}
+              </div>`:''}
             </td>
-            <td><b>${ev.rooms?.venues?.name||''}</b><br>${ev.rooms?.name||''}</td>
+            <td class="col-loc">
+               <div style="margin-bottom:8px;">
+                 <b style="color:#1e3a5f;">SEDE:</b><br>
+                 ${ev.rooms?.venues?.name || 'Por definir'}
+               </div>
+               <div>
+                 <b style="color:#e65100;">SALA:</b><br>
+                 ${ev.rooms?.name || 'Por definir'}
+               </div>
+            </td>
           </tr>`;
         });
         htmlContent += `</tbody></table>`;
@@ -180,15 +201,172 @@ const Program = () => {
     printWindow.document.write(htmlContent); printWindow.document.close();
   };
 
+  const formatTime = (timeString) => {
+    if (!timeString) return '--:--';
+    return timeString.slice(0, 5);
+  };
+
+  // =========================================================================
+  // VISTA 3: FICHA DE PONENCIA (VISTA PLANA - NIVEL 3)
+  // =========================================================================
+  if (selectedPaper && selectedSession) {
+    return (
+      <div className="w-full min-h-[600px] animate-in slide-in-from-right duration-300 bg-white rounded-2xl shadow-sm border border-gray-100">
+        <div className="bg-white border-b border-gray-200 sticky top-0 z-40 px-4 py-4 flex items-center gap-3 rounded-t-2xl">
+          <button 
+            onClick={() => setSelectedPaper(null)}
+            className="p-2 -ml-2 rounded-full hover:bg-gray-100 text-slate-700 transition-colors border border-gray-200"
+          >
+            <ArrowLeft className="w-6 h-6" />
+          </button>
+          <div>
+            <p className="text-[10px] font-black uppercase text-orange-600 tracking-widest">Detalle Ponencia</p>
+            <p className="text-xs text-gray-400 font-medium">Volver a la Mesa</p>
+          </div>
+        </div>
+
+        <div className="max-w-3xl mx-auto p-6 pb-20">
+          <h1 className="text-xl md:text-2xl font-black text-[#1e3a5f] mb-6 leading-tight">
+            {selectedPaper.title}
+          </h1>
+
+          <div className="space-y-6">
+            <div className="bg-slate-50 p-5 rounded-xl border border-slate-100">
+              <div className="flex items-center gap-2 mb-3">
+                <User className="w-4 h-4 text-orange-500" />
+                <span className="text-xs font-black uppercase text-slate-400 tracking-wider">Autoría</span>
+              </div>
+              <p className="font-bold text-slate-800 text-lg mb-2">{selectedPaper.authors}</p>
+              {selectedPaper.author_affiliation && (
+                <div className="inline-flex items-center gap-2 bg-white px-3 py-1 rounded border border-slate-200 text-slate-500 text-sm italic">
+                  <MapPin className="w-3 h-3" />
+                  {selectedPaper.author_affiliation}
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-4 bg-[#1e3a5f] text-white p-4 rounded-xl shadow-lg shadow-blue-900/20">
+               <Clock className="w-6 h-6 opacity-80" />
+               <div>
+                  <p className="text-[10px] font-black uppercase opacity-60">Horario</p>
+                  <p className="text-base font-bold">
+                    {formatTime(selectedPaper.start_time)} - {formatTime(selectedPaper.end_time)}
+                  </p>
+               </div>
+            </div>
+
+            {selectedPaper.abstract_text && (
+              <div className="pt-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <FileText className="w-4 h-4 text-orange-500" />
+                  <span className="text-xs font-black uppercase text-slate-400 tracking-wider">Resumen</span>
+                </div>
+                <div className="text-slate-700 leading-relaxed text-justify text-sm md:text-base">
+                  {selectedPaper.abstract_text}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // VISTA 2: DETALLE DE MESA (VISTA PLANA - NIVEL 2)
+  // =========================================================================
+  if (selectedSession) {
+    return (
+      <div className="w-full min-h-[600px] animate-in slide-in-from-right duration-300 bg-white rounded-2xl shadow-sm border border-gray-100">
+        <div className="bg-white border-b border-gray-200 sticky top-0 z-40 px-4 py-4 shadow-sm rounded-t-2xl">
+          <div className="flex items-center gap-3 mb-2">
+            <button 
+              onClick={() => setSelectedSession(null)}
+              className="p-2 -ml-2 rounded-full hover:bg-gray-100 text-slate-700 transition-colors border border-gray-200"
+            >
+              <ArrowLeft className="w-6 h-6" />
+            </button>
+            <div className="flex-1">
+               <div className="flex items-center gap-2 mt-1">
+                 <span className="text-xs text-gray-500 font-medium">Volver al Programa General</span>
+               </div>
+            </div>
+          </div>
+          <h2 className="text-lg font-bold text-[#1e3a5f] leading-tight pl-1">
+            {selectedSession.symposiums?.name || selectedSession.name || 'Evento Especial'}
+          </h2>
+          {selectedSession.symposiums && selectedSession.name !== selectedSession.symposiums.name && (
+             <p className="text-xs text-gray-500 pl-1 mt-1">{selectedSession.name}</p>
+          )}
+        </div>
+
+        <div className="max-w-3xl mx-auto p-4">
+            <div className="flex flex-wrap gap-2 mb-6">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-gray-600 bg-gray-50 px-3 py-1.5 rounded border border-gray-100">
+                    <Clock size={14} className="text-[#1e3a5f]"/>
+                    {formatTime(selectedSession.start_time)} - {formatTime(selectedSession.end_time)}
+                </div>
+                <div className="flex items-center gap-1.5 text-xs font-bold text-gray-600 bg-gray-50 px-3 py-1.5 rounded border border-gray-100">
+                    <MapPin size={14} className="text-[#1e3a5f]"/>
+                    {selectedSession.rooms?.venues?.name} - {selectedSession.rooms?.name}
+                </div>
+            </div>
+
+            <div className="flex items-center justify-between mb-4 mt-2 px-2">
+              <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">
+                Agenda de Ponencias
+              </h3>
+            </div>
+
+            <div className="space-y-3">
+              {selectedSession.presentations?.sort((a,b)=>(a.start_time||'').localeCompare(b.start_time||'')).map((paper, idx) => (
+                <button
+                  key={paper.id || idx}
+                  onClick={() => setSelectedPaper(paper)}
+                  className="w-full bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:border-[#1e3a5f] hover:shadow-md transition-all text-left group relative"
+                >
+                  <div className="flex items-start gap-4">
+                    <span className="shrink-0 w-12 h-8 flex items-center justify-center bg-slate-100 text-slate-600 text-[10px] font-black rounded group-hover:bg-[#1e3a5f] group-hover:text-white transition-colors">
+                      {paper.start_time ? paper.start_time.slice(0,5) : `#${idx+1}`}
+                    </span>
+                    <div className="flex-1">
+                       <h4 className="font-bold text-slate-800 text-sm mb-1 group-hover:text-[#1e3a5f]">
+                         {paper.title}
+                       </h4>
+                       <p className="text-xs text-slate-500 font-medium uppercase">
+                         {paper.authors}
+                       </p>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-[#1e3a5f] self-center" />
+                  </div>
+                </button>
+              ))}
+              
+              {(!selectedSession.presentations || selectedSession.presentations.length === 0) && (
+                 <div className="text-center py-10 opacity-60">
+                    <LayoutList className="w-8 h-8 mx-auto text-slate-300 mb-2" />
+                    <p className="text-sm text-slate-400">No hay ponencias registradas.</p>
+                 </div>
+              )}
+            </div>
+            <div className="h-20"></div>
+        </div>
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // VISTA 1: PROGRAMA GENERAL
+  // =========================================================================
   if (loading) return <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1e3a5f]"></div></div>;
 
   return (
     <div className="max-w-7xl mx-auto px-2 py-2 animate-in fade-in duration-300">
-      
-      {/* CABECERA (SIN TÍTULO GIGANTE) */}
-      <div className="mb-2 flex flex-col md:flex-row justify-end items-center gap-2 bg-white p-2 rounded-lg border border-gray-100 shadow-sm">
+
+      {/* CABECERA DE CONTROL (Tabs y Filtros) */}
+      <div className="mb-6 flex flex-col md:flex-row justify-end items-center gap-2 bg-white p-2 rounded-lg border border-gray-100 shadow-sm sticky top-0 z-30">
          <div className="mr-auto pl-2 hidden md:block text-xs font-bold text-gray-400 tracking-widest uppercase">
-            {activeTab === 'simposios' ? 'Listado General' : 'Agenda Diaria'}
+            {activeTab === 'simposios' ? 'Listado de Simposios' : 'Agenda Diaria'}
          </div>
 
         <div className="flex items-center gap-1 w-full md:w-auto overflow-x-auto">
@@ -205,35 +383,35 @@ const Program = () => {
         </div>
       </div>
 
-      {/* --- VISTA: SIMPOSIOS --- */}
+      {/* --- CONTENIDO: PESTAÑA SIMPOSIOS --- */}
       {activeTab === 'simposios' && (
         <>
-          <div className="mb-2 relative">
+          <div className="mb-4 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
-            <input type="text" placeholder="Buscar simposio o autor..." className="w-full pl-9 pr-20 py-2 rounded-lg border border-gray-200 bg-white outline-none focus:border-[#1e3a5f] text-xs font-bold shadow-sm transition-all" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            <input type="text" placeholder="Buscar simposio o autor..." className="w-full pl-9 pr-20 py-3 rounded-xl border border-gray-200 bg-white outline-none focus:border-[#1e3a5f] text-sm font-bold shadow-sm transition-all" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {filteredSimposios.map((symp) => (
-              <div key={symp.id} id={`symp-${symp.id}`} className={`bg-white rounded-lg border transition-all duration-200 ${openId === symp.id ? 'border-[#1e3a5f] ring-1 ring-blue-50 shadow-md' : 'border-gray-100 shadow-sm'}`}>
-                <button onClick={() => toggleAccordion(symp.id)} className="w-full text-left p-3 flex items-center justify-between gap-3 hover:bg-gray-50/50 rounded-lg transition-colors">
+              <div key={symp.id} id={`symp-${symp.id}`} className={`bg-white rounded-xl border transition-all duration-200 ${openId === symp.id ? 'border-[#1e3a5f] ring-1 ring-blue-50 shadow-md' : 'border-gray-100 shadow-sm'}`}>
+                <button onClick={() => toggleAccordion(symp.id)} className="w-full text-left p-4 flex items-center justify-between gap-3 hover:bg-gray-50/50 rounded-xl transition-colors">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="bg-[#1e3a5f] text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm uppercase">Simposio {symp.id}</span>
-                      <span className="bg-blue-50 text-blue-700 text-[8px] font-black px-1.5 py-0.5 rounded-sm uppercase">{symp.presentations?.length || 0} PONENCIAS</span>
+                      <span className="bg-[#1e3a5f] text-white text-[9px] font-black px-2 py-0.5 rounded-md uppercase">Simposio {symp.id}</span>
+                      <span className="bg-blue-50 text-blue-700 text-[9px] font-black px-2 py-0.5 rounded-md uppercase">{symp.presentations?.length || 0} PONENCIAS</span>
                     </div>
-                    <h3 className={`text-xs md:text-sm font-bold leading-tight ${openId === symp.id ? 'text-[#1e3a5f]' : 'text-gray-800'}`}>{symp.name}</h3>
-                    {symp.coordinators && <p className="text-[9px] font-medium text-gray-400 uppercase mt-1 truncate">COORD: {symp.coordinators}</p>}
+                    <h3 className={`text-sm md:text-base font-bold leading-tight ${openId === symp.id ? 'text-[#1e3a5f]' : 'text-gray-800'}`}>{symp.name}</h3>
+                    {symp.coordinators && <p className="text-[10px] font-bold text-gray-400 uppercase mt-1 truncate">COORD: {symp.coordinators}</p>}
                   </div>
-                  <ChevronDown size={16} className={`transition-transform duration-200 ${openId === symp.id ? 'rotate-180 text-[#1e3a5f]' : 'text-gray-300'}`} />
+                  <ChevronDown size={20} className={`transition-transform duration-200 ${openId === symp.id ? 'rotate-180 text-[#1e3a5f]' : 'text-gray-300'}`} />
                 </button>
                 {openId === symp.id && (
-                  <div className="px-3 pb-3 animate-in fade-in slide-in-from-top-1">
-                    <div className="h-px bg-gray-100 mb-2" />
-                    <div className="grid grid-cols-1 gap-1.5">
+                  <div className="px-4 pb-4 animate-in fade-in slide-in-from-top-1">
+                    <div className="h-px bg-gray-100 mb-3" />
+                    <div className="grid grid-cols-1 gap-2">
                       {symp.presentations.map((pres) => (
-                        <div key={pres.id} className="p-2.5 rounded border border-gray-100 bg-gray-50/30 hover:bg-white transition-all">
-                          <h4 className="font-bold text-gray-800 text-[11px] leading-snug mb-1">{pres.title}</h4>
-                          <p className="text-[9px] font-black uppercase text-gray-500 flex items-center gap-1"><Users size={10} className="text-[#1e3a5f]" /> {pres.authors}</p>
+                        <div key={pres.id} className="p-3 rounded-lg border border-gray-100 bg-gray-50/50">
+                          <h4 className="font-bold text-gray-800 text-xs leading-snug mb-1">{pres.title}</h4>
+                          <p className="text-[10px] font-black uppercase text-gray-500 flex items-center gap-1"><Users size={10} className="text-[#1e3a5f]" /> {pres.authors}</p>
                         </div>
                       ))}
                     </div>
@@ -245,19 +423,18 @@ const Program = () => {
         </>
       )}
 
-      {/* --- VISTA: AGENDA --- */}
+      {/* --- CONTENIDO: PESTAÑA AGENDA --- */}
       {activeTab === 'agenda' && (
         <>
-            {/* TABS DE FECHA */}
-            <div className="flex gap-2 overflow-x-auto pb-2 mb-1 no-scrollbar">
+            <div className="flex gap-2 overflow-x-auto pb-4 mb-2 no-scrollbar">
                 {CONGRESS_DATES.map((date) => (
                     <button
                         key={date.value}
                         onClick={() => setSelectedDate(date.value)}
                         className={`
-                            shrink-0 px-4 py-2 rounded-lg text-xs font-black transition-all border
-                            ${selectedDate === date.value 
-                                ? 'bg-[#1e3a5f] text-white border-[#1e3a5f] shadow-md' 
+                            shrink-0 px-5 py-2.5 rounded-xl text-xs font-black transition-all border
+                            ${selectedDate === date.value
+                                ? 'bg-[#1e3a5f] text-white border-[#1e3a5f] shadow-lg transform scale-105'
                                 : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                             }
                         `}
@@ -267,151 +444,60 @@ const Program = () => {
                 ))}
             </div>
 
-            <div className="space-y-3 min-h-[200px]">
+            <div className="space-y-4 min-h-[300px]">
             {filteredSchedule.length > 0 ? filteredSchedule.map(ev => (
-                <div 
-                    key={ev.id} 
-                    onClick={() => setSelectedSession(ev)}
-                    className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:border-[#1e3a5f] transition-all cursor-pointer flex overflow-hidden group"
+                <div
+                    key={ev.id}
+                    onClick={() => setSelectedSession(ev)} 
+                    className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg hover:border-[#1e3a5f] hover:-translate-y-0.5 transition-all cursor-pointer flex overflow-hidden group"
                 >
-                <div className="bg-gray-50 p-3 w-20 flex flex-col items-center justify-center border-r border-gray-100 group-hover:bg-blue-50/30 transition-colors shrink-0">
+                <div className="bg-gray-50 p-4 w-24 flex flex-col items-center justify-center border-r border-gray-100 group-hover:bg-blue-50 transition-colors shrink-0">
                     <span className="text-sm font-black text-[#1e3a5f]">{ev.start_time?.slice(0,5)}</span>
-                    <div className="h-0.5 w-6 bg-gray-200 my-1"></div>
+                    <div className="h-0.5 w-8 bg-gray-300 my-1 group-hover:bg-[#1e3a5f]"></div>
                     <span className="text-xs font-bold text-gray-400">{ev.end_time?.slice(0,5)}</span>
                 </div>
-                
-                <div className="p-3 flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+
+                <div className="p-4 flex-1 min-w-0 flex flex-col justify-center">
+                    <div className="flex items-center gap-2 mb-1.5">
                         {ev.symposiums ? (
-                        <span className="bg-[#1e3a5f] text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase">Simposio {ev.symposiums.id}</span>
+                        <span className="bg-[#1e3a5f] text-white text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wide">Simposio {ev.symposiums.id}</span>
                         ) : (
-                        <span className="bg-gray-200 text-gray-600 text-[8px] font-black px-1.5 py-0.5 rounded uppercase">GENERAL</span>
+                        <span className="bg-gray-200 text-gray-600 text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wide">GENERAL</span>
                         )}
-                        <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest truncate">{ev.name}</span>
+                        <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest truncate">{ev.name}</span>      
                     </div>
-                    
-                    <h3 className="text-sm font-bold text-gray-900 leading-tight mb-2 line-clamp-2">
+
+                    <h3 className="text-base font-bold text-gray-900 leading-tight mb-3 line-clamp-2 group-hover:text-[#1e3a5f] transition-colors">
                         {ev.symposiums?.name || ev.name}
                     </h3>
 
-                    <div className="flex flex-wrap items-center gap-2">
-                        <div className="flex items-center gap-1 text-gray-500 bg-gray-50 px-2 py-1 rounded border border-gray-100">
-                        <MapPin size={10} className="text-orange-500"/>
-                        <span className="text-[9px] font-bold uppercase truncate max-w-[150px]">{ev.rooms?.venues?.name}</span>
+                    <div className="flex flex-wrap items-center gap-2 mt-auto">
+                        <div className="flex items-center gap-1.5 text-gray-600 bg-gray-50 px-2.5 py-1 rounded-md border border-gray-100">   
+                        <MapPin size={12} className="text-orange-500"/>
+                        <span className="text-[10px] font-bold uppercase truncate max-w-[150px]">{ev.rooms?.venues?.name}</span>        
                         </div>
                         {ev.presentations?.length > 0 && (
-                        <div className="flex items-center gap-1 text-gray-500 ml-2">
-                            <FileText size={10} />
-                            <span className="text-[9px] font-bold">{ev.presentations.length} Ponencias</span>
+                        <div className="flex items-center gap-1.5 text-gray-500 ml-2">
+                            <FileText size={12} />
+                            <span className="text-[10px] font-bold">{ev.presentations.length} Ponencias</span>
                         </div>
                         )}
                     </div>
                 </div>
+                <div className="flex items-center px-3 text-gray-300 group-hover:text-[#1e3a5f]">
+                    <ChevronRight size={24} />
+                </div>
                 </div>
             )) : (
-                <div className="flex flex-col items-center justify-center py-10 bg-white rounded-xl border border-dashed border-gray-200 text-gray-400">
-                    <Calendar size={32} className="mb-2 opacity-20"/>
-                    <p className="text-sm font-bold">No hay actividades programadas para este día.</p>
-                    <p className="text-xs">Intenta seleccionar otra fecha en las pestañas de arriba.</p>
+                <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-dashed border-gray-200 text-gray-400">
+                    <Calendar size={48} className="mb-4 opacity-20"/>
+                    <p className="text-base font-bold">No hay actividades para este día.</p>
+                    <p className="text-xs mt-1">Selecciona otra fecha en la parte superior.</p>
                 </div>
             )}
             </div>
         </>
       )}
-
-      {/* --- MODAL (FICHA TÉCNICA) --- */}
-      {selectedSession && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-4 bg-[#1e3a5f]/60 backdrop-blur-sm animate-in fade-in duration-200">
-          
-          <div className="bg-white w-full h-full md:h-auto md:max-h-[90vh] md:max-w-3xl md:rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-200">
-            
-            {/* Cabecera */}
-            <div className="bg-white p-4 border-b border-gray-100 shrink-0 relative flex justify-between items-start">
-               <div className="pr-10">
-                  {selectedSession.symposiums && (
-                    <span className="inline-block bg-orange-500 text-white text-[9px] font-black px-2 py-0.5 rounded mb-2 uppercase">
-                       Simposio {selectedSession.symposiums.id}
-                    </span>
-                  )}
-                  <h2 className="text-lg font-black text-[#1e3a5f] leading-tight mb-1 line-clamp-2">
-                     {selectedSession.symposiums?.name || selectedSession.name}
-                  </h2>
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">{selectedSession.name}</p>
-                  
-                  <div className="flex flex-wrap gap-2 mt-3">
-                     <div className="flex items-center gap-1.5 text-xs font-bold text-gray-600 bg-gray-50 px-2 py-1 rounded border border-gray-100">
-                        <Clock size={12} className="text-[#1e3a5f]"/>
-                        {selectedSession.start_time?.slice(0,5)} - {selectedSession.end_time?.slice(0,5)}
-                     </div>
-                     <div className="flex items-center gap-1.5 text-xs font-bold text-gray-600 bg-gray-50 px-2 py-1 rounded border border-gray-100">
-                        <MapPin size={12} className="text-[#1e3a5f]"/>
-                        {selectedSession.rooms?.venues?.name}
-                     </div>
-                  </div>
-               </div>
-
-               <button onClick={() => setSelectedSession(null)} className="p-3 bg-gray-100 rounded-full text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors active:scale-90">
-                  <X size={24} />
-               </button>
-            </div>
-
-            {/* Cuerpo */}
-            <div className="flex-1 overflow-y-auto p-4 bg-gray-50/50 pb-20 md:pb-4">
-               {selectedSession.presentations?.length > 0 ? (
-                 <div className="space-y-3">
-                    {selectedSession.presentations.sort((a,b)=>(a.start_time||'').localeCompare(b.start_time||'')).map((pres, idx) => (
-                       <details key={pres.id} className="group bg-white rounded-xl border border-gray-200 overflow-hidden open:ring-2 open:ring-blue-100 transition-all">
-                          <summary className="p-4 cursor-pointer list-none flex gap-3 items-start hover:bg-gray-50 transition-colors select-none">
-                             <div className="bg-blue-50 text-blue-700 font-mono text-[10px] font-bold px-2 py-1 rounded border border-blue-100 shrink-0 mt-0.5">
-                                {pres.start_time ? pres.start_time.slice(0,5) : `#${idx+1}`}
-                             </div>
-                             <div className="flex-1">
-                                <h4 className="text-sm font-bold text-gray-900 leading-snug group-open:text-[#1e3a5f] transition-colors">{pres.title}</h4>
-                                <div className="flex items-center gap-2 mt-1.5">
-                                   <User size={12} className="text-gray-400"/>
-                                   <span className="text-xs font-bold text-gray-600 uppercase">{pres.authors}</span>
-                                </div>
-                             </div>
-                             <div className="text-gray-400 group-open:rotate-180 transition-transform mt-1">
-                                <ChevronDown size={20}/>
-                             </div>
-                          </summary>
-                          
-                          <div className="px-4 pb-4 pt-0">
-                             <div className="h-px w-full bg-gray-100 mb-4"></div>
-                             {pres.author_affiliation && (
-                                <div className="mb-3 flex items-start gap-2">
-                                   <div className="mt-1.5 w-1 h-1 bg-[#1e3a5f] rounded-full shrink-0"></div>
-                                   <p className="text-xs text-gray-500 italic"><span className="font-bold text-gray-700 not-italic">Filiación: </span>{pres.author_affiliation}</p>
-                                </div>
-                             )}
-                             {pres.abstract_text ? (
-                                <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 text-xs text-gray-700 leading-relaxed text-justify">
-                                   <p className="font-black text-[10px] text-gray-400 uppercase mb-1">Resumen</p>
-                                   {pres.abstract_text}
-                                </div>
-                             ) : <p className="text-xs text-gray-400 italic">Sin resumen disponible.</p>}
-                          </div>
-                       </details>
-                    ))}
-                 </div>
-               ) : (
-                 <div className="flex flex-col items-center justify-center h-40 text-gray-400">
-                    <FileText size={40} className="mb-2 opacity-20"/>
-                    <p className="text-sm italic">No hay ponencias registradas.</p>
-                 </div>
-               )}
-            </div>
-            
-            <div className="p-4 border-t border-gray-100 bg-white md:hidden absolute bottom-0 left-0 right-0">
-              <button onClick={() => setSelectedSession(null)} className="w-full py-3 bg-gray-100 text-gray-700 font-black rounded-xl hover:bg-gray-200 active:scale-95 transition-all text-sm uppercase">
-                CERRAR VENTANA
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 };
