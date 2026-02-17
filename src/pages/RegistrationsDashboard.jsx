@@ -11,7 +11,6 @@ import { toast } from 'sonner';
 const generateSixCharID = () => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let result = '';
-  // Ciclo exacto de 6 vueltas para 6 caracteres
   for (let i = 0; i < 6; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
@@ -39,7 +38,7 @@ const RegistrationsDashboard = () => {
   const [errorState, setErrorState] = useState(false);
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   const [selectedRegistration, setSelectedRegistration] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({});
@@ -47,14 +46,14 @@ const RegistrationsDashboard = () => {
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentCurrency, setPaymentCurrency] = useState('MXN');
   const [paymentMethod, setPaymentMethod] = useState('transferencia');
-  
+
   const [showForceAuth, setShowForceAuth] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const [activeTab, setActiveTab] = useState('details'); 
+  const [activeTab, setActiveTab] = useState('details');
   const [auditLogs, setAuditLogs] = useState([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
-  
+
   const selectedRegistrationRef = useRef(selectedRegistration);
 
   useEffect(() => {
@@ -69,7 +68,7 @@ const RegistrationsDashboard = () => {
             country: selectedRegistration.country,
             category: selectedRegistration.category
         });
-        setIsEditing(false); 
+        setIsEditing(false);
         setShowForceAuth(false);
         setShowDeleteConfirm(false);
     }
@@ -92,7 +91,7 @@ const RegistrationsDashboard = () => {
   const fetchRegistrations = async () => {
     try {
       setErrorState(false);
-      if (registrations.length === 0) setLoading(true); 
+      if (registrations.length === 0) setLoading(true);
       let query = supabase.from('registrations').select('*').order('created_at', { ascending: false });
       if (filter !== 'all') query = query.eq('status', filter);
       const { data, error } = await query;
@@ -161,14 +160,14 @@ const RegistrationsDashboard = () => {
       try {
           const { error } = await supabase.from('registrations').delete().eq('id', selectedRegistration.id);
           if (error) throw error;
-          
+
           toast.success("Registro eliminado correctamente");
-          setShowDeleteConfirm(false); 
-          setSelectedRegistration(null); 
+          setShowDeleteConfirm(false);
+          setSelectedRegistration(null);
           setRegistrations(prev => prev.filter(r => r.id !== selectedRegistration.id));
-      } catch (error) { 
+      } catch (error) {
           console.error(error);
-          toast.error("Error al eliminar el registro"); 
+          toast.error("Error al eliminar el registro");
       }
   };
 
@@ -184,32 +183,29 @@ const RegistrationsDashboard = () => {
     }
   };
 
-  // --- LÓGICA DE APROBACIÓN CORREGIDA ---
   const executeStatusUpdate = async (id, newStatus) => {
     setShowForceAuth(false);
     const { data: currentReg } = await supabase.from('registrations').select('*').eq('id', id).single();
-    
+
     const processUpdate = async () => {
-      const updateData = { 
+      const updateData = {
         status: newStatus,
         payment_date: newStatus === 'paid' ? new Date().toISOString().split('T')[0] : null
       };
-      
+
       let finalCode = currentReg.attendance_code;
 
-      // Generamos el código nosotros para asegurar 6 caracteres
       if (newStatus === 'paid') {
         updateData.payment_amount = parseFloat(paymentAmount);
         updateData.payment_currency = paymentCurrency;
         updateData.payment_method = paymentMethod;
-        
-        // CORRECCIÓN: Si el código es nulo, mayor a 6 o tiene IASP, lo regeneramos.
+
         if (!finalCode || finalCode.length > 6 || finalCode.startsWith('IASP')) {
-            finalCode = generateSixCharID(); // Genera Ej: A1B2C3
-            updateData.attendance_code = finalCode; // Lo guardamos limpio
+            finalCode = generateSixCharID();
+            updateData.attendance_code = finalCode;
         }
       }
-      
+
       const { error } = await supabase.from('registrations').update(updateData).eq('id', id);
       if (error) throw error;
 
@@ -220,7 +216,7 @@ const RegistrationsDashboard = () => {
         const note = currentReg.payment_proof_url ? "Rechazado por Admin" : "Rechazado: Faltaba archivo adjunto";
         await supabase.from('registrations').update({ notes: (currentReg.notes || '') + '\n' + note }).eq('id', id);
       }
-      setPaymentAmount(''); 
+      setPaymentAmount('');
       return newStatus === 'paid' ? 'Pago aprobado y QR enviado' : 'Aviso enviado al participante';
     };
 
@@ -231,11 +227,9 @@ const RegistrationsDashboard = () => {
     });
   };
 
-  // --- LÓGICA DE REENVÍO CORREGIDA ---
   const handleResendEmail = async (reg) => {
     if (!reg.attendance_code) { toast.error('Sin código generado aún.'); return; }
-    
-    // Auto-corrección: Si tiene IASP o es muy largo, lo arreglamos antes de enviar
+
     let codeToUse = reg.attendance_code;
     if (codeToUse.length > 6 || codeToUse.startsWith('IASP')) {
         const newCode = generateSixCharID();
@@ -278,12 +272,12 @@ const RegistrationsDashboard = () => {
   const generateCertificate = (reg) => {
     try {
         const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-        const primaryColor = [5, 150, 105]; const darkColor = [31, 41, 55]; 
+        const primaryColor = [5, 150, 105]; const darkColor = [31, 41, 55];
         doc.setLineWidth(2); doc.setDrawColor(...primaryColor); doc.rect(10, 10, 277, 190);
         doc.setFont('helvetica', 'bold'); doc.setFontSize(28); doc.setTextColor(...primaryColor);
         doc.text('CONSTANCIA DE PARTICIPACIÓN', 148.5, 40, { align: 'center' });
         doc.setFont('helvetica', 'normal'); doc.setFontSize(14); doc.setTextColor(...darkColor);
-        doc.text('El Comité Organizador del XVII Congreso de la IASPM-AL otorga la presente a:', 148.5, 60, { align: 'center' });
+        doc.text('El Comité Organizador del XVII Congreso de la IASPM-AL otorga la presente a:', 148.5, 60, { align: 'center' });      
         doc.setFont('times', 'bold'); doc.setFontSize(32); doc.setTextColor(0, 0, 0);
         doc.text(reg.full_name, 148.5, 85, { align: 'center' });
         doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.5); doc.line(70, 90, 227, 90);
@@ -320,7 +314,7 @@ const RegistrationsDashboard = () => {
                   const changes = [];
                   if (log.operation === 'UPDATE' && log.old_data && log.new_data) {
                       Object.keys(log.new_data).forEach(key => {
-                          if (JSON.stringify(log.new_data[key]) !== JSON.stringify(log.old_data[key]) && key !== 'updated_at') {
+                          if (JSON.stringify(log.new_data[key]) !== JSON.stringify(log.old_data[key]) && key !== 'updated_at') {      
                               changes.push({ key, old: log.old_data[key], new: log.new_data[key] });
                           }
                       });
@@ -361,12 +355,12 @@ const RegistrationsDashboard = () => {
                 <Bell className="w-4 h-4" /> Activar Alertas
             </button>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100"><p className="text-sm font-medium text-gray-500">Total Registros</p><p className="text-3xl font-bold text-gray-900 mt-2">{stats.total}</p></div>
-           <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-yellow-400"><p className="text-sm font-medium text-gray-500">Pendientes</p><p className="text-3xl font-bold text-yellow-600 mt-2">{stats.pending}</p></div>
-           <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500"><p className="text-sm font-medium text-gray-500">Pagados</p><p className="text-3xl font-bold text-green-600 mt-2">{stats.paid}</p></div>
-           <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-red-500"><p className="text-sm font-medium text-gray-500">Rechazados</p><p className="text-3xl font-bold text-red-600 mt-2">{stats.rejected}</p></div>
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100"><p className="text-sm font-medium text-gray-500">Total Registros</p><p className="text-3xl font-bold text-gray-900 mt-2">{stats.total}</p></div>
+            <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-yellow-400"><p className="text-sm font-medium text-gray-500">Pendientes</p><p className="text-3xl font-bold text-yellow-600 mt-2">{stats.pending}</p></div>
+            <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500"><p className="text-sm font-medium text-gray-500">Pagados</p><p className="text-3xl font-bold text-green-600 mt-2">{stats.paid}</p></div>
+            <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-red-500"><p className="text-sm font-medium text-gray-500">Rechazados</p><p className="text-3xl font-bold text-red-600 mt-2">{stats.rejected}</p></div>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6 flex flex-col md:flex-row gap-4 justify-between items-center">
@@ -381,10 +375,10 @@ const RegistrationsDashboard = () => {
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-h-[400px]">
-          {loading ? <TableSkeleton /> : errorState ? <div className="flex flex-col items-center justify-center py-20 text-center"><WifiOff className="w-16 h-16 text-gray-300 mb-4" /><h3 className="text-xl font-bold text-gray-700">Error de conexión</h3><button onClick={() => fetchRegistrations()} className="bg-teal-600 text-white px-6 py-2 rounded-lg hover:bg-teal-700 transition">Reintentar</button></div> : filteredRegistrations.length === 0 ? <div className="flex flex-col items-center justify-center py-20 text-center"><Search className="w-16 h-16 text-gray-200 mb-4" /><h3 className="text-lg font-medium text-gray-900">No se encontraron resultados</h3></div> : (
+          {loading ? <TableSkeleton /> : errorState ? <div className="flex flex-col items-center justify-center py-20 text-center"><WifiOff className="w-16 h-16 text-gray-300 mb-4" /><h3 className="text-xl font-bold text-gray-700">Error de conexión</h3><button onClick={() => fetchRegistrations()} className="bg-teal-600 text-white px-6 py-2 rounded-lg hover:bg-teal-700 transition">Reintentar</button></div> : filteredRegistrations.length === 0 ? <div className="flex flex-col items-center justify-center py-20 text-center"><Search className="w-16 h-16 text-gray-200 mb-4" /><h3 className="text-lg font-medium text-gray-900">No se encontraron resultados</h3></div> : ( 
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200"><tr><th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Participante</th><th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Categoría</th><th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Código</th><th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Estado</th><th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Asistencia</th><th className="px-6 py-4 text-center text-xs font-semibold text-gray-500 uppercase">Acciones</th></tr></thead>
+                <thead className="bg-gray-50 border-b border-gray-200"><tr><th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Participante</th><th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Categoría</th><th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Código</th><th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Estado</th><th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Asistencia</th><th className="px-6 py-4 text-center text-xs font-semibold text-gray-500 uppercase">Acciones</th></tr></thead>        
                 <tbody className="divide-y divide-gray-100">
                   {filteredRegistrations.map((reg) => (
                     <tr key={reg.id} className="hover:bg-gray-50 transition group">
@@ -402,16 +396,20 @@ const RegistrationsDashboard = () => {
           )}
         </div>
 
+        {/* --- MODAL AJUSTADO (FIX ARQUITECTURA FLEX) --- */}
         {selectedRegistration && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-            <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl relative">
-              <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center z-10">
+            {/* CONTENEDOR FLEX: Divide en 3 bloques (Header, Tabs, Cuerpo) */}
+            <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl relative overflow-hidden">
+              
+              {/* BLOQUE 1: Header (Fijo) - Z-Index 30 para estar encima de todo */}
+              <div className="shrink-0 bg-white border-b px-6 py-4 flex justify-between items-center z-30 relative shadow-sm">
                 <div className="flex-1">
                     {isEditing ? (
                        <input type="text" value={editForm.full_name} onChange={(e) => setEditForm({...editForm, full_name: e.target.value})} className="text-xl font-bold text-gray-800 border-b border-teal-500 focus:outline-none w-full" placeholder="Nombre completo" />
                     ) : ( <h2 className="text-xl font-bold text-gray-800">{selectedRegistration.full_name}</h2> )}
                     {isEditing ? (
-                        <input type="email" value={editForm.email} onChange={(e) => setEditForm({...editForm, email: e.target.value})} className="text-sm text-gray-500 border-b border-gray-300 focus:outline-none w-full mt-1" placeholder="Correo electrónico" />
+                        <input type="email" value={editForm.email} onChange={(e) => setEditForm({...editForm, email: e.target.value})} className="text-sm text-gray-500 border-b border-gray-300 focus:outline-none w-full mt-1" placeholder="Correo electrónico" />        
                     ) : ( <p className="text-sm text-gray-500">{selectedRegistration.email}</p> )}
                 </div>
                 <div className="flex items-center gap-2">
@@ -432,12 +430,14 @@ const RegistrationsDashboard = () => {
                 </div>
               </div>
 
-              <div className="flex border-b border-gray-200">
+              {/* BLOQUE 2: Tabs (Fijo) - Z-Index 20 */}
+              <div className="shrink-0 flex border-b border-gray-200 bg-white z-20 relative">
                   <button onClick={() => setActiveTab('details')} className={`flex-1 py-3 text-sm font-bold text-center transition ${activeTab === 'details' ? 'text-teal-600 border-b-2 border-teal-600 bg-teal-50' : 'text-gray-500 hover:text-gray-700'}`}><span className="flex items-center justify-center gap-2"><User className="w-4 h-4"/> Detalles</span></button>
                   <button onClick={() => setActiveTab('history')} className={`flex-1 py-3 text-sm font-bold text-center transition ${activeTab === 'history' ? 'text-teal-600 border-b-2 border-teal-600 bg-teal-50' : 'text-gray-500 hover:text-gray-700'}`}><span className="flex items-center justify-center gap-2"><History className="w-4 h-4"/> Historial</span></button>
               </div>
 
-              <div className="p-6">
+              {/* BLOQUE 3: Cuerpo (Scrollable) - Z-Index 10 (El único que se mueve) */}
+              <div className="flex-1 overflow-y-auto p-6 bg-white relative z-10">
                 {activeTab === 'details' ? (
                     <div className="space-y-8 animate-in fade-in">
                         <div className="grid md:grid-cols-2 gap-6">
@@ -457,7 +457,7 @@ const RegistrationsDashboard = () => {
                                                 <option value="institucion_convocante">Inst. Convocante</option>
                                                 <option value="asistente">Asistente</option>
                                             </select>
-                                            ) : <p className="font-medium">{getCategoryLabel(selectedRegistration.category)}</p>}
+                                            ) : <p className="font-medium">{getCategoryLabel(selectedRegistration.category)}</p>}      
                                     </div>
                                     <div className="col-span-2"><p className="text-xs text-gray-500">Comprobante</p>{selectedRegistration.payment_proof_url ? <a href={selectedRegistration.payment_proof_url} target="_blank" rel="noopener noreferrer" className="text-sm text-teal-600 hover:underline flex items-center gap-1"><Download className="w-3 h-3" /> Ver archivo</a> : <span className="text-sm text-red-500 bg-red-50 px-2 py-0.5 rounded flex items-center gap-1 w-fit"><AlertTriangle className="w-3 h-3"/> No adjuntado</span>}</div>
                                 </div>
@@ -466,17 +466,17 @@ const RegistrationsDashboard = () => {
                                 <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center justify-between">Pagos {getStatusBadge(selectedRegistration.status)}</h3>
                                 {selectedRegistration.status !== 'paid' && (
                                     <div className="space-y-3">
-                                        <div className="grid grid-cols-2 gap-2"><input type="number" placeholder="Monto" value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} className="text-sm border rounded px-2 py-1" /><select value={paymentCurrency} onChange={e => setPaymentCurrency(e.target.value)} className="text-sm border rounded px-2 py-1"><option value="MXN">MXN</option><option value="USD">USD</option></select></div>
-                                        <div className="flex gap-2">
-                                            <button onClick={attemptApproval} className="flex-1 bg-green-600 text-white py-1.5 rounded text-sm hover:bg-green-700 transition">Aprobar</button>
-                                            <button onClick={() => executeStatusUpdate(selectedRegistration.id, 'rejected')} className="flex-1 bg-white border border-red-200 text-red-600 py-1.5 rounded text-sm hover:bg-red-50 transition">Rechazar</button>
-                                        </div>
+                                            <div className="grid grid-cols-2 gap-2"><input type="number" placeholder="Monto" value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} className="text-sm border rounded px-2 py-1" /><select value={paymentCurrency} onChange={e => setPaymentCurrency(e.target.value)} className="text-sm border rounded px-2 py-1"><option value="MXN">MXN</option><option value="USD">USD</option></select></div>
+                                            <div className="flex gap-2">
+                                                <button onClick={attemptApproval} className="flex-1 bg-green-600 text-white py-1.5 rounded text-sm hover:bg-green-700 transition">Aprobar</button>
+                                                <button onClick={() => executeStatusUpdate(selectedRegistration.id, 'rejected')} className="flex-1 bg-white border border-red-200 text-red-600 py-1.5 rounded text-sm hover:bg-red-50 transition">Rechazar</button>
+                                            </div>
                                     </div>
                                 )}
                                 {selectedRegistration.status === 'paid' && (
                                     <div className="space-y-2">
-                                        <div className="text-xs text-green-700 bg-green-50 p-2 rounded border border-green-100">Aprobado: {selectedRegistration.payment_date}</div>
-                                        <button onClick={() => handleResendEmail(selectedRegistration)} className="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 text-gray-700 py-1.5 rounded text-sm hover:bg-gray-50"><Send className="w-3 h-3" /> Reenviar Email</button>
+                                            <div className="text-xs text-green-700 bg-green-50 p-2 rounded border border-green-100">Aprobado: {selectedRegistration.payment_date}</div>
+                                            <button onClick={() => handleResendEmail(selectedRegistration)} className="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 text-gray-700 py-1.5 rounded text-sm hover:bg-gray-50"><Send className="w-3 h-3" /> Reenviar Email</button>
                                     </div>
                                 )}
                             </div>
@@ -509,7 +509,7 @@ const RegistrationsDashboard = () => {
               <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in zoom-in-95 duration-200">
                 <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full border border-gray-100">
                   <div className="flex flex-col items-center text-center">
-                    <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mb-4">
+                    <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mb-4">        
                       <ShieldAlert className="w-6 h-6" />
                     </div>
                     <h3 className="text-lg font-bold text-gray-900 mb-2">Aprobación Manual</h3>
@@ -538,14 +538,14 @@ const RegistrationsDashboard = () => {
                       <span className="bg-red-50 text-red-600 px-2 py-0.5 rounded font-bold text-xs">Esta acción es irreversible</span>
                     </p>
                     <div className="flex gap-3 w-full">
-                      <button 
-                        onClick={() => setShowDeleteConfirm(false)} 
+                      <button
+                        onClick={() => setShowDeleteConfirm(false)}
                         className="flex-1 px-4 py-2.5 bg-white border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition"
                       >
                         Cancelar
                       </button>
-                      <button 
-                        onClick={confirmDelete} 
+                      <button
+                        onClick={confirmDelete}
                         className="flex-1 px-4 py-2.5 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition shadow-lg shadow-red-200"
                       >
                         Sí, eliminar

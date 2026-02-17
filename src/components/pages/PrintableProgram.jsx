@@ -1,6 +1,6 @@
-// src/components/pages/PrintableProgram.jsx
 import React from 'react';
 
+// Función auxiliar para limpiar nombres de coordinadores
 const cleanCoordinators = (data) => {
   if (!data) return '';
   if (Array.isArray(data)) return data.join(', ');
@@ -10,137 +10,164 @@ const cleanCoordinators = (data) => {
   return data;
 };
 
-const PrintableProgram = ({ events, type, lang }) => {
-  // Ordenar eventos por hora para la agenda
-  const sortedEvents = type === 'schedule' 
-    ? [...events].sort((a, b) => a.start_time.localeCompare(b.start_time))
-    : events;
+const PrintableProgram = ({ events, type }) => {
+
+  // Lógica de ordenamiento específica para impresión
+  const sortedEvents = React.useMemo(() => {
+    if (!events) return [];
+
+    if (type === 'schedule') {
+      // Ordenar Agenda: Fecha -> Hora
+      return [...events].sort((a, b) => {
+        const dateA = a.date || '';
+        const dateB = b.date || '';
+        if (dateA !== dateB) return dateA.localeCompare(dateB);
+        return (a.start_time || '').localeCompare(b.start_time || '');
+      });
+    }
+
+    // Ordenar Simposios: Estrictamente 1 al 18
+    return [...events].sort((a, b) => a.id - b.id);
+  }, [events, type]);
 
   return (
-    <div className="p-8 bg-white text-black font-serif print-content">
-      {/* Encabezado Institucional */}
-      <div className="text-center border-b-2 border-black pb-4 mb-8">
-        <h1 className="text-2xl font-bold uppercase text-black">XVIII Congreso de la IASPM-AL 2026</h1>
-        <p className="text-lg italic text-black">Ética, política y música popular</p>
-        <p className="text-sm mt-1 text-black">28 de septiembre al 2 de octubre de 2026</p>
-        <div className="mt-4 bg-gray-100 py-2 border-y border-black">
-          <h2 className="text-md font-bold uppercase tracking-widest text-black">
-            {type === 'schedule' ? 'PROGRAMA GENERAL DE ACTIVIDADES (AGENDA)' : 'LISTADO DETALLADO DE SIMPOSIOS Y PONENCIAS'}
+    <div className="print-container font-serif text-black bg-white p-8 w-full max-w-none">
+
+      {/* --- ENCABEZADO FORMAL (SOLO SALE AL IMPRIMIR) --- */}
+      <div className="text-center border-b-2 border-black pb-4 mb-6">
+        <h1 className="text-2xl font-bold uppercase tracking-wide">XVIII Congreso IASPM-AL 2026</h1>
+        <p className="text-lg italic mt-1">"Ética, política y música popular"</p>
+        <p className="text-sm mt-1 uppercase tracking-widest text-gray-600">
+          San Cristóbal de las Casas, Chiapas • 28 Sep - 2 Oct 2026
+        </p>
+        <div className="mt-4 py-2 bg-gray-100 border-y border-gray-300">
+          <h2 className="text-md font-black uppercase tracking-widest">
+            {type === 'schedule' ? 'PROGRAMA GENERAL DE ACTIVIDADES' : 'RELACIÓN DE SIMPOSIOS Y PONENCIAS'}
           </h2>
         </div>
       </div>
 
-      {/* --- VISTA A: LISTADO DE SIMPOSIOS --- */}
+      {/* --- VISTA A: SIMPOSIOS (LISTADO LIMPIO) --- */}
       {type === 'symposiums' && (
         <div className="space-y-8">
-          {events.map((s) => (
-            <div key={s.id} className="avoid-break border-b border-gray-300 pb-6">
-              <h2 className="text-xl font-bold leading-tight">
-                Simposio {s.id}: {s.name}
-              </h2>
-              <div className="mt-2 mb-3 text-sm">
-                <span className="font-bold uppercase text-xs">Coordinación: </span>
-                {cleanCoordinators(s.coordinator)}
+          {sortedEvents.map((s) => (
+            <div key={s.id} className="avoid-break border-b border-gray-300 pb-6 last:border-0">
+              
+              {/* Encabezado del Simposio */}
+              <div className="mb-3">
+                <span className="inline-block bg-black text-white text-xs font-bold px-2 py-1 mb-1 rounded-sm uppercase">
+                  Simposio {s.id}
+                </span>
+                <h3 className="text-xl font-bold leading-tight inline-block ml-2">{s.name}</h3>
               </div>
-              <div className="text-sm text-justify mb-4 italic leading-relaxed">
-                {s.description || "Sin descripción disponible."}
+
+              {/* Coordinación */}
+              <div className="mb-4 text-sm text-gray-700 bg-gray-50 p-2 border-l-2 border-gray-400">
+                <span className="font-bold uppercase text-xs mr-2 text-black">Coordinación:</span>
+                {cleanCoordinators(s.coordinators || s.coordinator)}
               </div>
-              {s.presentations && s.presentations.length > 0 && (
-                <div className="ml-6 border-l border-black pl-4">
-                  <h3 className="text-xs font-bold uppercase mb-2">Trabajos Aceptados:</h3>
-                  <div className="space-y-3">
-                    {s.presentations.map((p) => (
-                      <div key={p.id} className="text-sm">
-                        {/* AJUSTE: Hora en la vista de simposios */}
-                        {p.start_time && (
-                          <p className="text-[10px] font-bold text-gray-600 mb-0.5">
-                            {p.start_time.substring(0, 5)} - {p.end_time.substring(0, 5)} 
-                            {p.duration_minutes ? ` (${p.duration_minutes} min)` : ''}
-                          </p>
-                        )}
-                        <p className="font-bold leading-tight">" {p.title} "</p>
-                        <p className="text-xs uppercase mt-1 italic">{p.authors}</p>
-                      </div>
-                    ))}
-                  </div>
+
+              {/* Lista de Ponencias */}
+              {s.presentations && s.presentations.length > 0 ? (
+                <div className="ml-4">
+                   <h4 className="text-xs font-bold uppercase border-b border-gray-400 pb-1 mb-2 inline-block">
+                     Ponencias ({s.presentations.length})
+                   </h4>
+                   <div className="grid grid-cols-1 gap-3">
+                     {s.presentations.sort((a,b) => (a.authors||'').localeCompare(b.authors||'')).map((p, idx) => (
+                       <div key={p.id} className="text-sm pl-3 border-l border-gray-300">
+                         {/* AJUSTE: HORA EN LA LISTA DE SIMPOSIOS */}
+                         <div className="mb-0.5">
+                            <span className="font-bold text-black leading-snug">
+                              {idx + 1}. {p.title}
+                            </span>
+                            {p.start_time && (
+                              <span className="ml-2 font-mono text-xs font-bold bg-gray-100 px-1 border border-gray-300 rounded text-gray-700">
+                                {p.start_time.slice(0,5)} - {p.end_time?.slice(0,5)}
+                              </span>
+                            )}
+                         </div>
+                         <p className="text-xs text-gray-600 uppercase mt-0.5">
+                           {p.authors} 
+                           {p.author_affiliation && <span className="normal-case italic text-gray-500"> — {p.author_affiliation}</span>}
+                         </p>
+                       </div>
+                     ))}
+                   </div>
                 </div>
+              ) : (
+                <p className="text-xs italic text-gray-400 ml-4">Sin ponencias registradas.</p>
               )}
             </div>
           ))}
         </div>
       )}
 
-      {/* --- VISTA B: AGENDA DE ACTIVIDADES (TABLA) --- */}
+      {/* --- VISTA B: AGENDA (TABLA COMPACTA) --- */}
       {type === 'schedule' && (
-        <div className="w-full">
-          <table className="w-full border-collapse border border-black text-sm">
-            <thead>
-              <tr className="bg-gray-200">
-                <th className="border border-black p-2 w-24 uppercase text-xs">Horario</th>
-                <th className="border border-black p-2 uppercase text-xs">Actividad / Mesa / Ponencias</th>
-                <th className="border border-black p-2 w-48 uppercase text-xs">Sede / Sala</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedEvents.map((session) => (
-                <tr key={session.id} className="avoid-break">
-                  <td className="border border-black p-3 text-center align-top font-bold">
-                    {session.start_time.substring(0, 5)} - {session.end_time.substring(0, 5)}
-                  </td>
-                  
-                  <td className="border border-black p-3 align-top">
-                    <div className="font-black text-base uppercase mb-1">{session.name}</div>
-                    <div className="text-xs italic text-gray-700 mb-3 border-b border-gray-100 pb-1">
-                      {session.symposiums?.name}
-                    </div>
-                    
-                    {session.presentations && session.presentations.length > 0 ? (
-                      <ul className="space-y-2 ml-2">
-                        {session.presentations.sort((a,b) => (a.start_time || '').localeCompare(b.start_time || '')).map(p => (
-                          <li key={p.id} className="text-[11px] leading-tight mb-2">
-                            {/* AJUSTE: Bloque de hora solicitado */}
-                            <div className="text-[9px] font-bold text-gray-500 uppercase mb-0.5">
-                              Hora: {p.start_time?.substring(0, 5)} - {p.end_time?.substring(0, 5)} 
-                              {p.duration_minutes ? ` (${p.duration_minutes} min)` : ''}
-                            </div>
-                            <span className="font-bold uppercase tracking-tighter">• {p.authors}:</span>
-                            <span className="ml-1 italic">"{p.title}"</span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <span className="text-[10px] text-gray-400">Sin ponencias asignadas</span>
-                    )}
-                  </td>
+        <table className="w-full border-collapse text-sm">
+          <thead>
+            <tr className="bg-gray-100 border-b-2 border-black">
+              <th className="p-2 text-left w-24 uppercase text-xs font-black">Horario</th>
+              <th className="p-2 text-left uppercase text-xs font-black">Actividad</th>
+              <th className="p-2 text-left w-40 uppercase text-xs font-black">Sede</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sortedEvents.map((ev) => (
+              <tr key={ev.id} className="avoid-break border-b border-gray-200">
+                <td className="p-2 align-top font-bold text-xs whitespace-nowrap bg-gray-50 text-center">
+                  {ev.start_time?.substring(0,5)} <br/> a <br/> {ev.end_time?.substring(0,5)}
+                </td>
+                <td className="p-2 align-top">
+                  {ev.symposiums && (
+                    <span className="inline-block bg-gray-200 text-[9px] font-bold px-1 rounded mb-1 uppercase border border-gray-300">
+                      Simposio {ev.symposiums.id}
+                    </span>
+                  )}
+                  <div className="font-bold uppercase text-sm leading-tight mt-1">{ev.name}</div>
+                  <div className="text-xs italic text-gray-600 mb-2">
+                    {ev.symposiums?.name || 'Evento General'}
+                  </div>
 
-                  <td className="border border-black p-3 align-top">
-                    <div className="font-bold text-xs uppercase text-teal-800">
-                      {session.rooms?.venues?.name}
-                    </div>
-                    <div className="text-sm font-medium mt-1">
-                      {session.rooms?.name}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  {/* Ponencias dentro de la mesa */}
+                  {ev.presentations && ev.presentations.length > 0 && (
+                    <ul className="ml-2 space-y-1 mt-2 border-l-2 border-gray-300 pl-2">
+                      {ev.presentations
+                        .sort((a,b) => (a.start_time || '').localeCompare(b.start_time || ''))
+                        .map(p => (
+                        <li key={p.id} className="text-[11px] leading-tight mb-1.5">
+                          {/* AJUSTE: HORA EN LA AGENDA */}
+                          {p.start_time && (
+                            <span className="font-mono text-[10px] font-bold text-gray-700 bg-gray-100 px-1 rounded border border-gray-200 mr-1.5">
+                              {p.start_time.slice(0,5)}
+                            </span>
+                          )}
+                          <span className="font-bold">"{p.title}"</span> 
+                          <span className="text-gray-500 italic uppercase text-[9px]"> - {p.authors}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </td>
+                <td className="p-2 align-top bg-gray-50 text-xs">
+                  <div className="font-bold uppercase">{ev.rooms?.venues?.name}</div>
+                  <div className="text-gray-600 italic">{ev.rooms?.name}</div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
 
-      {/* Estilos CSS para el PDF */}
+      {/* ESTILOS ESPECÍFICOS PARA EL PDF */}
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
           @page { size: letter; margin: 1.5cm; }
-          body { 
-            -webkit-print-color-adjust: exact; 
-            background-color: white !important;
-            color: black !important;
-          }
           .avoid-break { page-break-inside: avoid; break-inside: avoid; }
-          .print-content { width: 100%; }
-          table { width: 100%; border-spacing: 0; }
-          th { background-color: #f3f4f6 !important; color: black !important; }
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          h1, h2, h3, h4 { color: black !important; }
+          a { text-decoration: none; color: black; }
         }
       `}} />
     </div>

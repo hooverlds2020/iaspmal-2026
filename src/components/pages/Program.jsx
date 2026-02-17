@@ -1,204 +1,417 @@
 // src/components/pages/Program.jsx
 import React, { useState, useEffect } from 'react';
-import { Download, List, Calendar, ChevronDown, Users, FileText, Search, X } from 'lucide-react';
-import ScheduleView from './ScheduleView';
-import PrintableProgram from './PrintableProgram';
 import { supabase } from '../../lib/supabaseClient';
+import { Search, Users, ChevronDown, Download, Calendar, List, MapPin, Clock, X, FileText, User } from 'lucide-react';
 
-const Program = ({ lang }) => {
-  const [activeTab, setActiveTab] = useState(() => localStorage.getItem('program_active_tab') || 'simposios');
-  const [allData, setAllData] = useState([]);
+// FECHAS DEL CONGRESO
+const CONGRESS_DATES = [
+  { label: 'LUN 28', value: '2026-09-28' },
+  { label: 'MAR 29', value: '2026-09-29' },
+  { label: 'MIÉ 30', value: '2026-09-30' },
+  { label: 'JUE 01', value: '2026-10-01' },
+  { label: 'VIE 02', value: '2026-10-02' },
+];
 
-  const handleTabChange = (tab) => {
-    setAllData([]); 
-    setActiveTab(tab);
-    localStorage.setItem('program_active_tab', tab);
-  };
-
-  const handlePrint = () => {
-    const printWindow = window.open('', '_blank');
-    const printContent = document.getElementById('printable-area').innerHTML;
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Programa IASPM-AL 2026</title>
-          <style>
-            body { font-family: sans-serif; padding: 20px; color: #333; }
-            h1, h2, h3 { color: #1e3a5f; }
-            .event-item { margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-            .print-header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #1e3a5f; padding-bottom: 20px; }
-          </style>
-        </head>
-        <body onload="window.print(); window.close();">
-          <div class="print-header"><h1>XVII Congreso IASPM-AL 2026</h1><p>San Cristóbal de Las Casas, Chiapas</p></div>
-          ${printContent}
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-  };
-
-  return (
-    <div className="min-h-screen bg-gray-50/50 pb-20 animate-in fade-in duration-500">
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="text-center md:text-left">
-              <h1 className="text-xl md:text-2xl font-black text-[#1e3a5f] tracking-tight uppercase italic">
-                {activeTab === 'simposios' ? (lang === 'es' ? 'Simposios Temáticos' : 'Symposiums') : (lang === 'es' ? 'Agenda General' : 'General Schedule')}
-              </h1>
-              <p className="text-[10px] md:text-xs text-gray-500 font-bold uppercase tracking-wider">XVIII Congreso IASPM-AL 2026</p>
-            </div>
-            <div className="flex flex-wrap items-center justify-center gap-2 w-full md:w-auto">
-              <button onClick={handlePrint} className="flex items-center gap-2 px-4 py-2 bg-[#1e3a5f] text-white rounded-xl text-xs font-bold shadow-md hover:bg-black transition-all">
-                <Download size={14} /> <span className="hidden sm:inline">PDF</span>
-              </button>
-              <div className="bg-gray-100 p-1 rounded-xl flex">
-                <button onClick={() => handleTabChange('simposios')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'simposios' ? 'bg-white text-[#1e3a5f] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>
-                  <List size={14} /> <span>Simposios</span>
-                </button>
-                <button onClick={() => handleTabChange('agenda')} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'agenda' ? 'bg-white text-[#1e3a5f] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>
-                  <Calendar size={14} /> <span>Agenda</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6">
-        {activeTab === 'simposios' ? <SymposiumsList onDataLoaded={setAllData} lang={lang} /> : <ScheduleView onDataLoaded={setAllData} lang={lang} />}
-      </div>
-      <div className="hidden"><div id="printable-area"><PrintableProgram events={allData} type={activeTab === 'simposios' ? 'symposiums' : 'schedule'} /></div></div>
-    </div>
-  );
-};
-
-const SymposiumsList = ({ onDataLoaded, lang }) => {
+const Program = () => {
+  const [activeTab, setActiveTab] = useState('simposios');
+  const [selectedDate, setSelectedDate] = useState('2026-09-28'); 
+  
   const [simposios, setSimposios] = useState([]);
   const [filteredSimposios, setFilteredSimposios] = useState([]);
+  const [scheduleData, setScheduleData] = useState([]);
+  const [filteredSchedule, setFilteredSchedule] = useState([]); 
+  
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [openId, setOpenId] = useState(null);
+  const [selectedSession, setSelectedSession] = useState(null);
 
-  useEffect(() => { fetchData(); }, []);
-
-  // --- LÓGICA DE FILTRADO QUIRÚRGICO MEJORADA ---
   useEffect(() => {
-    if (!searchTerm) {
-      setFilteredSimposios(simposios);
-      // Opcional: Cerrar todo al limpiar búsqueda para limpiar la vista
-      // setOpenId(null); 
-    } else {
-      const lower = searchTerm.toLowerCase();
-      const filtered = simposios.map(s => {
-        const headerMatches = s.name.toLowerCase().includes(lower) || 
-                              (s.coordinators && s.coordinators.toLowerCase().includes(lower));
-        const matchingPresentations = s.presentations.filter(p => 
-          p.title.toLowerCase().includes(lower) || 
-          p.authors.toLowerCase().includes(lower)
-        );
+    fetchData();
+    fetchScheduleData();
+  }, []);
 
-        if (headerMatches) return s; // Coincide encabezado, mostramos todo
-        else if (matchingPresentations.length > 0) return { ...s, presentations: matchingPresentations }; // Coincide hijo, mostramos solo hijos
-        else return null;
-      }).filter(Boolean);
-
-      setFilteredSimposios(filtered);
-      
-      // Auto-abrir si encontramos pocos resultados para mejor UX
-      if (filtered.length > 0 && filtered.length < 5) {
-         setOpenId(filtered[0].id);
-      }
-    }
-  }, [searchTerm, simposios]);
+  useEffect(() => {
+    document.body.style.overflow = selectedSession ? 'hidden' : 'unset';
+  }, [selectedSession]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.from('symposiums').select(`*, venues (name), presentations (id, title, authors, abstract_text)`);
+      const { data, error } = await supabase
+        .from('symposiums')
+        .select(`*, venues (name), presentations (id, title, authors, author_affiliation, abstract_text, start_time, end_time)`);
       if (error) throw error;
-      const sortedSymposiums = (data || []).sort((a, b) => {
-        const numA = parseInt(a.name.match(/\d+/)?.[0]) || 0;
-        const numB = parseInt(b.name.match(/\d+/)?.[0]) || 0;
-        return numA - numB;
-      });
-      const sortedData = sortedSymposiums.map(symposium => ({
-        ...symposium,
-        presentations: (symposium.presentations || []).sort((a, b) => (a.authors || "").localeCompare(b.authors || "", 'es', { sensitivity: 'base' }))
+      
+      const sortedData = (data || []).sort((a, b) => a.id - b.id);
+      const finalData = sortedData.map(symp => ({
+        ...symp,
+        presentations: (symp.presentations || []).sort((a, b) => 
+          (a.authors || "").localeCompare(b.authors || "", 'es', { sensitivity: 'base' })
+        )
       }));
-      setSimposios(sortedData);
-      setFilteredSimposios(sortedData);
-      if (onDataLoaded) onDataLoaded(sortedData);
-    } catch (e) { console.error("Error cargando simposios:", e); } finally { setLoading(false); }
+
+      setSimposios(finalData);
+      setFilteredSimposios(finalData);
+    } catch (e) { console.error(e); } finally { setLoading(false); }
   };
 
-  const handleToggle = (id) => {
-    const willOpen = openId !== id;
-    setOpenId(willOpen ? id : null);
-    if (willOpen) {
+  const fetchScheduleData = async () => {
+      // Nos aseguramos de traer todos los campos posibles de fecha/hora
+      const { data } = await supabase
+        .from('sessions')
+        .select(`*, date, start_time, end_time, rooms(name, venues(name)), symposiums(id, name), presentations(*)`)
+        .order('start_time');
+      
+      console.log("Datos Agenda Cargados:", data); // Para depuración en consola
+      setScheduleData(data || []);
+  };
+
+  // Filtrado de Simposios
+  useEffect(() => {
+    const term = searchTerm.toLowerCase();
+    const filtered = simposios.filter(s => 
+      s.name.toLowerCase().includes(term) ||
+      s.presentations.some(p => p.title.toLowerCase().includes(term) || p.authors.toLowerCase().includes(term))
+    );
+    setFilteredSimposios(filtered);
+  }, [searchTerm, simposios]);
+
+  // --- FILTRADO DE AGENDA (LÓGICA CORREGIDA) ---
+  useEffect(() => {
+    if (scheduleData.length > 0) {
+       const dayEvents = scheduleData.filter(ev => {
+         // 1. Verificar si existe campo 'date' exacto (ej: '2026-09-28')
+         if (ev.date && ev.date === selectedDate) return true;
+         // 2. Verificar si 'start_time' es ISO y empieza con la fecha
+         if (ev.start_time && ev.start_time.startsWith(selectedDate)) return true;
+         return false;
+       });
+       setFilteredSchedule(dayEvents);
+    }
+  }, [selectedDate, scheduleData]);
+
+  const toggleAccordion = (id) => {
+    if (openId === id) setOpenId(null);
+    else {
+      setOpenId(id);
       setTimeout(() => {
-        const element = document.getElementById(`sympo-${id}`);
-        if (element) {
-          const headerOffset = 180; 
-          const elementPosition = element.getBoundingClientRect().top;
-          const offsetPosition = elementPosition + window.scrollY - headerOffset;
-          window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+        const el = document.getElementById(`symp-${id}`);
+        if (el) {
+          const top = el.getBoundingClientRect().top + window.scrollY - 80;
+          window.scrollTo({ top, behavior: 'smooth' });
         }
-      }, 300);
+      }, 100);
     }
   };
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-20 gap-4"><div className="animate-spin rounded-full h-10 w-10 border-4 border-gray-200 border-t-[#1e3a5f]"></div><p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Cargando...</p></div>;
+  // --- IMPRESIÓN (VENTANA NUEVA) ---
+  const handlePrint = () => {
+    const isSymposium = activeTab === 'simposios';
+    const dataToPrint = isSymposium ? filteredSimposios : filteredSchedule; 
+    const title = isSymposium ? "RELACIÓN DE SIMPOSIOS Y PONENCIAS" : `AGENDA - ${CONGRESS_DATES.find(d=>d.value===selectedDate)?.label}`;
+
+    const printWindow = window.open('', '_blank', 'width=1100,height=800');
+    if (!printWindow) { alert("Permite ventanas emergentes."); return; }
+
+    let htmlContent = `
+      <html><head><title>Reporte IASPM-AL 2026</title>
+      <style>
+        body { font-family: 'Times New Roman', serif; padding: 30px; color: #000; font-size: 10pt; }
+        h1 { font-size: 14pt; text-align: center; margin: 0; text-transform: uppercase; }
+        .meta { text-align: center; font-size: 9pt; margin-bottom: 20px; border-bottom: 2px solid #000; pb: 10px; text-transform: uppercase; }
+        .badge { background: #eee; color: #000; padding: 2px 6px; font-weight: bold; font-size: 8pt; text-transform: uppercase; border: 1px solid #999; display: inline-block; }
+        
+        /* Tabla Agenda */
+        table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 10px; }
+        th, td { border: 1px solid #000; padding: 5px; vertical-align: top; }
+        th { background: #eee; font-weight: bold; text-align: left; }
+        .tc { text-align: center; font-weight: bold; width: 85px; }
+        .p-time { font-family: monospace; font-size: 8pt; background: #f0f0f0; padding: 0 4px; border: 1px solid #ddd; margin-right: 5px; font-weight: bold; }
+        
+        /* Lista Simposios */
+        .symp { margin-bottom: 20px; page-break-inside: avoid; border-bottom: 1px dashed #ccc; padding-bottom: 10px; }
+        .symp-name { font-weight: bold; font-size: 12pt; margin-left: 5px; }
+      </style>
+      </head><body>
+        <h1>XVIII Congreso IASPM-AL 2026</h1>
+        <div class="meta">San Cristóbal de las Casas • 28 Sep - 2 Oct 2026<br><b>${title}</b></div>`;
+
+    if (isSymposium) {
+      dataToPrint.forEach(s => {
+        htmlContent += `
+        <div class="symp">
+          <div><span class="badge">Simposio ${s.id}</span><span class="symp-name">${s.name}</span></div>
+          <div style="font-size:9pt; font-style:italic; margin:4px 0;">Coord: ${s.coordinators || 'N/A'}</div>
+          ${s.presentations?.map((p,i)=>`
+            <div style="margin-left:15px; margin-top:4px;">
+              <strong>${i+1}. ${p.title}</strong><br>
+              ${p.start_time ? `<span class="p-time">${p.start_time.slice(0,5)} - ${p.end_time?.slice(0,5)}</span>` : ''}
+              <span style="font-size:9pt; text-transform:uppercase;">${p.authors}</span>
+            </div>`).join('') || '<i style="margin-left:15px">Sin ponencias</i>'}
+        </div>`;
+      });
+    } else {
+      if(dataToPrint.length === 0) htmlContent += `<p style="text-align:center">No hay actividades para este día.</p>`;
+      else {
+        htmlContent += `<table><thead><tr><th>HORA</th><th>ACTIVIDAD</th><th>SEDE</th></tr></thead><tbody>`;
+        dataToPrint.sort((a,b)=>(a.start_time||'').localeCompare(b.start_time||'')).forEach(ev => {
+          htmlContent += `<tr>
+            <td class="tc">${ev.start_time?.slice(0,5)}<br>-<br>${ev.end_time?.slice(0,5)}</td>
+            <td>
+              ${ev.symposiums ? `<span class="badge">Simposio ${ev.symposiums.id}</span>` : ''}
+              <div style="font-weight:bold; font-size:10pt; margin-top:3px;">${ev.name}</div>
+              <div style="font-style:italic; font-size:9pt; margin-bottom:6px;">${ev.symposiums?.name||''}</div>
+              ${ev.presentations?.length > 0 ? `<ul style="margin:0; padding-left:15px;">
+                ${ev.presentations.sort((a,b)=>(a.start_time||'').localeCompare(b.start_time||'')).map(p=>`
+                  <li style="margin-bottom:3px;">
+                    ${p.start_time ? `<span class="p-time">${p.start_time.slice(0,5)}-${p.end_time?.slice(0,5)}</span>` : ''}
+                    <b>"${p.title}"</b> - ${p.authors}
+                  </li>`).join('')}
+              </ul>`:''}
+            </td>
+            <td><b>${ev.rooms?.venues?.name||''}</b><br>${ev.rooms?.name||''}</td>
+          </tr>`;
+        });
+        htmlContent += `</tbody></table>`;
+      }
+    }
+    htmlContent += `<script>window.onload=function(){window.print();}</script></body></html>`;
+    printWindow.document.write(htmlContent); printWindow.document.close();
+  };
+
+  if (loading) return <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1e3a5f]"></div></div>;
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200 flex flex-col sm:flex-row gap-4 items-center justify-between sticky top-[135px] z-30 md:static">
-         <div className="relative w-full sm:max-w-md group">
-            <input type="text" placeholder={lang === 'es' ? "Buscar por simposio, autor o título..." : "Search by symposium, author or title..."} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#1e3a5f] focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-gray-400 text-gray-800" />
-            <Search className="absolute left-3.5 top-3.5 text-gray-400 group-focus-within:text-[#1e3a5f] transition-colors" size={18} />
-            {searchTerm && <button onClick={() => setSearchTerm('')} className="absolute right-3 top-3 text-gray-400 hover:text-red-500 transition-colors"><X size={18} /></button>}
+    <div className="max-w-7xl mx-auto px-2 py-2 animate-in fade-in duration-300">
+      
+      {/* CABECERA (SIN TÍTULO GIGANTE) */}
+      <div className="mb-2 flex flex-col md:flex-row justify-end items-center gap-2 bg-white p-2 rounded-lg border border-gray-100 shadow-sm">
+         <div className="mr-auto pl-2 hidden md:block text-xs font-bold text-gray-400 tracking-widest uppercase">
+            {activeTab === 'simposios' ? 'Listado General' : 'Agenda Diaria'}
          </div>
-         <div className="text-right hidden sm:block">
-            <p className="text-2xl font-black text-[#1e3a5f]">{filteredSimposios.length}</p>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Resultados</p>
-         </div>
+
+        <div className="flex items-center gap-1 w-full md:w-auto overflow-x-auto">
+          <button onClick={() => setActiveTab('simposios')} className={`flex-1 md:flex-none px-4 py-2 rounded-md text-[10px] font-black border whitespace-nowrap transition-all ${activeTab === 'simposios' ? 'bg-gray-100 text-[#1e3a5f] border-gray-300' : 'bg-white text-gray-400 border-transparent hover:bg-gray-50'}`}>
+            <List size={12} className="inline mr-2"/> SIMPOSIOS
+          </button>
+          <button onClick={() => setActiveTab('agenda')} className={`flex-1 md:flex-none px-4 py-2 rounded-md text-[10px] font-black border whitespace-nowrap transition-all ${activeTab === 'agenda' ? 'bg-gray-100 text-[#1e3a5f] border-gray-300' : 'bg-white text-gray-400 border-transparent hover:bg-gray-50'}`}>
+            <Calendar size={12} className="inline mr-2"/> AGENDA
+          </button>
+          <div className="w-px h-6 bg-gray-200 mx-2"></div>
+          <button onClick={handlePrint} className="px-4 py-2 bg-[#1e3a5f] text-white rounded-md text-[10px] font-black hover:bg-black shadow-sm flex items-center gap-2 whitespace-nowrap transition-all">
+            <Download size={12}/> IMPRIMIR
+          </button>
+        </div>
       </div>
 
-      <div className="space-y-4">
-        {filteredSimposios.length === 0 ? (
-           <div className="text-center py-12 opacity-60"><div className="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3"><Search className="w-8 h-8 text-gray-400" /></div><p className="text-gray-500 font-medium">No se encontraron resultados.</p></div>
-        ) : (
-          filteredSimposios.map((s) => (
-            <div key={s.id} id={`sympo-${s.id}`} className={`bg-white border rounded-xl overflow-hidden transition-all duration-300 ${openId === s.id ? 'border-[#1e3a5f] shadow-lg ring-1 ring-[#1e3a5f]/10' : 'border-gray-200 hover:border-orange-200'}`}>
-              <button onClick={() => handleToggle(s.id)} className="w-full text-left p-5 flex flex-col gap-3 group focus:outline-none">
-                <div className="flex justify-between items-start w-full">
-                  <div className="flex flex-wrap gap-2 items-center">
-                    <span className={`text-[10px] font-black px-2 py-1 rounded shadow-sm uppercase tracking-wider ${openId === s.id ? 'bg-[#1e3a5f] text-white' : 'bg-gray-100 text-gray-500'}`}>Simposio {s.id}</span>
-                    <span className="bg-blue-50 text-blue-700 text-[10px] font-bold px-2 py-1 rounded border border-blue-100 flex items-center gap-1"><FileText size={10} /> {s.presentations?.length || 0} Ponencias</span>
+      {/* --- VISTA: SIMPOSIOS --- */}
+      {activeTab === 'simposios' && (
+        <>
+          <div className="mb-2 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+            <input type="text" placeholder="Buscar simposio o autor..." className="w-full pl-9 pr-20 py-2 rounded-lg border border-gray-200 bg-white outline-none focus:border-[#1e3a5f] text-xs font-bold shadow-sm transition-all" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            {filteredSimposios.map((symp) => (
+              <div key={symp.id} id={`symp-${symp.id}`} className={`bg-white rounded-lg border transition-all duration-200 ${openId === symp.id ? 'border-[#1e3a5f] ring-1 ring-blue-50 shadow-md' : 'border-gray-100 shadow-sm'}`}>
+                <button onClick={() => toggleAccordion(symp.id)} className="w-full text-left p-3 flex items-center justify-between gap-3 hover:bg-gray-50/50 rounded-lg transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="bg-[#1e3a5f] text-white text-[8px] font-black px-1.5 py-0.5 rounded-sm uppercase">Simposio {symp.id}</span>
+                      <span className="bg-blue-50 text-blue-700 text-[8px] font-black px-1.5 py-0.5 rounded-sm uppercase">{symp.presentations?.length || 0} PONENCIAS</span>
+                    </div>
+                    <h3 className={`text-xs md:text-sm font-bold leading-tight ${openId === symp.id ? 'text-[#1e3a5f]' : 'text-gray-800'}`}>{symp.name}</h3>
+                    {symp.coordinators && <p className="text-[9px] font-medium text-gray-400 uppercase mt-1 truncate">COORD: {symp.coordinators}</p>}
                   </div>
-                  <ChevronDown className={`text-gray-400 transition-transform duration-300 ${openId === s.id ? 'rotate-180 text-[#1e3a5f]' : ''}`} />
-                </div>
-                <h3 className={`text-lg sm:text-xl font-bold leading-tight pr-4 ${openId === s.id ? 'text-[#1e3a5f]' : 'text-gray-800 group-hover:text-orange-600 transition-colors'}`}>{s.name}</h3>
-                <div className="flex items-start gap-2 pt-2 mt-1 border-t border-gray-50 w-full"><Users size={14} className="text-iaspm-orange mt-0.5 shrink-0" /><div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Coordinación</p><p className="text-sm font-medium text-gray-600">{s.coordinators || 'Pendiente'}</p></div></div>
-              </button>
-              {openId === s.id && (
-                <div className="p-5 bg-gray-50/50 border-t border-gray-100 animate-in slide-in-from-top-2 duration-200">
-                   <h4 className="text-[10px] font-black text-[#1e3a5f] uppercase tracking-widest mb-4 flex items-center gap-2"><div className="w-1 h-4 bg-iaspm-orange rounded-full"></div>Trabajos Aceptados {searchTerm && "(Filtrados)"}</h4>
-                   <div className="grid gap-3 grid-cols-1 lg:grid-cols-2">
-                     {s.presentations?.map((p, idx) => (
-                       <div key={p.id || idx} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow animate-in fade-in zoom-in-95 duration-300">
-                         <p className="font-bold text-gray-900 text-sm mb-2 leading-snug">{p.title}</p>
-                         <p className="text-xs text-gray-600 font-medium flex items-start gap-1.5 bg-gray-50 p-2 rounded-lg"><Users size={12} className="mt-0.5 shrink-0 text-iaspm-orange" /> <span className="uppercase tracking-wide text-[10px]">{p.authors}</span></p>
-                       </div>
-                     ))}
-                     {(!s.presentations || s.presentations.length === 0) && <p className="text-sm text-gray-400 italic col-span-2 text-center py-4">No hay resultados para tu búsqueda en este simposio.</p>}
-                   </div>
-                </div>
-              )}
+                  <ChevronDown size={16} className={`transition-transform duration-200 ${openId === symp.id ? 'rotate-180 text-[#1e3a5f]' : 'text-gray-300'}`} />
+                </button>
+                {openId === symp.id && (
+                  <div className="px-3 pb-3 animate-in fade-in slide-in-from-top-1">
+                    <div className="h-px bg-gray-100 mb-2" />
+                    <div className="grid grid-cols-1 gap-1.5">
+                      {symp.presentations.map((pres) => (
+                        <div key={pres.id} className="p-2.5 rounded border border-gray-100 bg-gray-50/30 hover:bg-white transition-all">
+                          <h4 className="font-bold text-gray-800 text-[11px] leading-snug mb-1">{pres.title}</h4>
+                          <p className="text-[9px] font-black uppercase text-gray-500 flex items-center gap-1"><Users size={10} className="text-[#1e3a5f]" /> {pres.authors}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* --- VISTA: AGENDA --- */}
+      {activeTab === 'agenda' && (
+        <>
+            {/* TABS DE FECHA */}
+            <div className="flex gap-2 overflow-x-auto pb-2 mb-1 no-scrollbar">
+                {CONGRESS_DATES.map((date) => (
+                    <button
+                        key={date.value}
+                        onClick={() => setSelectedDate(date.value)}
+                        className={`
+                            shrink-0 px-4 py-2 rounded-lg text-xs font-black transition-all border
+                            ${selectedDate === date.value 
+                                ? 'bg-[#1e3a5f] text-white border-[#1e3a5f] shadow-md' 
+                                : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                            }
+                        `}
+                    >
+                        {date.label}
+                    </button>
+                ))}
             </div>
-          ))
-        )}
-      </div>
+
+            <div className="space-y-3 min-h-[200px]">
+            {filteredSchedule.length > 0 ? filteredSchedule.map(ev => (
+                <div 
+                    key={ev.id} 
+                    onClick={() => setSelectedSession(ev)}
+                    className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:border-[#1e3a5f] transition-all cursor-pointer flex overflow-hidden group"
+                >
+                <div className="bg-gray-50 p-3 w-20 flex flex-col items-center justify-center border-r border-gray-100 group-hover:bg-blue-50/30 transition-colors shrink-0">
+                    <span className="text-sm font-black text-[#1e3a5f]">{ev.start_time?.slice(0,5)}</span>
+                    <div className="h-0.5 w-6 bg-gray-200 my-1"></div>
+                    <span className="text-xs font-bold text-gray-400">{ev.end_time?.slice(0,5)}</span>
+                </div>
+                
+                <div className="p-3 flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                        {ev.symposiums ? (
+                        <span className="bg-[#1e3a5f] text-white text-[8px] font-black px-1.5 py-0.5 rounded uppercase">Simposio {ev.symposiums.id}</span>
+                        ) : (
+                        <span className="bg-gray-200 text-gray-600 text-[8px] font-black px-1.5 py-0.5 rounded uppercase">GENERAL</span>
+                        )}
+                        <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest truncate">{ev.name}</span>
+                    </div>
+                    
+                    <h3 className="text-sm font-bold text-gray-900 leading-tight mb-2 line-clamp-2">
+                        {ev.symposiums?.name || ev.name}
+                    </h3>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex items-center gap-1 text-gray-500 bg-gray-50 px-2 py-1 rounded border border-gray-100">
+                        <MapPin size={10} className="text-orange-500"/>
+                        <span className="text-[9px] font-bold uppercase truncate max-w-[150px]">{ev.rooms?.venues?.name}</span>
+                        </div>
+                        {ev.presentations?.length > 0 && (
+                        <div className="flex items-center gap-1 text-gray-500 ml-2">
+                            <FileText size={10} />
+                            <span className="text-[9px] font-bold">{ev.presentations.length} Ponencias</span>
+                        </div>
+                        )}
+                    </div>
+                </div>
+                </div>
+            )) : (
+                <div className="flex flex-col items-center justify-center py-10 bg-white rounded-xl border border-dashed border-gray-200 text-gray-400">
+                    <Calendar size={32} className="mb-2 opacity-20"/>
+                    <p className="text-sm font-bold">No hay actividades programadas para este día.</p>
+                    <p className="text-xs">Intenta seleccionar otra fecha en las pestañas de arriba.</p>
+                </div>
+            )}
+            </div>
+        </>
+      )}
+
+      {/* --- MODAL (FICHA TÉCNICA) --- */}
+      {selectedSession && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-4 bg-[#1e3a5f]/60 backdrop-blur-sm animate-in fade-in duration-200">
+          
+          <div className="bg-white w-full h-full md:h-auto md:max-h-[90vh] md:max-w-3xl md:rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-200">
+            
+            {/* Cabecera */}
+            <div className="bg-white p-4 border-b border-gray-100 shrink-0 relative flex justify-between items-start">
+               <div className="pr-10">
+                  {selectedSession.symposiums && (
+                    <span className="inline-block bg-orange-500 text-white text-[9px] font-black px-2 py-0.5 rounded mb-2 uppercase">
+                       Simposio {selectedSession.symposiums.id}
+                    </span>
+                  )}
+                  <h2 className="text-lg font-black text-[#1e3a5f] leading-tight mb-1 line-clamp-2">
+                     {selectedSession.symposiums?.name || selectedSession.name}
+                  </h2>
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">{selectedSession.name}</p>
+                  
+                  <div className="flex flex-wrap gap-2 mt-3">
+                     <div className="flex items-center gap-1.5 text-xs font-bold text-gray-600 bg-gray-50 px-2 py-1 rounded border border-gray-100">
+                        <Clock size={12} className="text-[#1e3a5f]"/>
+                        {selectedSession.start_time?.slice(0,5)} - {selectedSession.end_time?.slice(0,5)}
+                     </div>
+                     <div className="flex items-center gap-1.5 text-xs font-bold text-gray-600 bg-gray-50 px-2 py-1 rounded border border-gray-100">
+                        <MapPin size={12} className="text-[#1e3a5f]"/>
+                        {selectedSession.rooms?.venues?.name}
+                     </div>
+                  </div>
+               </div>
+
+               <button onClick={() => setSelectedSession(null)} className="p-3 bg-gray-100 rounded-full text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors active:scale-90">
+                  <X size={24} />
+               </button>
+            </div>
+
+            {/* Cuerpo */}
+            <div className="flex-1 overflow-y-auto p-4 bg-gray-50/50 pb-20 md:pb-4">
+               {selectedSession.presentations?.length > 0 ? (
+                 <div className="space-y-3">
+                    {selectedSession.presentations.sort((a,b)=>(a.start_time||'').localeCompare(b.start_time||'')).map((pres, idx) => (
+                       <details key={pres.id} className="group bg-white rounded-xl border border-gray-200 overflow-hidden open:ring-2 open:ring-blue-100 transition-all">
+                          <summary className="p-4 cursor-pointer list-none flex gap-3 items-start hover:bg-gray-50 transition-colors select-none">
+                             <div className="bg-blue-50 text-blue-700 font-mono text-[10px] font-bold px-2 py-1 rounded border border-blue-100 shrink-0 mt-0.5">
+                                {pres.start_time ? pres.start_time.slice(0,5) : `#${idx+1}`}
+                             </div>
+                             <div className="flex-1">
+                                <h4 className="text-sm font-bold text-gray-900 leading-snug group-open:text-[#1e3a5f] transition-colors">{pres.title}</h4>
+                                <div className="flex items-center gap-2 mt-1.5">
+                                   <User size={12} className="text-gray-400"/>
+                                   <span className="text-xs font-bold text-gray-600 uppercase">{pres.authors}</span>
+                                </div>
+                             </div>
+                             <div className="text-gray-400 group-open:rotate-180 transition-transform mt-1">
+                                <ChevronDown size={20}/>
+                             </div>
+                          </summary>
+                          
+                          <div className="px-4 pb-4 pt-0">
+                             <div className="h-px w-full bg-gray-100 mb-4"></div>
+                             {pres.author_affiliation && (
+                                <div className="mb-3 flex items-start gap-2">
+                                   <div className="mt-1.5 w-1 h-1 bg-[#1e3a5f] rounded-full shrink-0"></div>
+                                   <p className="text-xs text-gray-500 italic"><span className="font-bold text-gray-700 not-italic">Filiación: </span>{pres.author_affiliation}</p>
+                                </div>
+                             )}
+                             {pres.abstract_text ? (
+                                <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 text-xs text-gray-700 leading-relaxed text-justify">
+                                   <p className="font-black text-[10px] text-gray-400 uppercase mb-1">Resumen</p>
+                                   {pres.abstract_text}
+                                </div>
+                             ) : <p className="text-xs text-gray-400 italic">Sin resumen disponible.</p>}
+                          </div>
+                       </details>
+                    ))}
+                 </div>
+               ) : (
+                 <div className="flex flex-col items-center justify-center h-40 text-gray-400">
+                    <FileText size={40} className="mb-2 opacity-20"/>
+                    <p className="text-sm italic">No hay ponencias registradas.</p>
+                 </div>
+               )}
+            </div>
+            
+            <div className="p-4 border-t border-gray-100 bg-white md:hidden absolute bottom-0 left-0 right-0">
+              <button onClick={() => setSelectedSession(null)} className="w-full py-3 bg-gray-100 text-gray-700 font-black rounded-xl hover:bg-gray-200 active:scale-95 transition-all text-sm uppercase">
+                CERRAR VENTANA
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
