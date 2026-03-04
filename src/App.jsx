@@ -1,7 +1,7 @@
 // src/App.jsx
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from 'sonner'; 
+import { Toaster } from 'sonner';
 import { Ticket } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
 
@@ -21,7 +21,7 @@ import HomeLanding from './components/pages/HomeLanding';
 import CallForParticipation from './components/pages/CallForParticipation';
 import ScientificCommittee from './components/pages/ScientificCommittee';
 import AcceptedFormats from './components/pages/AcceptedFormats';
-import Program from './components/pages/Program'; 
+import Program from './components/pages/Program';
 import RegistrationForm from './components/pages/RegistrationForm';
 import VenuesPage from './components/pages/VenuesPage';
 
@@ -147,10 +147,9 @@ const MainLayout = ({ lang, setLang }) => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  <tr className="bg-white hover:bg-gray-50 transition"><td className="px-6 py-5 font-bold text-gray-700">{lang === 'es' ? 'Investigador/a del sur global' : 'Pesquisador/a do sul global'}</td><td className="px-6 py-5 text-center font-black text-[#1e3a5f] text-lg">$800</td><td className="px-6 py-5 text-center font-bold text-gray-400">$1,000</td></tr>
-                  <tr className="bg-white hover:bg-gray-50 transition"><td className="px-6 py-5 font-bold text-gray-700">{lang === 'es' ? 'Investigador/a del norte global' : 'Pesquisador/a do norte global'}</td><td className="px-6 py-5 text-center font-black text-[#1e3a5f] text-lg">$1,300</td><td className="px-6 py-5 text-center font-bold text-gray-400">$1,500</td></tr>
-                  <tr className="bg-white hover:bg-gray-50 transition"><td className="px-6 py-5 font-bold text-gray-700">{lang === 'es' ? 'Investigador/a de institución convocante' : 'Pesquisador/a de instituição convocante'}</td><td className="px-6 py-5 text-center font-black text-[#1e3a5f] text-lg">$400</td><td className="px-6 py-5 text-center font-bold text-gray-400">$600</td></tr>
-                  <tr className="bg-white hover:bg-gray-50 transition"><td className="px-6 py-5 font-bold text-gray-700">{lang === 'es' ? 'Asistente / Estudiante' : 'Assistente / Estudante'}</td><td className="px-6 py-5 text-center font-black text-[#1e3a5f] text-lg">$200</td><td className="px-6 py-5 text-center font-bold text-gray-400">$300</td></tr>
+                  <tr className="bg-white hover:bg-gray-50 transition"><td className="px-6 py-5 font-bold text-gray-700">{lang === 'es' ? 'Sur global' : 'Sul global'}</td><td className="px-6 py-5 text-center font-black text-[#1e3a5f] text-lg">$800</td><td className="px-6 py-5 text-center font-bold text-gray-400">$1,000</td></tr>
+                  <tr className="bg-white hover:bg-gray-50 transition"><td className="px-6 py-5 font-bold text-gray-700">{lang === 'es' ? 'Norte global' : 'Norte global'}</td><td className="px-6 py-5 text-center font-black text-[#1e3a5f] text-lg">$1,300</td><td className="px-6 py-5 text-center font-bold text-gray-400">$1,500</td></tr>
+                  <tr className="bg-white hover:bg-gray-50 transition"><td className="px-6 py-5 font-bold text-gray-700">{lang === 'es' ? 'Asistente' : 'Assistente'}</td><td className="px-6 py-5 text-center font-black text-[#1e3a5f] text-lg">$200</td><td className="px-6 py-5 text-center font-bold text-gray-400">$300</td></tr>
                 </tbody>
               </table>
             </div>
@@ -183,7 +182,7 @@ const MainLayout = ({ lang, setLang }) => {
 
       case 'comite-academico': return <div className="space-y-4"><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">Lizette Alegre</p><p className="text-sm text-gray-600">Facultad de Música, UNAM, México</p></div><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">Natalia Bieletto Bueno</p><p className="text-sm text-gray-600">Centro de Investigación en Artes y Humanidades, Universidad Mayor, Chile</p></div></div></div>;
       case 'comite-organizador': return <div className="space-y-4"><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">María Luisa de la Garza Chávez</p><p className="text-sm text-gray-600">CESMECA-UNICACH</p></div><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">Roberto Campos Velázquez</p><p className="text-sm text-gray-600">CIMSUR-UNAM</p></div></div></div>;
-      
+
       case 'programa': return <Program lang={lang} />;
       case 'sedes': return <VenuesPage lang={lang} />;
 
@@ -224,16 +223,16 @@ const MainLayout = ({ lang, setLang }) => {
             lang={lang}
           />
 
-          <section className="bg-white rounded-2xl shadow-xl min-h-[600px] relative overflow-hidden transition-all duration-300">      
+          <section className="bg-white rounded-2xl shadow-xl min-h-[600px] relative overflow-hidden transition-all duration-300">
 
             <div className="absolute inset-0 z-0 opacity-[0.02] bg-[url('/images/Marimba_Watermark.png')] bg-cover bg-center bg-no-repeat pointer-events-none"></div>
 
             <div className="relative z-10 flex flex-col h-full">
 
                 {currentPage !== 'home' && (
-                    <div className="bg-white/95 backdrop-blur-sm px-6 sm:px-8 py-6 border-b border-gray-100 sticky top-0 z-20">        
+                    <div className="bg-white/95 backdrop-blur-sm px-6 sm:px-8 py-6 border-b border-gray-100 sticky top-0 z-20">
 
-                      <h2 className="text-[#1e3a5f] text-xl sm:text-2xl font-black font-sans tracking-tight uppercase italic">        
+                      <h2 className="text-[#1e3a5f] text-xl sm:text-2xl font-black font-sans tracking-tight uppercase italic">
                         {getPageTitle()}
                       </h2>
                       <div className="h-1.5 w-16 bg-iaspm-orange mt-2 rounded-full"></div>
@@ -306,7 +305,7 @@ const App = () => {
           }
         }}
       />
-      
+
       <Routes>
         <Route path="/" element={<MainLayout lang={lang} setLang={setLang} />} />
         {/* RUTA DE SCHEDULEVIEW ELIMINADA */}
