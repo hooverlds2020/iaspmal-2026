@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
-import { Ticket } from 'lucide-react';
+import { Ticket, ArrowLeft, Clock, Library, Info } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
 
 // Pages - Tools
@@ -24,6 +24,7 @@ import AcceptedFormats from './components/pages/AcceptedFormats';
 import Program from './components/pages/Program';
 import RegistrationForm from './components/pages/RegistrationForm';
 import VenuesPage from './components/pages/VenuesPage';
+import Alojamiento from './components/pages/Alojamiento'; // Componente Importado Correctamente
 
 // Admin Pages
 import Login from './pages/Login';
@@ -135,28 +136,134 @@ const MainLayout = ({ lang, setLang }) => {
       case 'formatos': return <AcceptedFormats lang={lang} />;
       case 'conferenciantes': return <div className="space-y-4 text-gray-600"><p>{lang === 'es' ? 'Información próximamente.' : 'Informação em breve.'}</p></div>;
 
-      case 'cuotas': return (
+      // --- PESTAÑA: INSCRIPCIÓN ---
+      case 'cuotas': 
+        if (showRegistration) {
+          return (
+            <div className="animate-in fade-in slide-in-from-bottom-8 duration-500 max-w-3xl mx-auto">
+              <button 
+                onClick={() => setShowRegistration(false)} 
+                className="mb-6 flex items-center gap-2 text-gray-500 hover:text-[#1e3a5f] font-bold text-sm transition-colors group"
+              >
+                <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" /> 
+                {lang === 'es' ? 'Volver a información de costos' : 'Voltar para informações de custos'}
+              </button>
+              <RegistrationForm
+                  lang={lang}
+                  onClose={() => setShowRegistration(false)}
+              />
+            </div>
+          );
+        }
+
+        return (
           <div className="space-y-8 animate-in fade-in duration-300">
             <div className="overflow-x-auto shadow-sm rounded-xl border border-gray-200 bg-white">
-              <table className="w-full text-sm text-left min-w-[600px]">
+              <table className="w-full text-sm text-left min-w-[800px]">
                 <thead className="bg-[#1e3a5f] text-white uppercase text-xs tracking-wider">
                   <tr>
                     <th className="px-6 py-4">{lang === 'es' ? 'Categoría' : 'Categoria'}</th>
-                    <th className="px-6 py-4 text-center">{lang === 'es' ? 'Hasta 31/05/26' : 'Até 31/05/26'}</th>
-                    <th className="px-6 py-4 text-center">{lang === 'es' ? 'Desde 01/06/26' : 'Desde 01/06/26'}</th>
+                    <th className="px-6 py-4 text-center">{lang === 'es' ? 'Hasta el 31 de mayo' : 'Até 31 de maio'}</th>
+                    <th className="px-6 py-4 text-center">{lang === 'es' ? 'Hasta el 31 de julio' : 'Até 31 de julho'}</th>
+                    <th className="px-6 py-4 text-center">{lang === 'es' ? 'A partir del 1º de agos.' : 'A partir de 1º de agos.'}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  <tr className="bg-white hover:bg-gray-50 transition"><td className="px-6 py-5 font-bold text-gray-700">{lang === 'es' ? 'Sur global' : 'Sul global'}</td><td className="px-6 py-5 text-center font-black text-[#1e3a5f] text-lg">$800</td><td className="px-6 py-5 text-center font-bold text-gray-400">$1,000</td></tr>
-                  <tr className="bg-white hover:bg-gray-50 transition"><td className="px-6 py-5 font-bold text-gray-700">{lang === 'es' ? 'Norte global' : 'Norte global'}</td><td className="px-6 py-5 text-center font-black text-[#1e3a5f] text-lg">$1,300</td><td className="px-6 py-5 text-center font-bold text-gray-400">$1,500</td></tr>
-                  <tr className="bg-white hover:bg-gray-50 transition"><td className="px-6 py-5 font-bold text-gray-700">{lang === 'es' ? 'Asistente' : 'Assistente'}</td><td className="px-6 py-5 text-center font-black text-[#1e3a5f] text-lg">$200</td><td className="px-6 py-5 text-center font-bold text-gray-400">$300</td></tr>
+                  <tr className="bg-white hover:bg-gray-50 transition">
+                    <td className="px-6 py-5 font-bold text-gray-700">{lang === 'es' ? 'Del Sur global' : 'Do Sul global'}</td>
+                    <td className="px-6 py-5 text-center">
+                      <span className="font-black text-[#1e3a5f] block text-base">800 MxP</span>
+                      <span className="text-xs text-gray-500 font-bold">50 Dls</span>
+                    </td>
+                    <td className="px-6 py-5 text-center">
+                      <span className="font-black text-[#1e3a5f] block text-base">1000 MxP</span>
+                      <span className="text-xs text-gray-500 font-bold">60 Dls</span>
+                    </td>
+                    <td className="px-6 py-5 text-center">
+                      <span className="font-black text-gray-400 block text-base">1200 MxP</span>
+                      <span className="text-xs text-gray-400 font-bold">70 Dls</span>
+                    </td>
+                  </tr>
+                  <tr className="bg-white hover:bg-gray-50 transition">
+                    <td className="px-6 py-5 font-bold text-gray-700">{lang === 'es' ? 'Del Norte global' : 'Do Norte global'}</td>
+                    <td className="px-6 py-5 text-center">
+                      <span className="font-black text-[#1e3a5f] block text-base">1300 MxP</span>
+                      <span className="text-xs text-gray-500 font-bold">75 Dls / 65 €</span>
+                    </td>
+                    <td className="px-6 py-5 text-center">
+                      <span className="font-black text-[#1e3a5f] block text-base">1500 MxP</span>
+                      <span className="text-xs text-gray-500 font-bold">90 Dls / 75 €</span>
+                    </td>
+                    <td className="px-6 py-5 text-center">
+                      <span className="font-black text-gray-400 block text-base">1700 MxP</span>
+                      <span className="text-xs text-gray-400 font-bold">100 Dls / 85 €</span>
+                    </td>
+                  </tr>
+                  <tr className="bg-white hover:bg-gray-50 transition">
+                    <td className="px-6 py-5 font-bold text-gray-700">
+                      {lang === 'es' ? 'Asistente' : 'Assistente'}<br/>
+                      <span className="text-xs text-gray-500 font-normal">{lang === 'es' ? '(si desea constancia)' : '(se desejar certificado)'}</span>
+                    </td>
+                    <td className="px-6 py-5 text-center">
+                      <span className="font-black text-[#1e3a5f] block text-base">500 MxP</span>
+                      <span className="text-xs text-gray-500 font-bold">30 Dls / 25 €</span>
+                    </td>
+                    <td className="px-6 py-5 text-center">
+                      <span className="font-black text-[#1e3a5f] block text-base">600 MxP</span>
+                      <span className="text-xs text-gray-500 font-bold">35 Dls / 30 €</span>
+                    </td>
+                    <td className="px-6 py-5 text-center">
+                      <span className="font-black text-gray-400 block text-base">700 MxP</span>
+                      <span className="text-xs text-gray-400 font-bold">40 Dls / 35 €</span>
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
 
-            <div className="flex justify-center py-6">
+            <div className="bg-white border border-blue-100 rounded-2xl p-6 md:p-8 shadow-sm space-y-6 text-sm md:text-base text-gray-700 leading-relaxed">
+              <p>
+                {lang === 'es' 
+                  ? 'El pago de la cuota deberá hacerse mediante transferencia. Favor de indicar, en el "Concepto", únicamente su nombre (tan completo como quepa). Después, hay que volver a esta página y formalizar la inscripción desde el botón de abajo ("Registrarse Ahora"). Tengan a la mano el comprobante de pago, pues habrá que adjuntarlo.'
+                  : 'O pagamento da taxa deve ser feito por transferência. Favor indicar, no "Conceito", apenas o seu nome (o mais completo possível). Depois, é necessário voltar a esta página e formalizar a inscrição pelo botão abaixo ("Inscrever-se Agora"). Tenha em mãos o comprovante de pagamento, pois será necessário anexá-lo.'}
+              </p>
+              
+              <div className="bg-blue-50/50 p-5 rounded-xl border border-blue-100">
+                <p className="font-black text-[#1e3a5f] mb-4">
+                  {lang === 'es' ? 'Las cuentas para transferencia entre bancos mexicanos son las siguientes:' : 'As contas para transferência entre bancos mexicanos são as seguintes:'}
+                </p>
+                <ul className="space-y-4">
+                  <li className="flex flex-col md:flex-row md:items-center gap-3">
+                    <span className="bg-[#004481] text-white px-3 py-1.5 rounded text-xs font-black tracking-wider inline-block w-fit">BANCOMER</span>
+                    <span><strong>Clave Interbancaria (CLABE):</strong> 0122 2500 1537 850171, a nombre de Ma. Teresa Chávez Troncoso</span>
+                  </li>
+                  <li className="flex flex-col md:flex-row md:items-center gap-3">
+                    <span className="bg-[#ec0000] text-white px-3 py-1.5 rounded text-xs font-black tracking-wider inline-block w-fit">SANTANDER</span>
+                    <span><strong>Clave Interbancaria (CLABE):</strong> 0141 3056 5557 027351, a nombre de Ma Luisa de la Garza Chávez</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="bg-amber-50 text-amber-900 p-5 rounded-xl border border-amber-200 flex items-start gap-3">
+                <div className="text-amber-500 mt-0.5">ℹ️</div>
+                <p>
+                  {lang === 'es' 
+                    ? <span>Para pagos desde el extranjero, favor de escribir al correo <strong className="text-amber-700">iaspm.al.2026.inscripcion@gmail.com</strong> para conocer opciones. No se olvide de indicar su nombre completo y su lugar de residencia.</span>
+                    : <span>Para pagamentos do exterior, favor escrever para <strong className="text-amber-700">iaspm.al.2026.inscripcion@gmail.com</strong> para conhecer as opções. Não se esqueça de indicar seu nome completo e local de residência.</span>}
+                </p>
+              </div>
+              
+              <p className="text-xs text-gray-500 italic text-center font-medium mt-4">
+                {lang === 'es' ? 'En caso de requerirlo, se emitirá un recibo de pago. No se emitirán facturas.' : 'Se necessário, será emitido um recibo. Não serão emitidas notas fiscais.'}
+              </p>
+            </div>
+
+            <div className="flex justify-center py-4">
               <button
-                onClick={() => setShowRegistration(true)}
+                onClick={() => {
+                  setShowRegistration(true);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
                 className="group relative bg-[#1e3a5f] hover:bg-black text-white font-bold py-4 px-10 rounded-full text-lg transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1 flex items-center gap-3 overflow-hidden"
               >
                 <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
@@ -164,19 +271,63 @@ const MainLayout = ({ lang, setLang }) => {
                 <span className="tracking-wide uppercase text-sm font-black">{lang === 'es' ? 'Registrarse Ahora' : 'Inscrever-se Agora'}</span>
               </button>
             </div>
+          </div>
+        );
 
-            {showRegistration && (
-              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
-                <div className="absolute inset-0 bg-[#1e3a5f]/80 backdrop-blur-sm transition-opacity" onClick={() => setShowRegistration(false)}></div>
-                <div className="relative w-full max-w-xl z-10 animate-in zoom-in-95 duration-200">
-                    <RegistrationForm
-                        lang={lang}
-                        onClose={() => setShowRegistration(false)}
-                        onSuccess={() => setShowRegistration(false)}
-                    />
+      // --- PESTAÑA: PRESENTACIONES DE LIBROS ---
+      case 'presentaciones-libros': 
+        return (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-100">
+              <p className="text-base md:text-lg text-gray-700 leading-relaxed mb-8">
+                {lang === 'es'
+                  ? 'El XVII Congreso invita a exponer la producción bibliográfica de los socios de IASPM-AL y a presentar las obras que hayan sido publicadas de 2023 a la fecha.'
+                  : 'O XVII Congresso convida a expor a produção bibliográfica dos sócios da IASPM-AL e a apresentar as obras que tenham sido publicadas de 2023 até a presente data.'}
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="flex items-start gap-4 p-5 bg-blue-50/50 rounded-xl border border-blue-100">
+                  <div className="bg-[#1e3a5f] text-white p-3 rounded-lg shrink-0">
+                    <Clock size={24} />
+                  </div>
+                  <div>
+                    <h4 className="font-black text-[#1e3a5f] uppercase tracking-wide text-sm mb-1.5">
+                      {lang === 'es' ? 'Duración y Formato' : 'Duração e Formato'}
+                    </h4>
+                    <p className="text-gray-600 text-sm">
+                      {lang === 'es'
+                        ? 'Las presentaciones de libros durarán hasta 30 minutos, con un máximo de tres presentadores.'
+                        : 'As apresentações de livros durarão até 30 minutos, com um máximo de três apresentadores.'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4 p-5 bg-emerald-50/50 rounded-xl border border-emerald-100">
+                  <div className="bg-emerald-600 text-white p-3 rounded-lg shrink-0">
+                    <Library size={24} />
+                  </div>
+                  <div>
+                    <h4 className="font-black text-emerald-800 uppercase tracking-wide text-sm mb-1.5">
+                      {lang === 'es' ? 'Venta y Donación' : 'Venda e Doação'}
+                    </h4>
+                    <p className="text-gray-600 text-sm">
+                      {lang === 'es'
+                        ? 'Se podrán vender los libros, a cambio de la donación de un ejemplar para consulta pública en biblioteca.'
+                        : 'Os livros poderão ser vendidos, em troca da doação de um exemplar para consulta pública na biblioteca.'}
+                    </p>
+                  </div>
                 </div>
               </div>
-            )}
+
+              <div className="mt-8 flex items-start gap-4 p-5 md:p-6 bg-amber-50 rounded-xl border border-amber-200">
+                <Info className="text-amber-500 shrink-0 mt-0.5" size={24} />
+                <p className="text-sm md:text-base text-amber-900 leading-relaxed font-medium">
+                  {lang === 'es'
+                    ? 'Se agradecerá la organización de presentaciones de más de un libro, ya que se vislumbra una demanda alta de estos espacios. No hay preferencias sobre el eje de vinculación de las publicaciones (tema, país, grupo de investigación, editorial...).'
+                    : 'Agradece-se a organização de apresentações de mais de um livro, uma vez que se vislumbra uma alta demanda por esses espaços. Não há preferências sobre o eixo de vinculação das publicações (tema, país, grupo de pesquisa, editora...).'}
+                </p>
+              </div>
+            </div>
           </div>
         );
 
@@ -185,6 +336,9 @@ const MainLayout = ({ lang, setLang }) => {
 
       case 'programa': return <Program lang={lang} />;
       case 'sedes': return <VenuesPage lang={lang} />;
+      
+      // --- LA LÍNEA MÁGICA QUE FALTABA ---
+      case 'alojamiento': return <Alojamiento lang={lang} />;
 
       default: return <div className="p-8 text-center text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-300">{lang === 'es' ? 'Contenido en preparación.' : 'Conteúdo em preparação.'}</div>;
     }
@@ -231,7 +385,6 @@ const MainLayout = ({ lang, setLang }) => {
 
                 {currentPage !== 'home' && (
                     <div className="bg-white/95 backdrop-blur-sm px-6 sm:px-8 py-6 border-b border-gray-100 sticky top-0 z-20">
-
                       <h2 className="text-[#1e3a5f] text-xl sm:text-2xl font-black font-sans tracking-tight uppercase italic">
                         {getPageTitle()}
                       </h2>
@@ -308,7 +461,6 @@ const App = () => {
 
       <Routes>
         <Route path="/" element={<MainLayout lang={lang} setLang={setLang} />} />
-        {/* RUTA DE SCHEDULEVIEW ELIMINADA */}
         <Route path="/asistencia" element={<AttendanceCheck />} />
         <Route path="/constancias" element={<CertificateDownload />} />
         <Route path="/staff/attendance" element={<StaffAttendance />} />

@@ -2,10 +2,10 @@
 import React, { useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { sendRegistrationConfirmation } from '../../lib/resendClient';
-import { Upload, Check, Search, X, FileText, AlertCircle, UserPlus } from 'lucide-react';
+import { Upload, Check, Search, X, FileText, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
-const RegistrationForm = ({ lang, onClose, onSuccess }) => {
+const RegistrationForm = ({ lang, onClose }) => {
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
@@ -24,13 +24,11 @@ const RegistrationForm = ({ lang, onClose, onSuccess }) => {
   const [success, setSuccess] = useState(false);
 
   const categories = [
-    { id: 'sur_global', es: 'Investigador/a del sur global', pt: 'Pesquisador/a do sul global' },
-    { id: 'norte_global', es: 'Investigador/a del norte global', pt: 'Pesquisador/a do norte global' },
-    { id: 'institucion_convocante', es: 'Investigador/a de institución convocante', pt: 'Pesquisador/a de instituição convocante' },  
-    { id: 'asistente', es: 'Asistente General / Estudiante', pt: 'Assistente Geral / Estudante' }
+    { id: 'sur_global', es: 'Del Sur global', pt: 'Do Sul global' },
+    { id: 'norte_global', es: 'Del Norte global', pt: 'Do Norte global' },
+    { id: 'asistente', es: 'Asistente (si desea constancia)', pt: 'Assistente (se desejar certificado)' }
   ];
 
-  // --- 1. AJUSTE DE ALERTA INTELIGENTE ---
   const handleSearch = async (e) => {
     if (e) e.preventDefault();
     if (searchTerm.length < 3) return toast.warning(lang === 'es' ? 'Escribe al menos 3 letras' : 'Digite pelo menos 3 letras');      
@@ -50,7 +48,6 @@ const RegistrationForm = ({ lang, onClose, onSuccess }) => {
       setSuggestions(data || []);
 
       if (!data || data.length === 0) {
-        // Alerta personalizada y accionable con Sonner
         toast.warning(
           lang === 'es' 
             ? 'No encontramos coincidencias.' 
@@ -59,12 +56,11 @@ const RegistrationForm = ({ lang, onClose, onSuccess }) => {
             description: lang === 'es' 
               ? 'Si no eres ponente, puedes registrarte directamente llenando tus datos abajo.' 
               : 'Se você não é palestrante, pode se registrar diretamente preenchendo seus dados abaixo.',
-            duration: 6000, // Dura un poco más para que lean
+            duration: 6000,
             icon: <AlertCircle className="text-orange-500" />,
             action: {
               label: lang === 'es' ? 'Entendido' : 'Entendido',
               onClick: () => {
-                // Opcional: Podrías enfocar el formulario aquí si quisieras
                 document.getElementById('fullname-input')?.focus();
               }
             }
@@ -115,15 +111,13 @@ const RegistrationForm = ({ lang, onClose, onSuccess }) => {
         }]);
       }
 
-      // --- 2. CORRECCIÓN SUBIDA DE ARCHIVOS ---
-      // Normalizamos la extensión a minúsculas para evitar problemas (ej. .JPG -> .jpg)
       const fileExt = file.name.split('.').pop().toLowerCase();
       const filePath = `payments/${reg.id}.${fileExt}`;
       
       const { error: uploadError } = await supabase.storage
         .from('registrations')
         .upload(filePath, file, {
-          upsert: true // Sobrescribir si existe para evitar error
+          upsert: true 
         });
 
       if (uploadError) throw uploadError;
@@ -134,7 +128,8 @@ const RegistrationForm = ({ lang, onClose, onSuccess }) => {
       await sendRegistrationConfirmation(formData.email, formData.full_name).catch(console.error);
       
       setSuccess(true);
-      if (onSuccess) setTimeout(() => onSuccess(), 2000);
+      // Hacemos scroll suave hacia arriba para que vea su trofeo de éxito
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       
     } catch (err) {
       console.error(err);
@@ -144,85 +139,90 @@ const RegistrationForm = ({ lang, onClose, onSuccess }) => {
     }
   };
 
+  // --- EL EFECTO "SWEET ALERT 2" INLINE ---
   if (success) {
     return (
-      <div className="p-10 text-center animate-in zoom-in h-full flex flex-col items-center justify-center bg-white rounded-2xl shadow-2xl">
-        <div className="bg-emerald-100 p-4 rounded-full mb-6 animate-bounce">
-            <Check className="text-emerald-600 size-12" />
+      <div className="py-16 px-4 sm:px-10 text-center animate-in zoom-in-95 duration-500 bg-white rounded-[2rem] shadow-xl border border-gray-100 flex flex-col items-center max-w-2xl mx-auto">
+        <div className="relative mb-8">
+            <div className="absolute inset-0 bg-emerald-200 rounded-full animate-ping opacity-20"></div>
+            <div className="bg-emerald-100 p-6 rounded-full relative z-10">
+                <Check className="text-emerald-500 size-16" strokeWidth={3} />
+            </div>
         </div>
-        <h3 className="text-2xl font-black text-[#1e3a5f] uppercase italic mb-2">¡Registro Exitoso!</h3>
-        <p className="text-gray-600 text-sm mb-8 max-w-xs mx-auto">Hemos recibido tu información. Te enviaremos un correo de confirmación pronto.</p>
-        <button onClick={onClose} className="px-8 bg-[#1e3a5f] hover:bg-black text-white py-3 rounded-xl font-bold uppercase text-xs transition-colors shadow-lg">
-            Cerrar Ventana
+        <h3 className="text-3xl font-black text-gray-800 mb-3 tracking-tight">
+            {lang === 'es' ? '¡Registro Exitoso!' : 'Registro Bem-sucedido!'}
+        </h3>
+        <p className="text-gray-500 text-base mb-10 max-w-sm mx-auto leading-relaxed">
+            {lang === 'es' 
+              ? 'Hemos recibido tu comprobante e información. Te enviaremos un correo de confirmación.' 
+              : 'Recebemos seu comprovante e informações. Enviaremos um e-mail de confirmação.'}
+        </p>
+        <button 
+          onClick={onClose} 
+          className="px-10 bg-[#1e3a5f] hover:bg-black text-white py-4 rounded-xl font-bold uppercase text-xs tracking-widest transition-all shadow-lg hover:shadow-2xl active:scale-95"
+        >
+            {lang === 'es' ? 'Volver al Inicio' : 'Voltar ao Início'}
         </button>
       </div>
     );
   }
 
+  // --- RENDERIZADO INLINE DEL FORMULARIO ---
   return (
-    // --- 3. LAYOUT INTACTO (Respetando tu trabajo de responsividad) ---
-    <div className="flex flex-col w-[95%] sm:w-[90%] md:w-full max-w-xl mx-auto bg-white rounded-2xl md:rounded-3xl shadow-2xl overflow-hidden border-t-8 border-t-[#1e3a5f] h-[85dvh] md:h-auto md:max-h-[90vh] relative my-auto transition-all duration-300">
+    <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 transition-all duration-300">
 
-      {/* HEADER FIJO */}
-      <div className="px-5 py-4 border-b border-gray-100 flex justify-between items-center bg-white z-30 shrink-0">
+      {/* HEADER DEL FORMULARIO INLINE */}
+      <div className="px-6 sm:px-8 py-5 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
         <div>
-          <h2 className="text-lg md:text-xl font-black text-[#1e3a5f] uppercase italic leading-none tracking-tight">Inscripción</h2>  
-          <div className="flex items-center gap-2 mt-1">
-             <span className="h-1.5 w-1.5 rounded-full bg-orange-500"></span>
-             <p className="text-[10px] md:text-[11px] font-bold text-gray-500 uppercase tracking-wide">Congreso 2026</p>
-          </div>
+          <h2 className="text-xl font-black text-[#1e3a5f] uppercase italic tracking-tight">
+            {lang === 'es' ? 'Formulario de Inscripción' : 'Formulário de Inscrição'}
+          </h2>  
         </div>
-        <button
-          onClick={onClose}
-          className="p-2 -mr-2 text-gray-400 hover:bg-red-50 hover:text-red-500 rounded-full transition-colors"
-          aria-label="Cerrar"
-        >
-          <X size={24} />
-        </button>
       </div>
 
-      {/* CONTENIDO SCROLLEABLE */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 bg-white custom-scrollbar relative z-10">
+      <div className="p-6 sm:p-8 space-y-8">
 
         {/* SECCIÓN 1: BUSCADOR */}
-        <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="bg-[#1e3a5f] text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full">1</div>
-            <label className="text-xs font-bold text-[#1e3a5f] uppercase tracking-wide">Busca tu participación</label>
+        <div className="bg-blue-50/50 p-5 sm:p-6 rounded-2xl border border-blue-100">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="bg-[#1e3a5f] text-white text-[10px] font-bold w-6 h-6 flex items-center justify-center rounded-full">1</div>
+            <label className="text-sm font-bold text-[#1e3a5f] uppercase tracking-wide">
+              {lang === 'es' ? 'Busca tu participación' : 'Busque sua participação'}
+            </label>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1 group">
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => {setSearchTerm(e.target.value); setHasSearched(false);}}
                 disabled={selectedFromList}
-                className="w-full pl-10 pr-4 py-3 text-sm font-medium text-gray-900 border-2 rounded-xl bg-white border-gray-200 outline-none focus:border-[#1e3a5f] focus:ring-4 focus:ring-blue-500/10 transition-all disabled:bg-gray-100 disabled:text-gray-400 placeholder:text-gray-400"
-                placeholder="Escribe tu nombre..."
+                className="w-full pl-12 pr-4 py-3.5 text-base font-medium text-gray-900 border-2 rounded-xl bg-white border-gray-200 outline-none focus:border-[#1e3a5f] focus:ring-4 focus:ring-blue-500/10 transition-all disabled:bg-gray-100 disabled:text-gray-400 placeholder:text-gray-400 shadow-sm"
+                placeholder={lang === 'es' ? "Escribe tu nombre o título..." : "Digite seu nome ou título..."}
               />
-              <Search className="absolute left-3.5 top-3.5 text-gray-400 group-focus-within:text-[#1e3a5f] transition-colors" size={18} />
+              <Search className="absolute left-4 top-4 text-gray-400 group-focus-within:text-[#1e3a5f] transition-colors" size={20} />
             </div>
             <button
               type="button"
               onClick={handleSearch}
-              className="bg-[#1e3a5f] text-white py-3 px-6 rounded-xl font-bold text-xs uppercase hover:bg-blue-900 transition-all shadow-md active:transform active:scale-95"
+              className="bg-[#1e3a5f] text-white py-3.5 px-8 rounded-xl font-bold text-sm uppercase tracking-wider hover:bg-black transition-all shadow-md active:scale-95 shrink-0"
             >
-              Buscar
+              {lang === 'es' ? 'Buscar' : 'Buscar'}
             </button>
           </div>
 
           {suggestions.length > 0 && (
-            <div className="mt-4 space-y-2 animate-in slide-in-from-top-2">
-              <p className="text-[10px] font-bold text-gray-400 uppercase ml-1">Resultados:</p>
+            <div className="mt-5 space-y-3 animate-in slide-in-from-top-2">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Resultados:</p>
               {suggestions.map((p) => (
-                <button key={p.id} type="button" onClick={() => handleSelectPresentation(p)} className="w-full text-left p-3 bg-white border border-blue-100 rounded-xl flex justify-between items-center hover:border-orange-400 hover:shadow-md transition-all group">    
-                  <div className="flex-1 pr-3">
-                    <p className="text-xs font-bold text-[#1e3a5f] leading-snug group-hover:text-orange-600 transition-colors">{p.authors}</p>
-                    <p className="text-[11px] text-gray-500 mt-0.5 line-clamp-1">{p.title}</p>
+                <button key={p.id} type="button" onClick={() => handleSelectPresentation(p)} className="w-full text-left p-4 bg-white border-2 border-blue-100 rounded-xl flex justify-between items-center hover:border-orange-400 hover:shadow-md transition-all group">   
+                  <div className="flex-1 pr-4">
+                    <p className="text-sm font-bold text-[#1e3a5f] leading-snug group-hover:text-orange-600 transition-colors">{p.authors}</p>
+                    <p className="text-xs text-gray-500 mt-1 line-clamp-1">{p.title}</p>
                   </div>
-                  <div className="bg-gray-50 p-1 rounded-full group-hover:bg-orange-50 transition-colors">
-                     <Check size={14} className="text-gray-300 group-hover:text-orange-500" />
+                  <div className="bg-gray-50 p-2 rounded-full group-hover:bg-orange-50 transition-colors">
+                     <Check size={18} className="text-gray-300 group-hover:text-orange-500" />
                   </div>
                 </button>
               ))}
@@ -230,72 +230,84 @@ const RegistrationForm = ({ lang, onClose, onSuccess }) => {
           )}
 
           {selectedFromList && (
-            <div className="mt-4 flex justify-between items-start bg-white p-3 rounded-xl border-l-4 border-emerald-500 shadow-sm">   
-              <div className="flex gap-3">
-                 <div className="bg-emerald-100 p-1.5 rounded-full mt-0.5">
-                    <Check size={14} className="text-emerald-600" />
+            <div className="mt-5 flex justify-between items-start bg-white p-4 rounded-xl border-l-4 border-emerald-500 shadow-sm">   
+              <div className="flex gap-4">
+                 <div className="bg-emerald-100 p-2 rounded-full mt-0.5">
+                    <Check size={18} className="text-emerald-600" />
                  </div>
                  <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase">Seleccionado:</p>
-                    <p className="text-xs font-bold text-[#1e3a5f]">{formData.presentation_title}</p>
+                    <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1">
+                      {lang === 'es' ? 'Participación Seleccionada' : 'Participação Selecionada'}
+                    </p>
+                    <p className="text-sm font-bold text-gray-800">{formData.presentation_title}</p>
                  </div>
               </div>
-              <button type="button" onClick={() => {setSelectedFromList(false); setFormData({...formData, presentation_id: null, presentation_title: '', full_name: ''})}} className="text-gray-400 hover:text-red-500 transition-colors">
-                 <X size={16} />
+              <button type="button" onClick={() => {setSelectedFromList(false); setFormData({...formData, presentation_id: null, presentation_title: '', full_name: ''})}} className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors">
+                 <X size={18} />
               </button>
             </div>
           )}
         </div>
 
         {/* SECCIÓN 2: DATOS */}
-        {/* Lógica Visual: Si no ha buscado o seleccionado, se ve borroso para guiar al usuario a buscar primero */}
-        <form id="reg-form" onSubmit={handleSubmit} className={`space-y-6 pb-2 transition-all duration-500 ${!hasSearched && !selectedFromList ? 'opacity-40 grayscale pointer-events-none filter blur-[1px]' : 'opacity-100'}`}>
+        <form id="reg-form" onSubmit={handleSubmit} className={`space-y-6 transition-all duration-500 ${!hasSearched && !selectedFromList ? 'opacity-40 grayscale pointer-events-none filter blur-[1px]' : 'opacity-100'}`}>
 
-          <div className="flex items-center gap-2 mb-2">
-            <div className="bg-[#1e3a5f] text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full">2</div>
-            <label className="text-xs font-bold text-[#1e3a5f] uppercase tracking-wide">Completa tus datos</label>
+          <div className="flex items-center gap-2 mb-4">
+            <div className="bg-[#1e3a5f] text-white text-[10px] font-bold w-6 h-6 flex items-center justify-center rounded-full">2</div>
+            <label className="text-sm font-bold text-[#1e3a5f] uppercase tracking-wide">
+              {lang === 'es' ? 'Completa tus datos' : 'Preencha seus dados'}
+            </label>
           </div>
 
-          <div className="space-y-4 pl-1 md:pl-2">
+          <div className="space-y-5">
             <div>
-              <label className="block text-[11px] font-bold text-gray-700 mb-1.5">Nombre Completo</label>
+              <label className="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide">
+                {lang === 'es' ? 'Nombre Completo' : 'Nome Completo'}
+              </label>
               <input
                 id="fullname-input"
                 type="text" required value={formData.full_name}
                 onChange={(e) => setFormData({...formData, full_name: e.target.value})}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-[#1e3a5f] focus:bg-white focus:border-[#1e3a5f] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all"
-                placeholder="Nombre oficial para constancia"
+                className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-base font-bold text-[#1e3a5f] focus:bg-white focus:border-[#1e3a5f] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all"
+                placeholder={lang === 'es' ? "Nombre oficial para constancia" : "Nome oficial para o certificado"}
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div>
-                 <label className="block text-[11px] font-bold text-gray-700 mb-1.5">Correo Electrónico</label>
-                 <input type="email" required placeholder="ejemplo@email.com" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:bg-white focus:border-[#1e3a5f] outline-none transition-all" />
+                 <label className="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide">
+                   {lang === 'es' ? 'Correo Electrónico' : 'E-mail'}
+                 </label>
+                 <input type="email" required placeholder="ejemplo@email.com" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:bg-white focus:border-[#1e3a5f] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all" />
               </div>
               <div>
-                 <label className="block text-[11px] font-bold text-gray-700 mb-1.5">País de Residencia</label>
-                 <input type="text" required placeholder="Ej. México" value={formData.country} onChange={(e) => setFormData({...formData, country: e.target.value})} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:bg-white focus:border-[#1e3a5f] outline-none transition-all" />
+                 <label className="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide">
+                   {lang === 'es' ? 'País de Residencia' : 'País de Residência'}
+                 </label>
+                 <input type="text" required placeholder="Ej. México" value={formData.country} onChange={(e) => setFormData({...formData, country: e.target.value})} className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:bg-white focus:border-[#1e3a5f] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all" />
               </div>
             </div>
 
             <div>
-                <label className="block text-[11px] font-bold text-gray-700 mb-1.5">Categoría de Inscripción</label>
+                <label className="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide">
+                  {lang === 'es' ? 'Categoría de Inscripción' : 'Categoria de Inscrição'}
+                </label>
                 <div className="relative">
-                    <select required value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:bg-white focus:border-[#1e3a5f] outline-none appearance-none cursor-pointer">
+                    <select required value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:bg-white focus:border-[#1e3a5f] focus:ring-4 focus:ring-blue-500/10 outline-none appearance-none cursor-pointer transition-all">
                     <option value="">-- Seleccionar --</option>
                     {categories.map(c => <option key={c.id} value={c.id}>{lang === 'es' ? c.es : c.pt}</option>)}
                     </select>
-                    <div className="absolute right-4 top-3.5 pointer-events-none">
+                    <div className="absolute right-5 top-4 pointer-events-none">
                         <span className="text-gray-400">▼</span>
                     </div>
                 </div>
             </div>
 
-            <div className="pt-2">
-                <label className="block text-[11px] font-bold text-gray-700 mb-1.5">Comprobante de Pago</label>
-                <div className="relative border-2 border-dashed border-gray-300 rounded-xl p-6 text-center bg-gray-50 hover:bg-blue-50 hover:border-[#1e3a5f] transition-all cursor-pointer group">
-                  {/* INPUT AJUSTADO PARA MAYOR COMPATIBILIDAD */}
+            <div className="pt-4">
+                <label className="block text-xs font-bold text-gray-700 mb-3 uppercase tracking-wide">
+                  {lang === 'es' ? 'Comprobante de Pago' : 'Comprovante de Pagamento'}
+                </label>
+                <div className="relative border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center bg-gray-50 hover:bg-blue-50 hover:border-[#1e3a5f] transition-all cursor-pointer group">
                   <input 
                     type="file" 
                     required 
@@ -304,23 +316,23 @@ const RegistrationForm = ({ lang, onClose, onSuccess }) => {
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
                   />
 
-                  <div className="flex flex-col items-center gap-2 group-hover:scale-105 transition-transform">
+                  <div className="flex flex-col items-center gap-3 group-hover:scale-105 transition-transform">
                     {file ? (
-                        <div className="bg-emerald-100 p-3 rounded-full text-emerald-600">
-                            <FileText size={24} />
+                        <div className="bg-emerald-100 p-4 rounded-full text-emerald-600 shadow-sm">
+                            <FileText size={32} />
                         </div>
                     ) : (
-                        <div className="bg-gray-200 p-3 rounded-full text-gray-500 group-hover:bg-[#1e3a5f] group-hover:text-white transition-colors">
-                            <Upload size={24} />
+                        <div className="bg-white p-4 rounded-full text-gray-400 border border-gray-200 group-hover:bg-[#1e3a5f] group-hover:text-white group-hover:border-[#1e3a5f] transition-colors shadow-sm">
+                            <Upload size={32} />
                         </div>
                     )}
 
                     <div className="text-center">
-                        <p className={`text-xs font-bold uppercase ${file ? 'text-emerald-600' : 'text-[#1e3a5f]'}`}>
-                            {file ? 'Archivo Seleccionado' : 'Subir Archivo'}
+                        <p className={`text-sm font-black uppercase tracking-wide ${file ? 'text-emerald-600' : 'text-[#1e3a5f]'}`}>
+                            {file ? 'Archivo Listo' : 'Subir Comprobante'}
                         </p>
-                        <p className="text-[10px] text-gray-500 mt-1 max-w-[200px] mx-auto truncate">
-                            {file ? file.name : 'Formatos: PDF, JPG, PNG'}
+                        <p className="text-xs text-gray-500 mt-1 max-w-[250px] mx-auto truncate font-medium">
+                            {file ? file.name : 'Formatos aceptados: PDF, JPG, PNG'}
                         </p>
                     </div>
                   </div>
@@ -330,20 +342,19 @@ const RegistrationForm = ({ lang, onClose, onSuccess }) => {
         </form>
       </div>
 
-      {/* FOOTER FIJO */}
-      <div className="p-4 pb-8 md:p-6 md:pb-6 bg-white border-t border-gray-100 shrink-0 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-30 relative">
+      <div className="p-6 sm:p-8 bg-gray-50 border-t border-gray-100">
         <button
           form="reg-form" type="submit"
           disabled={loading || (!hasSearched && !selectedFromList)}
-          className="w-full bg-[#1e3a5f] text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-900/20 uppercase text-xs tracking-widest disabled:opacity-50 disabled:cursor-not-allowed hover:bg-black hover:shadow-xl transition-all transform active:scale-[0.99] flex items-center justify-center gap-2"
+          className="w-full bg-[#1e3a5f] text-white font-black py-4.5 rounded-xl shadow-lg shadow-blue-900/20 uppercase text-sm tracking-widest disabled:opacity-50 disabled:cursor-not-allowed hover:bg-black hover:shadow-xl transition-all transform active:scale-[0.99] flex items-center justify-center gap-3"
         >
           {loading ? (
              <>
-               <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+               <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
                <span>Procesando...</span>
              </>
           ) : (
-             <span>Finalizar Inscripción</span>
+             <span>{lang === 'es' ? 'Finalizar Inscripción' : 'Finalizar Inscrição'}</span>
           )}
         </button>
       </div>
