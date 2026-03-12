@@ -29,7 +29,7 @@ const SessionsManager = () => {
   const [editingId, setEditingId] = useState(null);
   const [availablePresentations, setAvailablePresentations] = useState([]);
   const [selectedWithTimes, setSelectedWithTimes] = useState([]);
-  const [totalSymposiumPapers, setTotalSymposiumPapers] = useState(0); // NUEVO ESTADO PARA EL TOTAL
+  const [totalSymposiumPapers, setTotalSymposiumPapers] = useState(0);
 
   const [formData, setFormData] = useState({
     name: '', symposium_id: '', room_id: '', date: '', start_time: '', end_time: '', event_type: 'mesa'
@@ -48,7 +48,6 @@ const SessionsManager = () => {
           .order('date')
           .order('start_time'), 
         supabase.from('rooms').select('*, venues(name)').order('venue_id'), 
-        // Filtro de sedes activado
         supabase.from('symposiums').select('*, venues(name)').not('venue_id', 'is', null).order('id', { ascending: true }),
         supabase.from('presentations').select('id, session_id'),
         supabase.from('event_types').select('*') 
@@ -179,6 +178,19 @@ const SessionsManager = () => {
         return timeToCheck >= busyStart && timeToCheck < busyEnd;
     });
   };
+
+  // NUEVO: Validación en tiempo real del horario principal de la mesa
+  const mainTimeConflict = useMemo(() => {
+    if (!formData.start_time || !formData.end_time || occupiedSlots.length === 0) return null;
+    
+    return occupiedSlots.find(slot => {
+      const busyStart = slot.start_time.slice(0, 5);
+      const busyEnd = slot.end_time.slice(0, 5);
+      
+      // La regla de intersección: (InicioA < FinB) Y (FinA > InicioB)
+      return formData.start_time < busyEnd && formData.end_time > busyStart;
+    });
+  }, [formData.start_time, formData.end_time, occupiedSlots]);
 
   const handleSymposiumChange = (id) => setFormData(prev => ({ ...prev, symposium_id: id }));
 
@@ -426,18 +438,19 @@ const SessionsManager = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
+              {/* Ajuste visual para cuando hay conflicto de horarios */}
+              <div className={`grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-xl border shadow-sm transition-all ${mainTimeConflict ? 'bg-red-50 border-red-300' : 'bg-white border-gray-200'}`}>
                 <div>
                   <Label><Clock size={12}/> Fecha del Evento</Label>
-                  <input type="date" className={InputClasses} value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
+                  <input type="date" className={`${InputClasses} ${mainTimeConflict ? 'border-red-300 bg-red-50/50' : ''}`} value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
                 </div>
                 <div>
                   <Label>Hora de Inicio</Label>
-                  <input type="time" className={InputClasses} value={formData.start_time} onChange={e => setFormData({...formData, start_time: e.target.value})} />
+                  <input type="time" className={`${InputClasses} ${mainTimeConflict ? 'border-red-500 bg-red-100 text-red-800 focus:ring-red-200 focus:border-red-500' : ''}`} value={formData.start_time} onChange={e => setFormData({...formData, start_time: e.target.value})} />
                 </div>
                 <div>
                   <Label>Hora de Fin</Label>
-                  <input type="time" className={InputClasses} value={formData.end_time} onChange={e => setFormData({...formData, end_time: e.target.value})} />
+                  <input type="time" className={`${InputClasses} ${mainTimeConflict ? 'border-red-500 bg-red-100 text-red-800 focus:ring-red-200 focus:border-red-500' : ''}`} value={formData.end_time} onChange={e => setFormData({...formData, end_time: e.target.value})} />
                 </div>
               </div>
 
@@ -447,80 +460,105 @@ const SessionsManager = () => {
           {formData.event_type === 'mesa' && (
             <div className="flex flex-col md:flex-row flex-1 bg-white min-h-[500px]">
               
-              <div className="flex-1 min-w-0 border-r border-gray-100 flex flex-col bg-white">
-                <div className="p-4 border-b flex justify-between items-center bg-gray-50/80 sticky top-0">
-                  <h4 className="text-sm font-black text-[#1e3a5f] uppercase tracking-widest flex items-center gap-2">
-                    <LayoutGrid size={16}/> Disponibles
-                    {formData.symposium_id && totalSymposiumPapers > 0 && (
-                      <span className="bg-blue-100 border border-blue-200 text-blue-800 px-2.5 py-1 rounded-md text-[10px] font-black shadow-sm ml-2">
-                        {availablePresentations.length - selectedWithTimes.length} de {totalSymposiumPapers} libres
-                      </span>
-                    )}
-                  </h4>
-                </div>
-                <div className="flex-1 p-4 space-y-3 bg-gray-100/30 overflow-y-auto max-h-[60vh] custom-scrollbar">
-                  {(!formData.symposium_id) && <div className="p-10 text-center text-gray-400 text-sm italic border-2 border-dashed rounded-2xl">Elige un simposio para ver trabajos.</div>}
-                  {availablePresentations.map(pres => {
-                    if (selectedWithTimes.find(p => p.id === pres.id)) return null;
-                    return (
-                      <div key={pres.id} onClick={() => togglePresentation(pres)} className="p-4 rounded-xl border border-gray-200 bg-white hover:border-[#1e3a5f] cursor-pointer flex justify-between items-center transition-all group shadow-sm">
-                        <div className="flex-1 pr-3 min-w-0"><p className="text-sm font-bold text-gray-800 leading-snug truncate">{pres.title}</p><p className="text-xs text-gray-400 mt-1 uppercase font-bold tracking-wide truncate">{pres.authors}</p></div>
-                        <div className="bg-[#1e3a5f] text-white p-2 rounded-lg shrink-0 group-hover:scale-110 shadow-sm"><Plus size={16}/></div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="flex-1 min-w-0 flex flex-col bg-gray-50">
-                <div className="p-4 border-b bg-white flex justify-between items-center sticky top-0 shadow-sm">
-                  <div className="flex items-center gap-2">
-                    <LayoutGrid size={16} className="text-[#1e3a5f]"/>
-                    <h4 className="text-sm font-black text-[#1e3a5f] uppercase italic tracking-widest">Cronograma</h4>
+              {/* NUEVO: Bloqueo visual si el horario principal choca */}
+              {mainTimeConflict ? (
+                <div className="flex-1 p-10 flex flex-col items-center justify-center bg-red-50/50 border-t border-red-100 min-h-[400px]">
+                  <div className="bg-white p-4 rounded-full shadow-sm border border-red-100 mb-4 animate-bounce">
+                    <AlertTriangle size={48} className="text-red-500" />
                   </div>
-                  {selectedWithTimes.length > 0 && (
-                    <span className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest shadow-sm">
-                      {selectedWithTimes.length} asignadas aquí
-                    </span>
-                  )}
+                  <h3 className="text-xl font-black text-red-600 uppercase tracking-widest mb-2 text-center">¡Choque de Horario Detectado!</h3>
+                  <p className="text-sm font-bold text-red-800 text-center max-w-md bg-white p-4 rounded-xl border border-red-200 shadow-sm leading-relaxed">
+                    El horario que elegiste ({formData.start_time} a {formData.end_time}) interfiere con <br/>
+                    <span className="font-black text-red-600 uppercase text-lg inline-block mt-2">"{mainTimeConflict.name || 'Otro Evento'}"</span> <br/>
+                    <span className="text-xs text-red-500 mt-1 block tracking-wider">({mainTimeConflict.start_time.slice(0,5)} - {mainTimeConflict.end_time.slice(0,5)})</span>
+                  </p>
+                  <p className="text-xs text-gray-500 mt-6 font-bold uppercase tracking-widest text-center flex items-center gap-2">
+                    <Clock size={14} className="text-red-400" />
+                    Corrige el horario arriba para continuar.
+                  </p>
                 </div>
-                <div className="flex-1 p-4 space-y-3 overflow-y-auto max-h-[60vh] custom-scrollbar">
-                  {selectedWithTimes.length === 0 && <div className="p-10 text-center text-gray-400 text-sm italic">Haz clic en panel izquierdo para agregar.</div>}
-                  {selectedWithTimes.map((pres, index) => {
-                    const isConflicting = isTimeConflicting(pres.start_time);
-                    return (
-                      <div key={pres.id} className={`bg-white p-4 rounded-xl border-l-[6px] shadow-sm relative ${isConflicting ? 'border-l-red-500 ring-2 ring-red-100' : 'border-l-[#1e3a5f]'}`}>
-                        <button onClick={() => togglePresentation(pres)} className="absolute top-3 right-3 text-gray-400 hover:text-red-500 bg-gray-100 hover:bg-red-50 rounded-full p-1.5 transition-colors"><X size={14}/></button>
-                        <span className="text-[10px] font-black text-blue-500 mb-1.5 block uppercase tracking-widest">Turno #{index + 1}</span>
-                        <p className="text-sm font-bold text-gray-800 uppercase mb-3 line-clamp-2 pr-6">{pres.title}</p>
-                        {isConflicting && <div className="mb-3 text-[10px] font-bold text-red-600 bg-red-50 px-2.5 py-1.5 rounded flex items-center gap-1.5 uppercase"><Ban size={12}/> ¡Conflicto de Horario!</div>}
-                        
-                        <div className="flex flex-wrap items-center gap-2 p-2 bg-gray-50 rounded-xl border border-gray-200">
-                          <input 
-                            type="time" 
-                            className={`flex-1 min-w-[130px] rounded-lg p-2.5 text-sm font-black text-center outline-none transition-colors ${isConflicting ? 'bg-red-100 text-red-800' : 'bg-white focus:ring-2 focus:ring-blue-100'}`} 
-                            value={pres.start_time} 
-                            onChange={e => updatePresTime(pres.id, 'start_time', e.target.value)} 
-                          />
-                          <ArrowRight size={14} className="text-gray-400 shrink-0 hidden 2xl:block"/>
-                          <input 
-                            type="time" 
-                            className="flex-1 min-w-[130px] bg-white rounded-lg p-2.5 text-sm font-black text-center outline-none focus:ring-2 focus:ring-blue-100 transition-colors" 
-                            value={pres.end_time} 
-                            onChange={e => updatePresTime(pres.id, 'end_time', e.target.value)} 
-                          />
-                        </div>
+              ) : (
+                <>
+                  <div className="flex-1 min-w-0 border-r border-gray-100 flex flex-col bg-white">
+                    <div className="p-4 border-b flex justify-between items-center bg-gray-50/80 sticky top-0">
+                      <h4 className="text-sm font-black text-[#1e3a5f] uppercase tracking-widest flex items-center gap-2">
+                        <LayoutGrid size={16}/> Disponibles
+                        {formData.symposium_id && totalSymposiumPapers > 0 && (
+                          <span className="bg-blue-100 border border-blue-200 text-blue-800 px-2.5 py-1 rounded-md text-[10px] font-black shadow-sm ml-2">
+                            {availablePresentations.length - selectedWithTimes.length} de {totalSymposiumPapers} libres
+                          </span>
+                        )}
+                      </h4>
+                    </div>
+                    <div className="flex-1 p-4 space-y-3 bg-gray-100/30 overflow-y-auto max-h-[60vh] custom-scrollbar">
+                      {(!formData.symposium_id) && <div className="p-10 text-center text-gray-400 text-sm italic border-2 border-dashed rounded-2xl">Elige un simposio para ver trabajos.</div>}
+                      {availablePresentations.map(pres => {
+                        if (selectedWithTimes.find(p => p.id === pres.id)) return null;
+                        return (
+                          <div key={pres.id} onClick={() => togglePresentation(pres)} className="p-4 rounded-xl border border-gray-200 bg-white hover:border-[#1e3a5f] cursor-pointer flex justify-between items-center transition-all group shadow-sm">
+                            <div className="flex-1 pr-3 min-w-0"><p className="text-sm font-bold text-gray-800 leading-snug truncate">{pres.title}</p><p className="text-xs text-gray-400 mt-1 uppercase font-bold tracking-wide truncate">{pres.authors}</p></div>
+                            <div className="bg-[#1e3a5f] text-white p-2 rounded-lg shrink-0 group-hover:scale-110 shadow-sm"><Plus size={16}/></div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="flex-1 min-w-0 flex flex-col bg-gray-50">
+                    <div className="p-4 border-b bg-white flex justify-between items-center sticky top-0 shadow-sm">
+                      <div className="flex items-center gap-2">
+                        <LayoutGrid size={16} className="text-[#1e3a5f]"/>
+                        <h4 className="text-sm font-black text-[#1e3a5f] uppercase italic tracking-widest">Cronograma</h4>
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
+                      {selectedWithTimes.length > 0 && (
+                        <span className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest shadow-sm">
+                          {selectedWithTimes.length} asignadas aquí
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-1 p-4 space-y-3 overflow-y-auto max-h-[60vh] custom-scrollbar">
+                      {selectedWithTimes.length === 0 && <div className="p-10 text-center text-gray-400 text-sm italic">Haz clic en panel izquierdo para agregar.</div>}
+                      {selectedWithTimes.map((pres, index) => {
+                        const isConflicting = isTimeConflicting(pres.start_time);
+                        return (
+                          <div key={pres.id} className={`bg-white p-4 rounded-xl border-l-[6px] shadow-sm relative ${isConflicting ? 'border-l-red-500 ring-2 ring-red-100' : 'border-l-[#1e3a5f]'}`}>
+                            <button onClick={() => togglePresentation(pres)} className="absolute top-3 right-3 text-gray-400 hover:text-red-500 bg-gray-100 hover:bg-red-50 rounded-full p-1.5 transition-colors"><X size={14}/></button>
+                            <span className="text-[10px] font-black text-blue-500 mb-1.5 block uppercase tracking-widest">Turno #{index + 1}</span>
+                            <p className="text-sm font-bold text-gray-800 uppercase mb-3 line-clamp-2 pr-6">{pres.title}</p>
+                            {isConflicting && <div className="mb-3 text-[10px] font-bold text-red-600 bg-red-50 px-2.5 py-1.5 rounded flex items-center gap-1.5 uppercase"><Ban size={12}/> ¡Conflicto de Horario!</div>}
+                            
+                            <div className="flex flex-wrap items-center gap-2 p-2 bg-gray-50 rounded-xl border border-gray-200">
+                              <input 
+                                type="time" 
+                                className={`flex-1 min-w-[130px] rounded-lg p-2.5 text-sm font-black text-center outline-none transition-colors ${isConflicting ? 'bg-red-100 text-red-800' : 'bg-white focus:ring-2 focus:ring-blue-100'}`} 
+                                value={pres.start_time} 
+                                onChange={e => updatePresTime(pres.id, 'start_time', e.target.value)} 
+                              />
+                              <ArrowRight size={14} className="text-gray-400 shrink-0 hidden 2xl:block"/>
+                              <input 
+                                type="time" 
+                                className="flex-1 min-w-[130px] bg-white rounded-lg p-2.5 text-sm font-black text-center outline-none focus:ring-2 focus:ring-blue-100 transition-colors" 
+                                value={pres.end_time} 
+                                onChange={e => updatePresTime(pres.id, 'end_time', e.target.value)} 
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
           <div className="p-5 sm:p-6 border-t border-gray-200 bg-white flex justify-end gap-4 shrink-0">
             <button onClick={() => setIsEditorOpen(false)} className="px-6 py-3 rounded-xl font-bold text-sm text-gray-600 bg-gray-50 border border-gray-200 hover:bg-gray-100 uppercase tracking-wide transition-colors">Cancelar</button>
-            <button onClick={handleSubmit} disabled={loading} className={`px-8 py-3 rounded-xl font-black text-sm uppercase tracking-widest text-white shadow-lg transition-all flex items-center gap-2 active:scale-95 ${formData.event_type !== 'mesa' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-[#1e3a5f] hover:bg-black'}`}>
+            <button 
+              onClick={handleSubmit} 
+              disabled={loading || mainTimeConflict} 
+              className={`px-8 py-3 rounded-xl font-black text-sm uppercase tracking-widest text-white shadow-lg transition-all flex items-center gap-2 ${loading || mainTimeConflict ? 'bg-gray-400 cursor-not-allowed opacity-70' : 'active:scale-95 hover:bg-black ' + (formData.event_type !== 'mesa' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-[#1e3a5f]')}`}
+            >
               <Save size={18} /> {loading ? 'Guardando...' : 'Guardar Agenda'}
             </button>
           </div>
@@ -545,7 +583,7 @@ const SessionsManager = () => {
         ))}
       </div>
 
-      <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">     
+      <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">      
         <h2 className="text-xl font-black text-[#1e3a5f] uppercase italic pl-2">Gestión de Agenda</h2>
         <button onClick={() => { 
             setEditingId(null); 
