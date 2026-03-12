@@ -29,6 +29,7 @@ const SessionsManager = () => {
   const [editingId, setEditingId] = useState(null);
   const [availablePresentations, setAvailablePresentations] = useState([]);
   const [selectedWithTimes, setSelectedWithTimes] = useState([]);
+  const [totalSymposiumPapers, setTotalSymposiumPapers] = useState(0); // NUEVO ESTADO PARA EL TOTAL
 
   const [formData, setFormData] = useState({
     name: '', symposium_id: '', room_id: '', date: '', start_time: '', end_time: '', event_type: 'mesa'
@@ -47,7 +48,8 @@ const SessionsManager = () => {
           .order('date')
           .order('start_time'), 
         supabase.from('rooms').select('*, venues(name)').order('venue_id'), 
-        supabase.from('symposiums').select('*, venues(name)').order('id', { ascending: true }),
+        // Filtro de sedes activado
+        supabase.from('symposiums').select('*, venues(name)').not('venue_id', 'is', null).order('id', { ascending: true }),
         supabase.from('presentations').select('id, session_id'),
         supabase.from('event_types').select('*') 
       ]);
@@ -79,14 +81,24 @@ const SessionsManager = () => {
     const loadPresentations = async () => {
       if (formData.event_type !== 'mesa' || !formData.symposium_id) {
         setAvailablePresentations([]);
+        setTotalSymposiumPapers(0);
         return;
       }
+      
       const { data } = await supabase
         .from('presentations')
         .select('id, title, authors, session_id, start_time, end_time')
         .eq('symposium_id', formData.symposium_id)
         .or(`session_id.is.null,session_id.eq.${editingId || 0}`);
+      
       setAvailablePresentations(data || []);
+
+      const { count } = await supabase
+        .from('presentations')
+        .select('*', { count: 'exact', head: true })
+        .eq('symposium_id', formData.symposium_id);
+        
+      setTotalSymposiumPapers(count || 0);
     };
     loadPresentations();
   }, [formData.symposium_id, editingId, formData.event_type]);
@@ -370,10 +382,8 @@ const SessionsManager = () => {
               </div>
             )}
             
-            {/* NUEVO DISEÑO DIVIDIDO COMO PEDISTE */}
             <div className="space-y-5">
               
-              {/* FILA 1: Identificación y Sala */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {formData.event_type !== 'mesa' && (
                   <div>
@@ -416,7 +426,6 @@ const SessionsManager = () => {
                 </div>
               </div>
 
-              {/* FILA 2: FECHA Y HORA (Separadas y con espacio real) */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
                 <div>
                   <Label><Clock size={12}/> Fecha del Evento</Label>
@@ -439,7 +448,16 @@ const SessionsManager = () => {
             <div className="flex flex-col md:flex-row flex-1 bg-white min-h-[500px]">
               
               <div className="flex-1 min-w-0 border-r border-gray-100 flex flex-col bg-white">
-                <div className="p-4 border-b flex justify-between items-center bg-gray-50/80 sticky top-0"><h4 className="text-sm font-black text-[#1e3a5f] uppercase tracking-widest flex items-center gap-2"><LayoutGrid size={16}/> Disponibles</h4></div>
+                <div className="p-4 border-b flex justify-between items-center bg-gray-50/80 sticky top-0">
+                  <h4 className="text-sm font-black text-[#1e3a5f] uppercase tracking-widest flex items-center gap-2">
+                    <LayoutGrid size={16}/> Disponibles
+                    {formData.symposium_id && totalSymposiumPapers > 0 && (
+                      <span className="bg-blue-100 border border-blue-200 text-blue-800 px-2.5 py-1 rounded-md text-[10px] font-black shadow-sm ml-2">
+                        {availablePresentations.length - selectedWithTimes.length} de {totalSymposiumPapers} libres
+                      </span>
+                    )}
+                  </h4>
+                </div>
                 <div className="flex-1 p-4 space-y-3 bg-gray-100/30 overflow-y-auto max-h-[60vh] custom-scrollbar">
                   {(!formData.symposium_id) && <div className="p-10 text-center text-gray-400 text-sm italic border-2 border-dashed rounded-2xl">Elige un simposio para ver trabajos.</div>}
                   {availablePresentations.map(pres => {
@@ -455,7 +473,17 @@ const SessionsManager = () => {
               </div>
 
               <div className="flex-1 min-w-0 flex flex-col bg-gray-50">
-                <div className="p-4 border-b bg-white flex items-center gap-2 sticky top-0"><LayoutGrid size={16} className="text-[#1e3a5f]"/><h4 className="text-sm font-black text-[#1e3a5f] uppercase italic tracking-widest">Cronograma</h4></div>
+                <div className="p-4 border-b bg-white flex justify-between items-center sticky top-0 shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <LayoutGrid size={16} className="text-[#1e3a5f]"/>
+                    <h4 className="text-sm font-black text-[#1e3a5f] uppercase italic tracking-widest">Cronograma</h4>
+                  </div>
+                  {selectedWithTimes.length > 0 && (
+                    <span className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest shadow-sm">
+                      {selectedWithTimes.length} asignadas aquí
+                    </span>
+                  )}
+                </div>
                 <div className="flex-1 p-4 space-y-3 overflow-y-auto max-h-[60vh] custom-scrollbar">
                   {selectedWithTimes.length === 0 && <div className="p-10 text-center text-gray-400 text-sm italic">Haz clic en panel izquierdo para agregar.</div>}
                   {selectedWithTimes.map((pres, index) => {
@@ -468,7 +496,6 @@ const SessionsManager = () => {
                         {isConflicting && <div className="mb-3 text-[10px] font-bold text-red-600 bg-red-50 px-2.5 py-1.5 rounded flex items-center gap-1.5 uppercase"><Ban size={12}/> ¡Conflicto de Horario!</div>}
                         
                         <div className="flex flex-wrap items-center gap-2 p-2 bg-gray-50 rounded-xl border border-gray-200">
-                          {/* Modifiqué min-w-[110px] a min-w-[130px] para que no se encime el AM/PM nunca más */}
                           <input 
                             type="time" 
                             className={`flex-1 min-w-[130px] rounded-lg p-2.5 text-sm font-black text-center outline-none transition-colors ${isConflicting ? 'bg-red-100 text-red-800' : 'bg-white focus:ring-2 focus:ring-blue-100'}`} 
@@ -505,7 +532,6 @@ const SessionsManager = () => {
   // --- VISTA 1: GRID PRINCIPAL (VISTA POR DEFECTO) ---
   return (
     <div className="space-y-6 p-4 md:p-6 animate-in fade-in pb-20 md:pb-6">
-      {/* STATS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
           { title: "Eventos Creados", val: stats.totalMesas, icon: LayoutGrid, color: "text-[#1e3a5f]", bg: "bg-blue-50" },

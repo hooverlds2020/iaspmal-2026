@@ -24,7 +24,8 @@ import AcceptedFormats from './components/pages/AcceptedFormats';
 import Program from './components/pages/Program';
 import RegistrationForm from './components/pages/RegistrationForm';
 import VenuesPage from './components/pages/VenuesPage';
-import Alojamiento from './components/pages/Alojamiento'; // Componente Importado Correctamente
+import Alojamiento from './components/pages/Alojamiento'; 
+import Gallery from './components/pages/Gallery';
 
 // Admin Pages
 import Login from './pages/Login';
@@ -96,7 +97,9 @@ const MainLayout = ({ lang, setLang }) => {
         { id: 'san-cristobal', label: 'San Cristóbal de Las Casas', label_pt: 'San Cristóbal de Las Casas' },
         { id: 'cartel', label: 'Cartel del congreso', label_pt: 'Cartaz do congresso' }
       ]
-    }
+    },
+    // --- NUEVA PESTAÑA: GALERÍA ---
+    { id: 'galeria', label: 'Galería', label_pt: 'Galeria' }
   ];
 
   const toggleSubmenu = (id) => {
@@ -122,7 +125,8 @@ const MainLayout = ({ lang, setLang }) => {
       'organizaciones': { es: 'Organizaciones colaboradoras', pt: 'Organizações colaboradoras' },
       'alojamiento': { es: 'Alojamiento', pt: 'Hospedagem' },
       'san-cristobal': { es: 'San Cristóbal de Las Casas', pt: 'San Cristóbal de Las Casas' },
-      'cartel': { es: 'Cartel Oficial', pt: 'Cartaz Oficial' }
+      'cartel': { es: 'Cartel Oficial', pt: 'Cartaz Oficial' },
+      'galeria': { es: 'Galería', pt: 'Galeria' } // <-- Agregado título de Galería
     };
     const titleObj = titles[currentPage];
     if (!titleObj) return lang === 'es' ? 'Contenido' : 'Conteúdo';
@@ -137,15 +141,15 @@ const MainLayout = ({ lang, setLang }) => {
       case 'conferenciantes': return <div className="space-y-4 text-gray-600"><p>{lang === 'es' ? 'Información próximamente.' : 'Informação em breve.'}</p></div>;
 
       // --- PESTAÑA: INSCRIPCIÓN ---
-      case 'cuotas': 
+      case 'cuotas':
         if (showRegistration) {
           return (
             <div className="animate-in fade-in slide-in-from-bottom-8 duration-500 max-w-3xl mx-auto">
-              <button 
-                onClick={() => setShowRegistration(false)} 
+              <button
+                onClick={() => setShowRegistration(false)}
                 className="mb-6 flex items-center gap-2 text-gray-500 hover:text-[#1e3a5f] font-bold text-sm transition-colors group"
               >
-                <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" /> 
+                <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
                 {lang === 'es' ? 'Volver a información de costos' : 'Voltar para informações de custos'}
               </button>
               <RegistrationForm
@@ -223,11 +227,11 @@ const MainLayout = ({ lang, setLang }) => {
 
             <div className="bg-white border border-blue-100 rounded-2xl p-6 md:p-8 shadow-sm space-y-6 text-sm md:text-base text-gray-700 leading-relaxed">
               <p>
-                {lang === 'es' 
+                {lang === 'es'
                   ? 'El pago de la cuota deberá hacerse mediante transferencia. Favor de indicar, en el "Concepto", únicamente su nombre (tan completo como quepa). Después, hay que volver a esta página y formalizar la inscripción desde el botón de abajo ("Registrarse Ahora"). Tengan a la mano el comprobante de pago, pues habrá que adjuntarlo.'
                   : 'O pagamento da taxa deve ser feito por transferência. Favor indicar, no "Conceito", apenas o seu nome (o mais completo possível). Depois, é necessário voltar a esta página e formalizar a inscrição pelo botão abaixo ("Inscrever-se Agora"). Tenha em mãos o comprovante de pagamento, pois será necessário anexá-lo.'}
               </p>
-              
+
               <div className="bg-blue-50/50 p-5 rounded-xl border border-blue-100">
                 <p className="font-black text-[#1e3a5f] mb-4">
                   {lang === 'es' ? 'Las cuentas para transferencia entre bancos mexicanos son las siguientes:' : 'As contas para transferência entre bancos mexicanos são as seguintes:'}
@@ -247,12 +251,12 @@ const MainLayout = ({ lang, setLang }) => {
               <div className="bg-amber-50 text-amber-900 p-5 rounded-xl border border-amber-200 flex items-start gap-3">
                 <div className="text-amber-500 mt-0.5">ℹ️</div>
                 <p>
-                  {lang === 'es' 
+                  {lang === 'es'
                     ? <span>Para pagos desde el extranjero, favor de escribir al correo <strong className="text-amber-700">iaspm.al.2026.inscripcion@gmail.com</strong> para conocer opciones. No se olvide de indicar su nombre completo y su lugar de residencia.</span>
                     : <span>Para pagamentos do exterior, favor escrever para <strong className="text-amber-700">iaspm.al.2026.inscripcion@gmail.com</strong> para conhecer as opções. Não se esqueça de indicar seu nome completo e local de residência.</span>}
                 </p>
               </div>
-              
+
               <p className="text-xs text-gray-500 italic text-center font-medium mt-4">
                 {lang === 'es' ? 'En caso de requerirlo, se emitirá un recibo de pago. No se emitirán facturas.' : 'Se necessário, será emitido um recibo. Não serão emitidas notas fiscais.'}
               </p>
@@ -275,7 +279,7 @@ const MainLayout = ({ lang, setLang }) => {
         );
 
       // --- PESTAÑA: PRESENTACIONES DE LIBROS ---
-      case 'presentaciones-libros': 
+      case 'presentaciones-libros':
         return (
           <div className="space-y-6 animate-in fade-in duration-300">
             <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-100">
@@ -336,11 +340,10 @@ const MainLayout = ({ lang, setLang }) => {
 
       case 'programa': return <Program lang={lang} />;
       case 'sedes': return <VenuesPage lang={lang} />;
-      
-      // --- LA LÍNEA MÁGICA QUE FALTABA ---
       case 'alojamiento': return <Alojamiento lang={lang} />;
-
-      default: return <div className="p-8 text-center text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-300">{lang === 'es' ? 'Contenido en preparación.' : 'Conteúdo em preparação.'}</div>;
+      case 'galeria': return <Gallery lang={lang} />;	    
+      
+     default: return <div className="p-8 text-center text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-300">{lang === 'es' ? 'Contenido en preparación.' : 'Conteúdo em preparação.'}</div>;
     }
   };
 
@@ -393,7 +396,7 @@ const MainLayout = ({ lang, setLang }) => {
                 )}
 
                 <div className="p-4 sm:p-10 flex-1">
-                  <div className="prose prose-slate max-w-none prose-headings:font-black prose-headings:text-[#1e3a5f] prose-a:text-iaspm-orange hover:prose-a:text-orange-600 prose-img:rounded-xl">
+                  <div className="prose prose-slate max-w-none prose-headings:font-black prose-headings:text-[#1e3a5f] prose-a:text-iaspm-orange hover:prose-a:text-orange-600 prose-img:rounded-xl">   
                     {renderContent()}
                   </div>
                 </div>

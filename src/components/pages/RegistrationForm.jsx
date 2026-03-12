@@ -23,6 +23,7 @@ const RegistrationForm = ({ lang, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
+  // CATEGORÍAS RESTAURADAS A SU ESTADO ORIGINAL
   const categories = [
     { id: 'sur_global', es: 'Del Sur global', pt: 'Do Sul global' },
     { id: 'norte_global', es: 'Del Norte global', pt: 'Do Norte global' },
@@ -87,6 +88,8 @@ const RegistrationForm = ({ lang, onClose }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // VALIDACIÓN RESTAURADA: El comprobante es obligatorio siempre
     if (!file) return toast.error(lang === 'es' ? 'Debes subir tu comprobante' : 'Você deve enviar seu comprovante');
     
     setLoading(true);
@@ -98,7 +101,7 @@ const RegistrationForm = ({ lang, onClose }) => {
           email: formData.email.trim().toLowerCase(),
           country: formData.country,
           category: formData.category,
-          status: 'pending'
+          status: 'pending' 
         }])
         .select().single();
 
@@ -128,7 +131,6 @@ const RegistrationForm = ({ lang, onClose }) => {
       await sendRegistrationConfirmation(formData.email, formData.full_name).catch(console.error);
       
       setSuccess(true);
-      // Hacemos scroll suave hacia arriba para que vea su trofeo de éxito
       window.scrollTo({ top: 0, behavior: 'smooth' });
       
     } catch (err) {
@@ -139,7 +141,6 @@ const RegistrationForm = ({ lang, onClose }) => {
     }
   };
 
-  // --- EL EFECTO "SWEET ALERT 2" INLINE ---
   if (success) {
     return (
       <div className="py-16 px-4 sm:px-10 text-center animate-in zoom-in-95 duration-500 bg-white rounded-[2rem] shadow-xl border border-gray-100 flex flex-col items-center max-w-2xl mx-auto">
@@ -167,11 +168,8 @@ const RegistrationForm = ({ lang, onClose }) => {
     );
   }
 
-  // --- RENDERIZADO INLINE DEL FORMULARIO ---
   return (
     <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 transition-all duration-300">
-
-      {/* HEADER DEL FORMULARIO INLINE */}
       <div className="px-6 sm:px-8 py-5 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
         <div>
           <h2 className="text-xl font-black text-[#1e3a5f] uppercase italic tracking-tight">
@@ -181,8 +179,6 @@ const RegistrationForm = ({ lang, onClose }) => {
       </div>
 
       <div className="p-6 sm:p-8 space-y-8">
-
-        {/* SECCIÓN 1: BUSCADOR */}
         <div className="bg-blue-50/50 p-5 sm:p-6 rounded-2xl border border-blue-100">
           <div className="flex items-center gap-2 mb-4">
             <div className="bg-[#1e3a5f] text-white text-[10px] font-bold w-6 h-6 flex items-center justify-center rounded-full">1</div>
@@ -249,9 +245,7 @@ const RegistrationForm = ({ lang, onClose }) => {
           )}
         </div>
 
-        {/* SECCIÓN 2: DATOS */}
         <form id="reg-form" onSubmit={handleSubmit} className={`space-y-6 transition-all duration-500 ${!hasSearched && !selectedFromList ? 'opacity-40 grayscale pointer-events-none filter blur-[1px]' : 'opacity-100'}`}>
-
           <div className="flex items-center gap-2 mb-4">
             <div className="bg-[#1e3a5f] text-white text-[10px] font-bold w-6 h-6 flex items-center justify-center rounded-full">2</div>
             <label className="text-sm font-bold text-[#1e3a5f] uppercase tracking-wide">
@@ -303,41 +297,45 @@ const RegistrationForm = ({ lang, onClose }) => {
                 </div>
             </div>
 
-            <div className="pt-4">
-                <label className="block text-xs font-bold text-gray-700 mb-3 uppercase tracking-wide">
-                  {lang === 'es' ? 'Comprobante de Pago' : 'Comprovante de Pagamento'}
-                </label>
-                <div className="relative border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center bg-gray-50 hover:bg-blue-50 hover:border-[#1e3a5f] transition-all cursor-pointer group">
-                  <input 
-                    type="file" 
-                    required 
-                    accept="image/jpeg,image/png,image/jpg,application/pdf" 
-                    onChange={(e) => setFile(e.target.files[0])} 
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
-                  />
+            {/* SECCIÓN DEL COMPROBANTE DE VUELTA A LA NORMALIDAD */}
+            {formData.category !== '' && (
+              <div className="pt-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <label className="block text-xs font-bold text-gray-700 mb-3 uppercase tracking-wide">
+                    {lang === 'es' ? 'Comprobante de Pago' : 'Comprovante de Pagamento'}
+                  </label>
+                  <div className="relative border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center bg-gray-50 hover:bg-blue-50 hover:border-[#1e3a5f] transition-all cursor-pointer group">
+                    <input 
+                      type="file" 
+                      required
+                      accept="image/jpeg,image/png,image/jpg,application/pdf" 
+                      onChange={(e) => setFile(e.target.files[0])} 
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+                    />
 
-                  <div className="flex flex-col items-center gap-3 group-hover:scale-105 transition-transform">
-                    {file ? (
-                        <div className="bg-emerald-100 p-4 rounded-full text-emerald-600 shadow-sm">
-                            <FileText size={32} />
-                        </div>
-                    ) : (
-                        <div className="bg-white p-4 rounded-full text-gray-400 border border-gray-200 group-hover:bg-[#1e3a5f] group-hover:text-white group-hover:border-[#1e3a5f] transition-colors shadow-sm">
-                            <Upload size={32} />
-                        </div>
-                    )}
+                    <div className="flex flex-col items-center gap-3 group-hover:scale-105 transition-transform">
+                      {file ? (
+                          <div className="bg-emerald-100 p-4 rounded-full text-emerald-600 shadow-sm">
+                              <FileText size={32} />
+                          </div>
+                      ) : (
+                          <div className="bg-white p-4 rounded-full text-gray-400 border border-gray-200 group-hover:bg-[#1e3a5f] group-hover:text-white group-hover:border-[#1e3a5f] transition-colors shadow-sm">
+                              <Upload size={32} />
+                          </div>
+                      )}
 
-                    <div className="text-center">
-                        <p className={`text-sm font-black uppercase tracking-wide ${file ? 'text-emerald-600' : 'text-[#1e3a5f]'}`}>
-                            {file ? 'Archivo Listo' : 'Subir Comprobante'}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1 max-w-[250px] mx-auto truncate font-medium">
-                            {file ? file.name : 'Formatos aceptados: PDF, JPG, PNG'}
-                        </p>
+                      <div className="text-center">
+                          <p className={`text-sm font-black uppercase tracking-wide ${file ? 'text-emerald-600' : 'text-[#1e3a5f]'}`}>
+                              {file ? 'Archivo Listo' : 'Subir Comprobante'}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1 max-w-[250px] mx-auto truncate font-medium">
+                              {file ? file.name : 'Formatos aceptados: PDF, JPG, PNG'}
+                          </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-            </div>
+              </div>
+            )}
+            
           </div>
         </form>
       </div>

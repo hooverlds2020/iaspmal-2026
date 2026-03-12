@@ -7,7 +7,6 @@ import { QRCodeCanvas } from 'qrcode.react';
 import { jsPDF } from 'jspdf';
 import { toast } from 'sonner';
 
-// --- FUNCIÓN GENERADORA DE 6 DÍGITOS ---
 const generateSixCharID = () => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let result = '';
@@ -300,7 +299,17 @@ const RegistrationsDashboard = () => {
     } catch (e) { toast.error('Error al generar PDF'); }
   };
 
-  const getCategoryLabel = (cat) => { const map = { 'sur_global': 'Sur Global', 'norte_global': 'Norte Global', 'institucion_convocante': 'Institución Convocante', 'estudiante': 'Estudiante', 'asistente': 'Asistente' }; return map[cat] || cat; };
+  const getCategoryLabel = (cat) => { 
+    const map = { 
+      'sur_global': 'Sur Global', 
+      'norte_global': 'Norte Global', 
+      'institucion_convocante': 'Inst. Convocante', 
+      'estudiante': 'Estudiante', 
+      'asistente': 'Asistente' 
+    }; 
+    return map[cat] || cat; 
+  };
+  
   const getStatusBadge = (status) => { const styles = { pending: 'bg-yellow-100 text-yellow-800 border-yellow-200', paid: 'bg-green-100 text-green-800 border-green-200', rejected: 'bg-red-100 text-red-800 border-red-200' }; const labels = { pending: 'Pendiente', paid: 'Pagado', rejected: 'Rechazado' }; return <span className={`px-3 py-1 rounded-full text-xs font-bold border ${styles[status]}`}>{labels[status]}</span>; };
   const filteredRegistrations = registrations.filter(reg => reg.full_name.toLowerCase().includes(searchTerm.toLowerCase()) || reg.email.toLowerCase().includes(searchTerm.toLowerCase()) || (reg.attendance_code && reg.attendance_code.toLowerCase().includes(searchTerm.toLowerCase())));
   const stats = { total: registrations.length, pending: registrations.filter(r => r.status === 'pending').length, paid: registrations.filter(r => r.status === 'paid').length, rejected: registrations.filter(r => r.status === 'rejected').length };
@@ -396,13 +405,10 @@ const RegistrationsDashboard = () => {
           )}
         </div>
 
-        {/* --- MODAL AJUSTADO (FIX ARQUITECTURA FLEX) --- */}
         {selectedRegistration && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-            {/* CONTENEDOR FLEX: Divide en 3 bloques (Header, Tabs, Cuerpo) */}
             <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl relative overflow-hidden">
               
-              {/* BLOQUE 1: Header (Fijo) - Z-Index 30 para estar encima de todo */}
               <div className="shrink-0 bg-white border-b px-6 py-4 flex justify-between items-center z-30 relative shadow-sm">
                 <div className="flex-1">
                     {isEditing ? (
@@ -430,13 +436,11 @@ const RegistrationsDashboard = () => {
                 </div>
               </div>
 
-              {/* BLOQUE 2: Tabs (Fijo) - Z-Index 20 */}
               <div className="shrink-0 flex border-b border-gray-200 bg-white z-20 relative">
                   <button onClick={() => setActiveTab('details')} className={`flex-1 py-3 text-sm font-bold text-center transition ${activeTab === 'details' ? 'text-teal-600 border-b-2 border-teal-600 bg-teal-50' : 'text-gray-500 hover:text-gray-700'}`}><span className="flex items-center justify-center gap-2"><User className="w-4 h-4"/> Detalles</span></button>
                   <button onClick={() => setActiveTab('history')} className={`flex-1 py-3 text-sm font-bold text-center transition ${activeTab === 'history' ? 'text-teal-600 border-b-2 border-teal-600 bg-teal-50' : 'text-gray-500 hover:text-gray-700'}`}><span className="flex items-center justify-center gap-2"><History className="w-4 h-4"/> Historial</span></button>
               </div>
 
-              {/* BLOQUE 3: Cuerpo (Scrollable) - Z-Index 10 (El único que se mueve) */}
               <div className="flex-1 overflow-y-auto p-6 bg-white relative z-10">
                 {activeTab === 'details' ? (
                     <div className="space-y-8 animate-in fade-in">
@@ -459,7 +463,10 @@ const RegistrationsDashboard = () => {
                                             </select>
                                             ) : <p className="font-medium">{getCategoryLabel(selectedRegistration.category)}</p>}      
                                     </div>
-                                    <div className="col-span-2"><p className="text-xs text-gray-500">Comprobante</p>{selectedRegistration.payment_proof_url ? <a href={selectedRegistration.payment_proof_url} target="_blank" rel="noopener noreferrer" className="text-sm text-teal-600 hover:underline flex items-center gap-1"><Download className="w-3 h-3" /> Ver archivo</a> : <span className="text-sm text-red-500 bg-red-50 px-2 py-0.5 rounded flex items-center gap-1 w-fit"><AlertTriangle className="w-3 h-3"/> No adjuntado</span>}</div>
+                                    <div className="col-span-2">
+                                      <p className="text-xs text-gray-500">Comprobante</p>
+                                      {selectedRegistration.payment_proof_url ? <a href={selectedRegistration.payment_proof_url} target="_blank" rel="noopener noreferrer" className="text-sm text-teal-600 hover:underline flex items-center gap-1"><Download className="w-3 h-3" /> Ver archivo</a> : <span className="text-sm text-red-500 bg-red-50 px-2 py-0.5 rounded flex items-center gap-1 w-fit"><AlertTriangle className="w-3 h-3"/> No adjuntado</span>}
+                                    </div>
                                 </div>
                             </div>
                             <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
