@@ -1,147 +1,56 @@
 // src/components/pages/VenuesPage.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabaseClient';
 
 function VenuesPage({ lang }) {
   const [selectedVenue, setSelectedVenue] = useState(null);
+  const [venues, setVenues] = useState([]);
+  const [rooms, setRooms] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const venues = [
-    {
-      id: 1,
-      name: 'Centro Cultural El Carmen',
-      description: lang === 'es' 
-        ? 'Espacio cultural emblemático ubicado en el corazón del centro histórico.'
-        : 'Emblematic cultural space located in the heart of the historic center.',
-      address: {
-        street: 'Hermanos Domínguez S/N',
-        zone: 'Zona Centro',
-        city: 'San Cristóbal de las Casas, Chiapas',
-        zip: 'C.P. 29220'
-      },
-      spaces: [
-        'Sala de Exposiciones',
-        'Sala de Usos Múltiples',
-        'Sala Julio Barrientos'
-      ],
-      icon: '🏛️',
-      image: '/images/el-carmen.webp', // Actualizado a .webp
-      coordinates: { lat: 16.7370, lng: -92.6378 },
-      mapLink: '' 
-    },
-    {
-      id: 2,
-      name: 'Auditorio del DIF',
-      description: lang === 'es'
-        ? 'Auditorio principal para conferencias magistrales.'
-        : 'Main auditorium for keynote lectures.',
-      address: {
-        street: 'Miguel Hidalgo 7',
-        zone: 'Zona Centro',
-        city: 'San Cristóbal de las Casas, Chiapas',
-        zip: 'C.P. 29200'
-      },
-      spaces: ['Auditorio principal'],
-      icon: '🎭',
-      image: '/images/dif.webp', // Actualizado a .webp
-      coordinates: { lat: 16.7360, lng: -92.6370 },
-      mapLink: ''
-    },
-    {
-      id: 3,
-      name: 'Facultad de Derecho',
-      description: lang === 'es'
-        ? 'Instalaciones académicas de la universidad.'
-        : 'University academic facilities.',
-      address: {
-        street: 'Av. Miguel Hidalgo No. 8',
-        zone: 'Centro Histórico',
-        city: 'San Cristóbal de las Casas, Chiapas',
-        zip: 'C.P. 29220'
-      },
-      spaces: ['Auditorio', 'Aula Magna'],
-      icon: '⚖️',
-      image: '/images/facultad-derecho.webp', // Actualizado a .webp
-      coordinates: { lat: 16.7380, lng: -92.6390 },
-      mapLink: ''
-    },
-    {
-      id: 4,
-      name: 'Casa Mazariegos',
-      description: lang === 'es'
-        ? 'Casa colonial histórica con múltiples espacios.'
-        : 'Historic colonial house with multiple spaces.',
-      address: {
-        street: 'Crescencio Rosas No. 4',
-        zone: 'Zona Centro',
-        city: 'San Cristóbal de las Casas, Chiapas',
-        zip: 'C.P. 29200'
-      },
-      spaces: ['Sala 1', 'Sala 2', 'Sala 3', 'Patio'],
-      icon: '🏰',
-      image: '/images/casa-mazariegos.webp', // Actualizado a .webp
-      coordinates: { lat: 16.7365, lng: -92.6385 },
-      mapLink: ''
-    },
-    {
-      id: 5,
-      name: 'Centro Cultural Carlos Jurado',
-      description: lang === 'es'
-        ? 'Centro cultural con salas adaptadas para presentaciones.'
-        : 'Cultural center with rooms adapted for presentations.',
-      address: {
-        street: '16 de Septiembre No. 1',
-        zone: 'Zona Centro',
-        city: 'San Cristóbal de las Casas, Chiapas',
-        zip: 'C.P. 29200'
-      },
-      spaces: ['Sala 1', 'Sala 2'],
-      icon: '🎨',
-      image: '/images/carlos-jurado.webp', // Actualizado a .webp
-      coordinates: { lat: 16.7375, lng: -92.6375 },
-      mapLink: ''
-    },
-    {
-      id: 6,
-      name: 'MUSAC',
-      description: lang === 'es'
-        ? 'Museo de las Culturas de San Cristóbal.'
-        : 'Museum of Cultures of San Cristóbal.',
-      address: {
-        street: 'Plaza 31 Marzo, Calle Diego de Mazariegos S/N',
-        zone: 'Zona Centro',
-        city: 'San Cristóbal de las Casas, Chiapas',
-        zip: 'C.P. 29200'
-      },
-      spaces: ['Espacios del museo'],
-      icon: '🖼️',
-      image: '/images/musac.webp', // Actualizado a .webp
-      coordinates: { lat: 16.7385, lng: -92.6365 },
-      mapLink: ''
-    },
-    {
-      id: 7,
-      name: 'Teatro Zebadúa',
-      description: lang === 'es'
-        ? 'Teatro histórico para eventos especiales.'
-        : 'Historic theater for special events.',
-      address: {
-        street: 'Av 20 de Noviembre No. 7',
-        zone: 'Zona Centro',
-        city: 'San Cristóbal de las Casas, Chiapas',
-        zip: 'C.P. 29200'
-      },
-      spaces: ['Teatro principal'],
-      icon: '🎪',
-      image: '/images/teatro.webp', // Actualizado a .webp
-      coordinates: { lat: 16.7355, lng: -92.6380 },
-      mapLink: ''
+  // Array de iconos variados para las tarjetas
+  const icons = ['🏛️', '🎭', '⚖️', '🏰', '🎨', '🖼️', '🎪', '🏢', '🏫'];
+
+  useEffect(() => {
+    fetchVenuesAndRooms();
+  }, []);
+
+  const fetchVenuesAndRooms = async () => {
+    try {
+      setLoading(true);
+      const [venuesRes, roomsRes] = await Promise.all([
+        supabase.from('venues').select('*').order('id'),
+        supabase.from('rooms').select('*').order('name')
+      ]);
+
+      if (venuesRes.error) throw venuesRes.error;
+      if (roomsRes.error) throw roomsRes.error;
+
+      setVenues(venuesRes.data || []);
+      setRooms(roomsRes.data || []);
+    } catch (error) {
+      console.error('Error cargando sedes:', error);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   const openInMaps = (venue) => {
     const query = encodeURIComponent(`${venue.name} San Cristóbal de las Casas`);
-    const url = venue.mapLink || `https://www.google.com/maps/search/?api=1&query=${query}`;
+    const url = venue.map_url || `https://maps.google.com/?q=${query}`;
     window.open(url, '_blank');
   };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-teal-600 mb-4"></div>
+        <p className="text-gray-500 font-bold uppercase tracking-widest text-sm">
+          {lang === 'es' ? 'Cargando sedes...' : 'Loading venues...'}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -156,88 +65,102 @@ function VenuesPage({ lang }) {
 
       {/* Grid de sedes */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {venues.map((venue) => (
-          <div
-            key={venue.id}
-            className="bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-200 cursor-pointer group flex flex-col h-full"
-            onClick={() => setSelectedVenue(venue)}
-          >
-            {/* Imagen */}
-            <div className="relative h-56 overflow-hidden">
-              <img
-                src={venue.image}
-                alt={venue.name}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                // Fallback por si la imagen webp no carga (volver a jpg o placeholder)
-                onError={(e) => {
-                  // Intenta cargar la JPG si la WEBP falla, o usa un placeholder
-                  if (e.target.src.includes('.webp')) {
-                     e.target.src = e.target.src.replace('.webp', '.jpg');
-                  } else {
-                     e.target.src = `https://via.placeholder.com/800x600/0d9488/ffffff?text=${encodeURIComponent(venue.name)}`;
-                  }
-                }}
-              />
-              {/* Overlay suave al hacer hover */}
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300"></div>
-              
-              {/* Icono flotante */}
-              <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-full w-10 h-10 flex items-center justify-center shadow-md">
-                <span className="text-xl">{venue.icon}</span>
-              </div>
-            </div>
+        {venues.map((venue, index) => {
+          // Obtener las salas correspondientes a esta sede
+          const venueRooms = rooms.filter(r => r.venue_id === venue.id);
+          const venueIcon = icons[index % icons.length]; // Asigna un icono cíclicamente
 
-            {/* Contenido */}
-            <div className="p-5 flex-1 flex flex-col">
-              <h3 className="font-bold text-lg text-gray-800 mb-2 group-hover:text-teal-700 transition-colors">
-                {venue.name}
-              </h3>
-              
-              {/* Dirección compacta */}
-              <div className="mb-3 text-xs text-gray-500 flex items-start gap-1.5">
-                <span className="text-teal-600 mt-0.5">📍</span>
-                <span className="line-clamp-2">
-                  {venue.address.street}, {venue.address.zone}
-                </span>
-              </div>
-
-              <p className="text-gray-600 text-sm mb-4 line-clamp-2 flex-1">
-                {venue.description}
-              </p>
-
-              {/* Espacios */}
-              <div className="mb-4">
-                <div className="flex flex-wrap gap-1.5">
-                  {venue.spaces.slice(0, 2).map((space, index) => (
-                    <span
-                      key={index}
-                      className="text-[10px] uppercase tracking-wide font-medium bg-teal-50 text-teal-700 px-2 py-1 rounded-md border border-teal-100"
-                    >
-                      {space}
-                    </span>
-                  ))}
-                  {venue.spaces.length > 2 && (
-                    <span className="text-[10px] font-medium bg-gray-50 text-gray-600 px-2 py-1 rounded-md border border-gray-200">
-                      +{venue.spaces.length - 2}
-                    </span>
-                  )}
+          return (
+            <div
+              key={venue.id}
+              className="bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-200 cursor-pointer group flex flex-col h-full"
+              onClick={() => setSelectedVenue({ ...venue, rooms: venueRooms, icon: venueIcon })}
+            >
+              {/* Imagen */}
+              <div className="relative h-56 overflow-hidden bg-gray-100">
+                {venue.image_url ? (
+                  <img
+                    src={venue.image_url}
+                    alt={venue.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                    onError={(e) => {
+                      if (e.target.src.includes('.webp')) {
+                         e.target.src = e.target.src.replace('.webp', '.jpg');
+                      } else {
+                         e.target.src = `https://via.placeholder.com/800x600/0d9488/ffffff?text=${encodeURIComponent(venue.name)}`;
+                      }
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-300">
+                    <span className="text-6xl">{venueIcon}</span>
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300"></div>
+                
+                {/* Icono flotante */}
+                <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-full w-10 h-10 flex items-center justify-center shadow-md">
+                  <span className="text-xl">{venueIcon}</span>
                 </div>
               </div>
 
-              {/* Botón */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  openInMaps(venue);
-                }}
-                className="w-full bg-white border border-teal-600 text-teal-700 hover:bg-teal-50 font-semibold py-2 px-4 rounded-lg transition-colors text-sm flex items-center justify-center gap-2 group-hover:bg-teal-600 group-hover:text-white"
-              >
-                <span>🗺️</span>
-                <span>{lang === 'es' ? 'Ver en Mapa' : 'View on Map'}</span>
-              </button>
+              {/* Contenido */}
+              <div className="p-5 flex-1 flex flex-col">
+                <h3 className="font-bold text-lg text-gray-800 mb-2 group-hover:text-teal-700 transition-colors">
+                  {venue.name}
+                </h3>
+                
+                {/* Dirección */}
+                <div className="mb-3 text-xs text-gray-500 flex items-start gap-1.5">
+                  <span className="text-teal-600 mt-0.5">📍</span>
+                  <span className="line-clamp-2">
+                    {venue.address || (lang === 'es' ? 'Centro Histórico' : 'Historic Center')}
+                  </span>
+                </div>
+
+                <p className="text-gray-600 text-sm mb-4 line-clamp-2 flex-1">
+                  {venue.description || (lang === 'es' ? 'Sede oficial del congreso.' : 'Official congress venue.')}
+                </p>
+
+                {/* Espacios (Salas) */}
+                <div className="mb-4">
+                  <div className="flex flex-wrap gap-1.5">
+                    {venueRooms.length === 0 && (
+                       <span className="text-[10px] uppercase tracking-wide font-medium bg-gray-50 text-gray-400 px-2 py-1 rounded-md border border-gray-200">
+                         {lang === 'es' ? 'Múltiples espacios' : 'Multiple spaces'}
+                       </span>
+                    )}
+                    {venueRooms.slice(0, 2).map((room) => (
+                      <span
+                        key={room.id}
+                        className="text-[10px] uppercase tracking-wide font-medium bg-teal-50 text-teal-700 px-2 py-1 rounded-md border border-teal-100"
+                      >
+                        {room.name}
+                      </span>
+                    ))}
+                    {venueRooms.length > 2 && (
+                      <span className="text-[10px] font-medium bg-gray-50 text-gray-600 px-2 py-1 rounded-md border border-gray-200">
+                        +{venueRooms.length - 2}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Botón */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openInMaps(venue);
+                  }}
+                  className="w-full bg-white border border-teal-600 text-teal-700 hover:bg-teal-50 font-semibold py-2 px-4 rounded-lg transition-colors text-sm flex items-center justify-center gap-2 group-hover:bg-teal-600 group-hover:text-white"
+                >
+                  <span>🗺️</span>
+                  <span>{lang === 'es' ? 'Ver en Mapa' : 'View on Map'}</span>
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Mapa general */}
@@ -257,7 +180,7 @@ function VenuesPage({ lang }) {
         
         <div className="h-96 bg-gray-100 relative">
           <iframe
-            src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d15286.326848606086!2d-92.63750000000002!3d16.737500000000004!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1ses!2smx!4v1679000000000!5m2!1ses!2smx"
+            src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d15252.827666248554!2d-92.6375!3d16.7375!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1ses-419!2smx!4v1700000000000!5m2!1ses-419!2smx"
             width="100%"
             height="100%"
             style={{ border: 0 }}
@@ -267,8 +190,7 @@ function VenuesPage({ lang }) {
             title={lang === 'es' ? 'Mapa de las sedes' : 'Venues map'}
           ></iframe>
           
-          {/* Overlay informativo */}
-          <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur p-2 rounded shadow text-xs text-gray-500">
+          <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur p-2 rounded shadow text-xs text-gray-500 font-bold">
             San Cristóbal de Las Casas, Chiapas
           </div>
         </div>
@@ -329,23 +251,29 @@ function VenuesPage({ lang }) {
             className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="relative h-72">
-              <img
-                src={selectedVenue.image}
-                alt={selectedVenue.name}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  if (e.target.src.includes('.webp')) {
-                     e.target.src = e.target.src.replace('.webp', '.jpg');
-                  } else {
-                     e.target.src = `https://via.placeholder.com/800x600/0d9488/ffffff?text=${encodeURIComponent(selectedVenue.name)}`;
-                  }
-                }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
+            <div className="relative h-72 bg-gray-100">
+              {selectedVenue.image_url ? (
+                <img
+                  src={selectedVenue.image_url}
+                  alt={selectedVenue.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    if (e.target.src.includes('.webp')) {
+                       e.target.src = e.target.src.replace('.webp', '.jpg');
+                    } else {
+                       e.target.src = `https://via.placeholder.com/800x600/0d9488/ffffff?text=${encodeURIComponent(selectedVenue.name)}`;
+                    }
+                  }}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-gray-300">
+                  <span className="text-6xl">{selectedVenue.icon}</span>
+                </div>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
               <button
                 onClick={() => setSelectedVenue(null)}
-                className="absolute top-4 right-4 bg-black/20 hover:bg-black/40 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center text-white transition-all"
+                className="absolute top-4 right-4 bg-black/20 hover:bg-black/40 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center text-white transition-all border border-white/20"
               >
                 ✕
               </button>
@@ -367,7 +295,7 @@ function VenuesPage({ lang }) {
                         {lang === 'es' ? 'Información' : 'Information'}
                       </h3>
                       <p className="text-gray-600 mb-6 leading-relaxed text-sm">
-                        {selectedVenue.description}
+                        {selectedVenue.description || (lang === 'es' ? 'Información de la sede próximamente.' : 'Venue information coming soon.')}
                       </p>
 
                       <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
@@ -375,10 +303,8 @@ function VenuesPage({ lang }) {
                             {lang === 'es' ? 'Dirección' : 'Address'}
                         </h4>
                         <div className="text-gray-700 text-sm space-y-1">
-                            <p className="font-medium">{selectedVenue.address.street}</p>
-                            <p>{selectedVenue.address.zone}</p>
-                            <p>{selectedVenue.address.city}</p>
-                            <p className="text-gray-500 text-xs">{selectedVenue.address.zip}</p>
+                            <p className="font-medium">{selectedVenue.address || 'San Cristóbal de Las Casas'}</p>
+                            <p className="text-gray-500 text-xs mt-2">C.P. 29200, Chiapas, México</p>
                         </div>
                       </div>
                   </div>
@@ -386,15 +312,21 @@ function VenuesPage({ lang }) {
                   <div>
                       <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
                         <span className="text-teal-600">🏛️</span>
-                        {lang === 'es' ? 'Espacios' : 'Spaces'}
+                        {lang === 'es' ? 'Salas / Espacios' : 'Rooms / Spaces'}
                       </h3>
                       <ul className="space-y-3">
-                        {selectedVenue.spaces.map((space, index) => (
-                        <li key={index} className="flex items-center gap-3 text-gray-700 text-sm bg-white border border-gray-100 p-3 rounded-lg shadow-sm">
-                            <span className="text-teal-500 font-bold">✓</span>
-                            {space}
-                        </li>
-                        ))}
+                        {selectedVenue.rooms && selectedVenue.rooms.length > 0 ? (
+                          selectedVenue.rooms.map((room) => (
+                            <li key={room.id} className="flex items-center gap-3 text-gray-700 text-sm bg-white border border-gray-100 p-3 rounded-lg shadow-sm">
+                                <span className="text-teal-500 font-bold">✓</span>
+                                {room.name}
+                            </li>
+                          ))
+                        ) : (
+                          <p className="text-sm text-gray-500 italic">
+                            {lang === 'es' ? 'Espacios por confirmar.' : 'Spaces to be confirmed.'}
+                          </p>
+                        )}
                       </ul>
 
                       <button
