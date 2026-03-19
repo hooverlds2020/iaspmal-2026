@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Toaster } from 'sonner';
 import { Ticket, ArrowLeft, Clock, Library, Info } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
+import UploadPhoto from './components/UploadPhoto';
 
 // Pages - Tools
 import AttendanceCheck from './pages/AttendanceCheck';
@@ -15,6 +16,7 @@ import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
 import MobileSidebar from './components/layout/MobileSidebar';
 import Footer from './components/layout/Footer';
+import WelcomeModal from './components/layout/WelcomeModal';
 
 // Page Components
 import HomeLanding from './components/pages/HomeLanding';
@@ -74,7 +76,7 @@ const MainLayout = ({ lang, setLang }) => {
     { id: 'comite-academico', label: 'Comité Académico', label_pt: 'Comitê Acadêmico' },
     { id: 'comite-organizador', label: 'Comité Organizador', label_pt: 'Comitê Organizador' },
     { id: 'programa', label: 'Programa', label_pt: 'Programa' },
-    { id: 'talleres', label: 'Talleres', label_pt: 'Oficinas' },
+    { id: 'conciertos', label: 'Conciertos', label_pt: 'Concertos' },
     { id: 'presentaciones-libros', label: 'Presentaciones de libros', label_pt: 'Apresentações de livros' },
     {
       id: 'actividades-congreso',
@@ -83,22 +85,23 @@ const MainLayout = ({ lang, setLang }) => {
       submenu: [
         { id: 'actividad1', label: 'Actividad 1', label_pt: 'Atividade 1' },
         { id: 'actividad2', label: 'Actividad 2', label_pt: 'Atividade 2' }
-      ]
+      ]      
     },
     {
-      id: 'info-complementaria',
-      label: 'Información complementaria',
-      label_pt: 'Informação complementar',
-      submenu: [
-        { id: 'sedes', label: 'Las sedes del Congreso', label_pt: 'Locais do Congresso' },
-        { id: 'instituciones-convocantes', label: 'Instituciones convocantes', label_pt: 'Instituições convocantes' },
-        { id: 'organizaciones', label: 'Organizaciones colaboradoras', label_pt: 'Organizações colaboradoras' },
-        { id: 'alojamiento', label: 'Alojamiento', label_pt: 'Hospedagem' },
-        { id: 'san-cristobal', label: 'San Cristóbal de Las Casas', label_pt: 'San Cristóbal de Las Casas' },
-        { id: 'cartel', label: 'Cartel del congreso', label_pt: 'Cartaz do congresso' }
-      ]
-    },
-    // --- NUEVA PESTAÑA: GALERÍA ---
+  id: 'info-complementaria',
+  label: 'Información complementaria',
+  label_pt: 'Informações complementares',
+  submenu: [
+    { id: 'sedes', label: 'Las sedes del Congreso', label_pt: 'As sedes do Congresso' },
+    { id: 'instituciones-convocantes', label: 'Instituciones convocantes', label_pt: 'Instituições convocantes' },
+    { id: 'organizaciones', label: 'Organizaciones colaboradoras', label_pt: 'Organizações colaboradoras' },
+    { id: 'alojamiento', label: 'Alojamiento', label_pt: 'Hospedagem' },
+    { id: 'san-cristobal', label: 'Lugares para comer', label_pt: 'Lugares para comer' }, 
+    { id: 'musica-vivo', label: 'Música en vivo', label_pt: 'Música ao vivo' }, 
+    { id: 'cartel', label: 'Cartel del congreso', label_pt: 'Pôster do congresso' }
+  ]
+},    
+      //--- NUEVA PESTAÑA: GALERÍA ---
     { id: 'galeria', label: 'Galería', label_pt: 'Galeria' }
   ];
 
@@ -126,7 +129,7 @@ const MainLayout = ({ lang, setLang }) => {
       'alojamiento': { es: 'Alojamiento', pt: 'Hospedagem' },
       'san-cristobal': { es: 'San Cristóbal de Las Casas', pt: 'San Cristóbal de Las Casas' },
       'cartel': { es: 'Cartel Oficial', pt: 'Cartaz Oficial' },
-      'galeria': { es: 'Galería', pt: 'Galeria' } // <-- Agregado título de Galería
+      'galeria': { es: 'Galería', pt: 'Galeria' }
     };
     const titleObj = titles[currentPage];
     if (!titleObj) return lang === 'es' ? 'Contenido' : 'Conteúdo';
@@ -234,7 +237,7 @@ const MainLayout = ({ lang, setLang }) => {
 
               <div className="bg-blue-50/50 p-5 rounded-xl border border-blue-100">
                 <p className="font-black text-[#1e3a5f] mb-4">
-                  {lang === 'es' ? 'Las cuentas para transferencia entre bancos mexicanos son las siguientes:' : 'As contas para transferência entre bancos mexicanos são as seguintes:'}
+                  {lang === 'es' ? 'Las cuentas para transferencia entre bancos mexicanos son las siguientes:' : 'As contas para transferência entre bancos mexicanos son las siguientes:'}
                 </p>
                 <ul className="space-y-4">
                   <li className="flex flex-col md:flex-row md:items-center gap-3">
@@ -279,15 +282,33 @@ const MainLayout = ({ lang, setLang }) => {
         );
 
       // --- PESTAÑA: PRESENTACIONES DE LIBROS ---
-      case 'presentaciones-libros':
+    case 'presentaciones-libros':
         return (
           <div className="space-y-6 animate-in fade-in duration-300">
             <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-100">
-              <p className="text-base md:text-lg text-gray-700 leading-relaxed mb-8">
+              <p className="text-base md:text-lg text-gray-700 leading-relaxed mb-6">
                 {lang === 'es'
                   ? 'El XVII Congreso invita a exponer la producción bibliográfica de los socios de IASPM-AL y a presentar las obras que hayan sido publicadas de 2023 a la fecha.'
                   : 'O XVII Congresso convida a expor a produção bibliográfica dos sócios da IASPM-AL e a apresentar as obras que tenham sido publicadas de 2023 até a presente data.'}
               </p>
+
+              {/* NUEVO BLOQUE: Fecha límite y correo */}
+              <div className="mb-8 p-5 md:p-6 bg-blue-50/80 rounded-xl border-l-4 border-[#1e3a5f] shadow-sm flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+                <div>
+                  <h4 className="font-black text-[#1e3a5f] uppercase tracking-wide text-sm mb-1.5">
+                    {lang === 'es' ? 'Envío de propuestas' : 'Envio de propostas'}
+                  </h4>
+                  <p className="text-[#1e3a5f] font-medium text-sm md:text-base">
+                    {lang === 'es' 
+                      ? 'Fecha límite: 15 de junio de 2026' 
+                      : 'Prazo final: 15 de junho de 2026'}
+                  </p>
+                </div>
+                <a href="mailto:iaspm.al.2026@gmail.com" className="shrink-0 bg-[#1e3a5f] text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-iaspm-orange transition-all shadow-md">
+                  iaspm.al.2026@gmail.com
+                </a>
+              </div>
+              {/* FIN DEL NUEVO BLOQUE */}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="flex items-start gap-4 p-5 bg-blue-50/50 rounded-xl border border-blue-100">
@@ -335,21 +356,49 @@ const MainLayout = ({ lang, setLang }) => {
           </div>
         );
 
-      case 'comite-academico': return <div className="space-y-4"><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">Lizette Alegre</p><p className="text-sm text-gray-600">Facultad de Música, UNAM, México</p></div><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">Natalia Bieletto Bueno</p><p className="text-sm text-gray-600">Centro de Investigación en Artes y Humanidades, Universidad Mayor, Chile</p></div></div></div>;
-      case 'comite-organizador': return <div className="space-y-4"><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">María Luisa de la Garza Chávez</p><p className="text-sm text-gray-600">CESMECA-UNICACH</p></div><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">Roberto Campos Velázquez</p><p className="text-sm text-gray-600">CIMSUR-UNAM</p></div></div></div>;
+
+      case 'comite-academico': 
+        return (
+          <div className="space-y-6 animate-in fade-in duration-500">
+            {/* Grid de 2 columnas para mantener el tamaño de la primera imagen */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[
+                { name: 'Lizette Alegre', country: 'México' },
+                { name: 'Natalia Bieletto', country: 'México / Chile' },
+                { name: 'Carlos Bonfim', country: 'Brasil' },
+                { name: 'María Luisa de la Garza', country: 'México' },
+                { name: 'Fernando Elías Llanos', country: 'Brasil / Perú' },
+                { name: 'Mercedes Liska', country: 'Argentina' },
+                { name: 'Darío Tejeda', country: 'República Dominicana' }
+              ].map((member, idx) => (
+                // rounded-none quita cualquier redondeo de las esquinas
+                <div key={idx} className="bg-gray-50 p-6 rounded-none border border-gray-200 hover:bg-white transition-colors">
+                  <p className="font-bold text-gray-900 text-base">
+                    {member.name}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1 uppercase tracking-wider">
+                    {member.country}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+    
+    case 'comite-organizador': return <div className="space-y-4"><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">María Luisa de la Garza Chávez</p><p className="text-sm text-gray-600">CESMECA-UNICACH</p></div><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">Roberto Campos Velázquez</p><p className="text-sm text-gray-600">FaM-UNICACH</p></div></div></div>;
 
       case 'programa': return <Program lang={lang} />;
       case 'sedes': return <VenuesPage lang={lang} />;
       case 'alojamiento': return <Alojamiento lang={lang} />;
-      case 'galeria': return <Gallery lang={lang} />;	    
+      case 'galeria': return <Gallery lang={lang} />; 
       
-     default: return <div className="p-8 text-center text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-300">{lang === 'es' ? 'Contenido en preparación.' : 'Conteúdo em preparação.'}</div>;
+      default: return <div className="p-8 text-center text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-300">{lang === 'es' ? 'Contenido en preparación.' : 'Conteúdo em preparação.'}</div>;
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900" dir="ltr">
-
+      <WelcomeModal lang={lang} />
       <Header
         lang={lang}
         setLang={setLang}
@@ -380,7 +429,8 @@ const MainLayout = ({ lang, setLang }) => {
             lang={lang}
           />
 
-          <section className="bg-white rounded-2xl shadow-xl min-h-[600px] relative overflow-hidden transition-all duration-300">
+          {/* AJUSTE APLICADO: Aquí está el min-w-0 para evitar el empuje del contenido */}
+          <section className="min-w-0 bg-white rounded-2xl shadow-xl min-h-[600px] relative overflow-hidden transition-all duration-300">
 
             <div className="absolute inset-0 z-0 opacity-[0.02] bg-[url('/images/Marimba_Watermark.png')] bg-cover bg-center bg-no-repeat pointer-events-none"></div>
 

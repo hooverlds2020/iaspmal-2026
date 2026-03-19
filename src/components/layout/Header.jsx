@@ -4,64 +4,46 @@ import { Globe, User, Menu } from 'lucide-react';
 
 const Header = ({ lang, setLang, onMobileMenuOpen }) => {
   return (
-    // h-[72px] define una altura fija para calcular el sticky del sidebar
-    <header className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm h-[72px] flex items-center">
+    // CAMBIO 1: Aumentamos la altura de la franja blanca de h-[72px] a h-[100px]
+    <header className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-md h-[100px] flex items-center">
       
       <div className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full">
 
-        {/* Marca de agua decorativa */}
-        <div className="absolute right-0 top-0 h-full w-1/3 flex justify-end items-center pointer-events-none overflow-hidden">
-           <img
-             src="/images/Marimba_Watermark.png"
-             alt=""
-             className="h-[180%] w-auto object-contain opacity-[0.08] grayscale mix-blend-multiply translate-x-10"
-           />
-        </div>
+         <div className="relative z-10 flex justify-between items-center h-full gap-4">
 
-        <div className="relative z-10 flex justify-between items-center h-full">
-
-          {/* IZQUIERDA: Logo */}
-          <div className="flex items-center gap-4">
+          {/* IZQUIERDA: Logo Horizontal - Ahora mucho más grande */}
+          <div className="flex items-center h-full py-3">
             <img
-              src="/images/logo-margen.jpg"
+              src="/images/logo-horizontal-iaspm.png"
               alt="XVII Congreso IASPM-AL"
-              className="h-12 md:h-14 w-auto object-contain hover:scale-105 transition-transform"
+              // CAMBIO 2: Subimos drásticamente las alturas responsivas del logo
+              className="h-12 sm:h-16 md:h-20 lg:h-24 w-auto object-contain hover:scale-[1.03] transition-transform origin-left"
             />
-
-            <div className="hidden md:flex flex-col justify-center border-l-2 border-gray-100 pl-4 h-10">
-               <h2 className="text-[#1e3a5f] font-bold text-sm uppercase leading-none tracking-tight">
-                 San Cristóbal de Las Casas
-               </h2>
-               <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Chiapas, México</span>
-                  <span className="text-orange-500 font-bold text-xs">• 2026</span>
-               </div>
-            </div>
           </div>
 
-          {/* DERECHA: Controles */}
-          <div className="flex items-center gap-3 md:gap-4">
+          {/* DERECHA: Controles (shrink-0 asegura que no se amontonen) */}
+          <div className="flex items-center gap-2 md:gap-4 shrink-0">
 
              {/* Selector Idioma */}
-             <div className="flex items-center gap-1 bg-gray-50 px-2 py-1.5 rounded-lg border border-gray-200">
+             <div className="flex items-center gap-1 bg-gray-50 px-2 py-1.5 rounded-lg border border-gray-200 shadow-sm">
                 <Globe className="w-3.5 h-3.5 text-gray-400" />
                 <button
                   onClick={() => setLang('es')}
-                  className={`text-xs font-bold px-1.5 transition ${lang === 'es' ? 'text-[#1e3a5f]' : 'text-gray-400 hover:text-gray-600'}`}
+                  className={`text-[10px] md:text-xs font-black px-1.5 transition ${lang === 'es' ? 'text-[#1e3a5f]' : 'text-gray-400 hover:text-gray-600'}`}
                 >
                   ES
                 </button>
                 <span className="text-gray-300">|</span>
                 <button
                   onClick={() => setLang('pt')}
-                  className={`text-xs font-bold px-1.5 transition ${lang === 'pt' ? 'text-[#1e3a5f]' : 'text-gray-400 hover:text-gray-600'}`}
+                  className={`text-[10px] md:text-xs font-black px-1.5 transition ${lang === 'pt' ? 'text-[#1e3a5f]' : 'text-gray-400 hover:text-gray-600'}`}
                 >
                   PT
                 </button>
              </div>
 
              {/* Admin Link */}
-             <a href="/admin" className="hidden md:flex items-center gap-2 text-xs font-medium text-gray-500 hover:text-orange-600 transition group bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200">
+             <a href="/admin" className="hidden md:flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-[#1e3a5f] transition group bg-white px-3 py-2 rounded-lg border border-gray-200 shadow-sm">
                 <User className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
                 <span>Admin</span>
              </a>
@@ -69,7 +51,7 @@ const Header = ({ lang, setLang, onMobileMenuOpen }) => {
              {/* Menú Móvil */}
              <button
                onClick={onMobileMenuOpen}
-               className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition"
+               className="md:hidden p-2 text-[#1e3a5f] hover:bg-gray-100 rounded-lg transition-colors border border-gray-100"
              >
                <Menu className="w-6 h-6" />
              </button>

@@ -6,57 +6,65 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 
-// --- 1. COMPONENTE DEL SLIDER TÁCTIL (NUEVO) ---
+// --- 1. COMPONENTE DEL SLIDER INTELIGENTE (CONECTADO A SUPABASE) ---
 const MainHeroSlider = ({ lang, setCurrentPage }) => {
   const [current, setCurrent] = useState(0);
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
+  const [slides, setSlides] = useState([]);
+  const [loading, setLoading] = useState(true);
   const autoPlayRef = useRef();
 
-  const slides = [
-    {
-      id: 1,
-      image: '/images/facultad-derecho.jpg', 
-      title: lang === 'es' ? 'Convocatoria Abierta' : 'Chamada Aberta',
-      subtitle: lang === 'es' ? '18 Simposios Temáticos Aprobados' : '18 Simpósios Temáticos Aprovados',
-      description: lang === 'es' 
-        ? 'Participa en el XVII Congreso de la IASPM-AL. Envía tu ponencia y sé parte del debate sobre música popular en América Latina.'
-        : 'Participe do XVII Congresso da IASPM-AL. Envie seu trabalho e faça parte do debate sobre música popular na América Latina.',
-      cta: lang === 'es' ? 'Ver Simposios' : 'Ver Simpósios',
-      link: 'programa',
-      icon: Calendar
-    },
-    {
-      id: 2,
-      image: '/images/el-carmen.jpg',
-      title: 'XVII Congreso IASPM-AL',
-      subtitle: 'San Cristóbal de Las Casas 2026',
-      description: lang === 'es'
-        ? 'Un encuentro para debatir sobre ética, política y música popular en el corazón de Chiapas.'
-        : 'Um encontro para debater ética, política e música popular no coração de Chiapas.',
-      cta: lang === 'es' ? 'Conocer la Sede' : 'Conhecer a Sede',
-      link: 'sedes',
-      icon: MapPin
-    },
-    {
-      id: 3,
-      image: '/images/teatro.jpg',
-      title: lang === 'es' ? 'Inscripciones Abiertas' : 'Inscrições Abertas',
-      subtitle: lang === 'es' ? 'Asegura tu participación' : 'Garanta sua participação',
-      description: lang === 'es'
-        ? 'Consulta las cuotas para investigadores y estudiantes. Aprovecha los descuentos por pago anticipado.'
-        : 'Consulte as taxas para pesquisadores e estudantes. Aproveite os descontos para pagamento antecipado.',
-      cta: lang === 'es' ? 'Ver Costos' : 'Ver Custos',
-      link: 'cuotas',
-      icon: Ticket
-    }
-  ];
+  useEffect(() => {
+    const fetchSliders = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('slider_home')
+          .select('*')
+          .eq('activo', true)
+          .order('orden', { ascending: true })
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        const now = new Date();
+        const activeSlides = data.filter(slide => {
+          const startDate = slide.fecha_inicio ? new Date(slide.fecha_inicio) : null;
+          const endDate = slide.fecha_fin ? new Date(slide.fecha_fin) : null;
+          
+          if (startDate && now < startDate) return false;
+          if (endDate && now > endDate) return false;
+          return true;
+        });
+
+        if (activeSlides.length > 0) {
+          setSlides(activeSlides);
+        } else {
+          // Banner de respaldo por si no hay sliders configurados
+          setSlides([{
+            id: 'default',
+            image_url: '/images/facultad-derecho.jpg',
+            titulo: lang === 'es' ? 'XVII Congreso IASPM-AL' : 'XVII Congresso IASPM-AL',
+            descripcion: 'San Cristóbal de Las Casas 2026',
+            enlace_url: 'programa',
+            abrir_nueva_pestana: false
+          }]);
+        }
+      } catch (error) {
+        console.error('Error fetching sliders:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSliders();
+  }, [lang]);
 
   const nextSlide = () => setCurrent(current === slides.length - 1 ? 0 : current + 1);
   const prevSlide = () => setCurrent(current === 0 ? slides.length - 1 : current - 1);
   const goToSlide = (index) => setCurrent(index);
 
-  // Lógica Swipe
+  // Lógica Swipe para celulares
   const minSwipeDistance = 50;
   const onTouchStart = (e) => { setTouchEnd(null); setTouchStart(e.targetTouches[0].clientX); };
   const onTouchMove = (e) => { setTouchEnd(e.targetTouches[0].clientX); };
@@ -70,57 +78,93 @@ const MainHeroSlider = ({ lang, setCurrentPage }) => {
   // Autoplay
   useEffect(() => { autoPlayRef.current = nextSlide; });
   useEffect(() => {
+    if (slides.length <= 1) return; // No hace autoplay si solo hay 1 foto
     const play = () => { autoPlayRef.current(); };
     const interval = setInterval(play, 6000);
     return () => clearInterval(interval);
-  }, []);
+  }, [slides.length]);
+
+  // Manejador Inteligente de Enlaces
+  const handleLinkClick = (url, newTab) => {
+    if (!url) return;
+    if (url.startsWith('http')) {
+      window.open(url, newTab ? '_blank' : '_self');
+    } else {
+      setCurrentPage(url);
+    }
+  };
+
+  if (loading) {
+    return <div className="w-full h-[450px] md:h-[550px] bg-gray-900 rounded-2xl animate-pulse flex items-center justify-center"><Calendar className="text-gray-700 w-12 h-12" /></div>;
+  }
 
   return (
     <div 
       className="relative w-full h-[450px] md:h-[550px] overflow-hidden rounded-2xl group shadow-xl bg-gray-900 select-none"
       onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
     >
-      {slides.map((slide, index) => (
-        <div key={slide.id} className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out ${index === current ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
-          <div className={`absolute inset-0 w-full h-full transform transition-transform duration-[8000ms] ease-linear ${index === current ? 'scale-110' : 'scale-100'}`}>
-             <img src={slide.image} alt={slide.title} className="w-full h-full object-cover" />
-          </div>
-          <div className="absolute inset-0 bg-gradient-to-t from-[#1e3a5f]/95 via-[#1e3a5f]/50 to-transparent"></div>
-        </div>
-      ))}
+      {slides.map((slide, index) => {
+        // La regla condicional maestra
+        const hasText = slide.titulo || slide.descripcion;
+        const isClickableImage = !hasText && slide.enlace_url;
 
-      <div className="absolute inset-0 z-20 flex items-end md:items-center justify-start px-6 md:px-16 pb-16 md:pb-0">
-        <div className="max-w-2xl space-y-3 md:space-y-5">
-          <div className={`inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-full text-white border border-white/20 shadow-sm animate-in slide-in-from-left duration-700 fade-in delay-100`}>
-            {React.createElement(slides[current].icon, { size: 14, className: "text-iaspm-orange" })}
-            <span className="text-[10px] md:text-xs font-bold tracking-widest uppercase">{slides[current].subtitle}</span>
+        return (
+          <div key={slide.id} className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out ${index === current ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
+            <div 
+               className={`absolute inset-0 w-full h-full transform transition-transform duration-[8000ms] ease-linear ${index === current ? 'scale-110' : 'scale-100'} ${isClickableImage ? 'cursor-pointer' : ''}`}
+               onClick={() => isClickableImage && handleLinkClick(slide.enlace_url, slide.abrir_nueva_pestana)}
+            >
+               <img src={slide.image_url} alt={slide.titulo || 'Slider IASPM-AL'} className="w-full h-full object-cover" />
+            </div>
+            
+            {/* Solo pinta el texto y el velo oscuro si el organizador escribió algo */}
+            {hasText && (
+              <>
+                <div className="absolute inset-0 bg-gradient-to-t from-[#1e3a5f]/95 via-[#1e3a5f]/50 to-transparent pointer-events-none"></div>
+                <div className="absolute inset-0 z-20 flex items-end md:items-center justify-start px-6 md:px-16 pb-16 md:pb-0 pointer-events-none">
+                  <div className="max-w-2xl space-y-3 md:space-y-5 pointer-events-auto">
+                    {slide.titulo && (
+                       <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-white leading-tight drop-shadow-lg animate-in slide-in-from-bottom-4 duration-700 fade-in delay-200">
+                         {slide.titulo}
+                       </h1>
+                    )}
+                    {slide.descripcion && (
+                       <p className="text-gray-200 text-sm md:text-lg font-medium leading-relaxed max-w-lg drop-shadow-md line-clamp-3 md:line-clamp-none animate-in slide-in-from-bottom-4 duration-700 fade-in delay-300">
+                         {slide.descripcion}
+                       </p>
+                    )}
+                    {slide.enlace_url && (
+                      <div className="pt-2 animate-in slide-in-from-bottom-4 duration-700 fade-in delay-500">
+                        <button onClick={() => handleLinkClick(slide.enlace_url, slide.abrir_nueva_pestana)} className="bg-iaspm-orange hover:bg-orange-600 text-white px-6 md:px-8 py-3 rounded-xl font-bold uppercase text-xs tracking-widest transition-all shadow-lg hover:shadow-orange-500/30 flex items-center gap-2 hover:-translate-y-1 active:scale-95">
+                          <span>{lang === 'es' ? 'Saber Más' : 'Saiba Mais'}</span> <ArrowRight size={16} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
-          <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-white leading-tight drop-shadow-lg animate-in slide-in-from-bottom-4 duration-700 fade-in delay-200">
-            {slides[current].title}
-          </h1>
-          <p className="text-gray-200 text-sm md:text-lg font-medium leading-relaxed max-w-lg drop-shadow-md line-clamp-3 md:line-clamp-none animate-in slide-in-from-bottom-4 duration-700 fade-in delay-300">
-            {slides[current].description}
-          </p>
-          <div className="pt-2 animate-in slide-in-from-bottom-4 duration-700 fade-in delay-500">
-            <button onClick={() => setCurrentPage(slides[current].link)} className="bg-iaspm-orange hover:bg-orange-600 text-white px-6 md:px-8 py-3 rounded-xl font-bold uppercase text-xs tracking-widest transition-all shadow-lg hover:shadow-orange-500/30 flex items-center gap-2 hover:-translate-y-1 active:scale-95">
-              <span>{slides[current].cta}</span> <ArrowRight size={16} />
-            </button>
+        );
+      })}
+
+      {/* Flechas y puntitos (Solo aparecen si hay más de 1 foto) */}
+      {slides.length > 1 && (
+        <>
+          <button onClick={prevSlide} className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/10 transition-all hover:scale-110 z-30 group">
+            <ChevronLeft size={24} className="group-hover:-translate-x-0.5 transition-transform" />
+          </button>
+          <button onClick={nextSlide} className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/10 transition-all hover:scale-110 z-30 group">
+            <ChevronRight size={24} className="group-hover:translate-x-0.5 transition-transform" />
+          </button>
+
+          <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-2 z-30">
+            {slides.map((_, idx) => (
+              <button key={idx} onClick={() => goToSlide(idx)} className={`h-1.5 rounded-full transition-all duration-500 shadow-sm ${idx === current ? 'w-8 bg-iaspm-orange' : 'w-2 bg-white/40 hover:bg-white/80'}`} />
+            ))}
           </div>
-        </div>
-      </div>
-
-      <button onClick={prevSlide} className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/10 transition-all hover:scale-110 z-30 group">
-        <ChevronLeft size={24} className="group-hover:-translate-x-0.5 transition-transform" />
-      </button>
-      <button onClick={nextSlide} className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/10 transition-all hover:scale-110 z-30 group">
-        <ChevronRight size={24} className="group-hover:translate-x-0.5 transition-transform" />
-      </button>
-
-      <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-2 z-30">
-        {slides.map((_, idx) => (
-          <button key={idx} onClick={() => goToSlide(idx)} className={`h-1.5 rounded-full transition-all duration-500 shadow-sm ${idx === current ? 'w-8 bg-iaspm-orange' : 'w-2 bg-white/40 hover:bg-white/80'}`} />
-        ))}
-      </div>
+        </>
+      )}
     </div>
   );
 };

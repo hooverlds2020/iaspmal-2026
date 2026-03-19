@@ -170,25 +170,28 @@ const SessionsManager = () => {
     return [...new Set(conflicts)];
   }, [selectedWithTimes, formData.event_type]);
 
+  // CORREGIDO: Evita choque falso por segundos
   const isTimeConflicting = (timeToCheck) => {
     if (!timeToCheck) return false;
+    const checkStart = timeToCheck.slice(0,5);
     return occupiedSlots.some(slot => {
         const busyStart = slot.start_time.slice(0,5);
         const busyEnd = slot.end_time.slice(0,5);
-        return timeToCheck >= busyStart && timeToCheck < busyEnd;
+        return checkStart >= busyStart && checkStart < busyEnd;
     });
   };
 
-  // NUEVO: Validación en tiempo real del horario principal de la mesa
+  // CORREGIDO: Evita que "12:00:00" choque con "12:00" quitando los segundos
   const mainTimeConflict = useMemo(() => {
     if (!formData.start_time || !formData.end_time || occupiedSlots.length === 0) return null;
     
     return occupiedSlots.find(slot => {
       const busyStart = slot.start_time.slice(0, 5);
       const busyEnd = slot.end_time.slice(0, 5);
+      const myStart = formData.start_time.slice(0, 5);
+      const myEnd = formData.end_time.slice(0, 5);
       
-      // La regla de intersección: (InicioA < FinB) Y (FinA > InicioB)
-      return formData.start_time < busyEnd && formData.end_time > busyStart;
+      return myStart < busyEnd && myEnd > busyStart;
     });
   }, [formData.start_time, formData.end_time, occupiedSlots]);
 
@@ -241,14 +244,27 @@ const SessionsManager = () => {
     finally { setDeleteId(null); }
   };
 
+  // CORREGIDO: Comprobación segura en el backend
   const checkRoomConflict = async () => {
     const { data } = await supabase
       .from('sessions')
-      .select('name, start_time, end_time')
-      .eq('room_id', formData.room_id).eq('date', formData.date).neq('id', editingId || -1)
-      .lt('start_time', formData.end_time).gt('end_time', formData.start_time) 
-      .maybeSingle();
-    return data;
+      .select('id, name, start_time, end_time')
+      .eq('room_id', formData.room_id)
+      .eq('date', formData.date)
+      .neq('id', editingId || -1);
+
+    if (!data || data.length === 0) return null;
+
+    const myStart = formData.start_time.slice(0, 5);
+    const myEnd = formData.end_time.slice(0, 5);
+
+    const conflict = data.find(s => {
+      const sStart = s.start_time.slice(0, 5);
+      const sEnd = s.end_time.slice(0, 5);
+      return (myStart < sEnd) && (myEnd > sStart);
+    });
+
+    return conflict || null;
   };
 
   const handleSubmit = async (e) => {
@@ -264,7 +280,8 @@ const SessionsManager = () => {
     if (formData.event_type === 'mesa') {
       for (const pres of selectedWithTimes) {
           if (isTimeConflicting(pres.start_time)) {
-              const conflicto = occupiedSlots.find(slot => pres.start_time >= slot.start_time.slice(0,5) && pres.start_time < slot.end_time.slice(0,5));
+              const checkS = pres.start_time.slice(0,5);
+              const conflicto = occupiedSlots.find(slot => checkS >= slot.start_time.slice(0,5) && checkS < slot.end_time.slice(0,5));
               toast.error(`Conflicto de horario: La ponencia de las ${pres.start_time} choca con "${conflicto?.name || 'otra actividad'}"`, { duration: 6000 });
               return;
           }
@@ -438,7 +455,6 @@ const SessionsManager = () => {
                 </div>
               </div>
 
-              {/* Ajuste visual para cuando hay conflicto de horarios */}
               <div className={`grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-xl border shadow-sm transition-all ${mainTimeConflict ? 'bg-red-50 border-red-300' : 'bg-white border-gray-200'}`}>
                 <div>
                   <Label><Clock size={12}/> Fecha del Evento</Label>
@@ -460,7 +476,6 @@ const SessionsManager = () => {
           {formData.event_type === 'mesa' && (
             <div className="flex flex-col md:flex-row flex-1 bg-white min-h-[500px]">
               
-              {/* NUEVO: Bloqueo visual si el horario principal choca */}
               {mainTimeConflict ? (
                 <div className="flex-1 p-10 flex flex-col items-center justify-center bg-red-50/50 border-t border-red-100 min-h-[400px]">
                   <div className="bg-white p-4 rounded-full shadow-sm border border-red-100 mb-4 animate-bounce">
@@ -468,7 +483,7 @@ const SessionsManager = () => {
                   </div>
                   <h3 className="text-xl font-black text-red-600 uppercase tracking-widest mb-2 text-center">¡Choque de Horario Detectado!</h3>
                   <p className="text-sm font-bold text-red-800 text-center max-w-md bg-white p-4 rounded-xl border border-red-200 shadow-sm leading-relaxed">
-                    El horario que elegiste ({formData.start_time} a {formData.end_time}) interfiere con <br/>
+                    El horario que elegiste ({formData.start_time.slice(0,5)} a {formData.end_time.slice(0,5)}) interfiere con <br/>
                     <span className="font-black text-red-600 uppercase text-lg inline-block mt-2">"{mainTimeConflict.name || 'Otro Evento'}"</span> <br/>
                     <span className="text-xs text-red-500 mt-1 block tracking-wider">({mainTimeConflict.start_time.slice(0,5)} - {mainTimeConflict.end_time.slice(0,5)})</span>
                   </p>
@@ -583,7 +598,7 @@ const SessionsManager = () => {
         ))}
       </div>
 
-      <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">      
+      <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">     
         <h2 className="text-xl font-black text-[#1e3a5f] uppercase italic pl-2">Gestión de Agenda</h2>
         <button onClick={() => { 
             setEditingId(null); 

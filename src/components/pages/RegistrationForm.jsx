@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { sendRegistrationConfirmation } from '../../lib/resendClient';
+import { optimizeImage } from '../../lib/imageOptimizer'; // ✅ AJUSTE: Importación del optimizador
 import { Upload, Check, Search, X, FileText, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -116,10 +117,16 @@ const RegistrationForm = ({ lang, onClose }) => {
 
       const fileExt = file.name.split('.').pop().toLowerCase();
       const filePath = `payments/${reg.id}.${fileExt}`;
+
+      // ✅ AJUSTE: Solo comprimir si es imagen. Si es PDF, subir original.
+      let finalFile = file;
+      if (['jpg', 'jpeg', 'png'].includes(fileExt)) {
+        finalFile = await optimizeImage(file);
+      }
       
       const { error: uploadError } = await supabase.storage
         .from('registrations')
-        .upload(filePath, file, {
+        .upload(filePath, finalFile, { // <--- Usamos 'finalFile'
           upsert: true 
         });
 

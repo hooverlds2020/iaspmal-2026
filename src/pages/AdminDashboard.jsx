@@ -1,12 +1,15 @@
 // src/pages/AdminDashboard.jsx
 import React, { useState } from 'react';
-import { LogOut, Users, Calendar, FileText, Settings, DollarSign, MapPin, LayoutGrid } from 'lucide-react';
+import { LogOut, Users, Calendar, FileText, Settings, DollarSign, MapPin, LayoutGrid, Image, Building } from 'lucide-react'; // ✅ Añadido Building
 import SymposiumsManager from '../components/admin/SymposiumsManager';
 import SessionsManager from '../components/admin/SessionsManager';
 import PresentationsManager from '../components/admin/PresentationsManager';
 import SymposiumVenueManager from '../components/admin/SymposiumVenueManager';
 import RegistrationsDashboard from './RegistrationsDashboard';
 import FinancesDashboard from './FinancesDashboard';
+import SliderManager from '../components/admin/SliderManager';
+import GalleryManager from '../components/admin/GalleryManager';
+import AccommodationManager from '../components/admin/AccommodationManager'; // ✅ Nueva importación
 import { supabase } from '../lib/supabaseClient';
 
 const AdminDashboard = ({ user, onLogout }) => {
@@ -47,7 +50,6 @@ const AdminDashboard = ({ user, onLogout }) => {
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
 
       {/* --- HEADER --- */}
-      {/* Ajustado a z-20 para no tapar modales */}
       <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -84,7 +86,6 @@ const AdminDashboard = ({ user, onLogout }) => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
           {/* SIDEBAR DE NAVEGACIÓN */}
-          {/* Ajustado a z-10: Prioridad baja para que las modales ganen la capa superior */}
           <aside className="lg:col-span-3 sticky top-24 z-10">
             <nav className="bg-gray-100/50 p-1 rounded-2xl border border-gray-200/60">
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 space-y-1">
@@ -106,13 +107,23 @@ const AdminDashboard = ({ user, onLogout }) => {
 
                  <NavButton id="registros" label="Inscripciones" icon={LayoutGrid} />
                  <NavButton id="finanzas" label="Finanzas" icon={DollarSign} />
+
+                 <div className="my-4 border-t border-gray-100 mx-4"></div>
+
+                 <div className="px-4 py-2 mb-2">
+                    <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Sitio Web</h2>
+                 </div>
+                 
+                 <NavButton id="slider" label="Banners / Sliders" icon={Image} />
+                 <NavButton id="galeria-admin" label="Galería de Fotos" icon={Image} />
+                 <NavButton id="alojamientos" label="Alojamiento" icon={Building} /> {/* ✅ Nuevo Botón */}
+
               </div>
             </nav>
           </aside>
 
           {/* ÁREA DE TRABAJO */}
           <main className="lg:col-span-9">
-            {/* Se eliminó 'overflow-hidden' para permitir que las modales respiren correctamente */}
             <div className="bg-white rounded-[2rem] border border-gray-200/80 p-6 md:p-8 shadow-xl shadow-gray-200/40 min-h-[600px] relative">
 
               {/* Fondo decorativo sutil */}
@@ -125,6 +136,9 @@ const AdminDashboard = ({ user, onLogout }) => {
                   {activeSection === 'ponencias' && <PresentationsManager />}
                   {activeSection === 'registros' && <RegistrationsDashboard />}
                   {activeSection === 'finanzas' && <FinancesDashboard />}
+                  {activeSection === 'slider' && <SliderManager />}
+                  {activeSection === 'galeria-admin' && <GalleryManager />}
+                  {activeSection === 'alojamientos' && <AccommodationManager />} {/* ✅ Renderizado del nuevo panel */}
               </div>
 
             </div>

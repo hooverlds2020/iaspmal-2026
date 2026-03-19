@@ -2,7 +2,7 @@
 import React from 'react';
 import { 
   Home, Info, Mic, Ticket, Users, FileText, Calendar, 
-  BookOpen, MapPin, Building, ChevronDown, ChevronRight, Briefcase, Globe 
+  BookOpen, MapPin, Building, ChevronDown, ChevronRight, Briefcase, Globe, Music 
 } from 'lucide-react';
 
 const Sidebar = ({ menuItems, currentPage, setCurrentPage, submenuOpen, toggleSubmenu, lang }) => {
@@ -17,7 +17,7 @@ const Sidebar = ({ menuItems, currentPage, setCurrentPage, submenuOpen, toggleSu
       'comite-academico': Users,
       'comite-organizador': Users,
       'programa': Calendar,
-      'talleres': Briefcase,
+      'conciertos': Music, 
       'presentaciones-libros': BookOpen,
       'actividades-congreso': Calendar,
       'info-complementaria': Info,
@@ -26,6 +26,7 @@ const Sidebar = ({ menuItems, currentPage, setCurrentPage, submenuOpen, toggleSu
       'organizaciones': Users,
       'alojamiento': Home,
       'san-cristobal': MapPin,
+      'musica-vivo': Music, 
       'cartel': FileText
     };
     return icons[id] || ChevronRight;
@@ -33,10 +34,8 @@ const Sidebar = ({ menuItems, currentPage, setCurrentPage, submenuOpen, toggleSu
 
   return (
     <aside className="hidden md:block relative h-full">
-      {/* sticky top-[88px]: Se queda fijo al bajar, justo debajo del Header.
-         max-h-[calc...]: Permite scroll independiente si el menú es muy largo.
-      */}
-      <nav className="sticky top-[88px] max-h-[calc(100vh-100px)] overflow-y-auto custom-scrollbar pr-3 pb-10">
+      {/* AJUSTE APLICADO: top-[140px] para librar el nuevo encabezado más alto */}
+      <nav className="sticky top-[140px] max-h-[calc(100vh-160px)] overflow-y-auto custom-scrollbar pr-3 pb-10">
         
         <div className="space-y-1">
           {menuItems.map((item) => {
@@ -104,7 +103,6 @@ const Sidebar = ({ menuItems, currentPage, setCurrentPage, submenuOpen, toggleSu
 
       </nav>
 
-      {/* Estilos para scrollbar invisible pero funcional */}
       <style>{`
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }

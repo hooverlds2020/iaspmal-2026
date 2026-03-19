@@ -2,7 +2,7 @@
 import React from 'react';
 import { 
   X, ChevronDown, Home, Info, Mic, Ticket, Users, FileText, Calendar, 
-  BookOpen, MapPin, Building, Briefcase 
+  BookOpen, MapPin, Building, Briefcase, Music // <-- Añadimos Music
 } from 'lucide-react';
 
 const MobileSidebar = ({ isOpen, onClose, menuItems, currentPage, setCurrentPage, submenuOpen, toggleSubmenu, lang }) => {
@@ -12,9 +12,12 @@ const MobileSidebar = ({ isOpen, onClose, menuItems, currentPage, setCurrentPage
     const icons = {
       'home': Home, 'llamada': Info, 'conferenciantes': Mic, 'cuotas': Ticket,
       'comite-academico': Users, 'comite-organizador': Users, 'programa': Calendar,
-      'talleres': Briefcase, 'presentaciones-libros': BookOpen, 'actividades-congreso': Calendar,
+      'conciertos': Music, // <-- Cambiado de talleres a conciertos
+      'presentaciones-libros': BookOpen, 'actividades-congreso': Calendar,
       'info-complementaria': Info, 'sedes': MapPin, 'instituciones-convocantes': Building,
-      'organizaciones': Users, 'alojamiento': Home, 'san-cristobal': MapPin, 'cartel': FileText
+      'organizaciones': Users, 'alojamiento': Home, 'san-cristobal': MapPin, 
+      'musica-vivo': Music, // <-- Nuevo icono
+      'cartel': FileText
     };
     return icons[id] || Info;
   };
