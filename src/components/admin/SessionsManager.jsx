@@ -3,8 +3,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import * as LucideIcons from 'lucide-react'; 
 import { toast } from 'sonner';
+import AgendaCalendario from '../pages/AgendaCalendario';
 
-const { Plus, Edit2, Trash2, X, Clock, MapPin, CheckCircle2, AlertCircle, Timer, LayoutGrid, ArrowRight, Ban, Lock, AlertTriangle, Save, User, ArrowLeft } = LucideIcons;
+const { Plus, Edit2, Trash2, X, Clock, MapPin, CheckCircle2, AlertCircle, Timer, LayoutGrid, ArrowRight, Ban, Lock, AlertTriangle, Save, User, ArrowLeft, Calendar, Filter, RefreshCw, Star, Users } = LucideIcons;
 
 const getVenueStyle = (venueName) => {
   if (!venueName) return { bg: 'bg-gray-50', text: 'text-gray-400', border: 'border-gray-200', icon: 'text-gray-300' };
@@ -25,11 +26,17 @@ const SessionsManager = () => {
   const [stats, setStats] = useState({ totalMesas: 0, assigned: 0, pending: 0 });
 
   const [isEditorOpen, setIsEditorOpen] = useState(false); 
+  const [activeTab, setActiveTab] = useState('list'); 
   const [deleteId, setDeleteId] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [availablePresentations, setAvailablePresentations] = useState([]);
   const [selectedWithTimes, setSelectedWithTimes] = useState([]);
   const [totalSymposiumPapers, setTotalSymposiumPapers] = useState(0);
+
+  // ESTADOS PARA LOS FILTROS
+  const [filterDate, setFilterDate] = useState('');
+  const [filterSymp, setFilterSymp] = useState('');
+  const [filterVenue, setFilterVenue] = useState('');
 
   const [formData, setFormData] = useState({
     name: '', symposium_id: '', room_id: '', date: '', start_time: '', end_time: '', event_type: 'mesa'
@@ -44,7 +51,7 @@ const SessionsManager = () => {
     try {
       setLoading(true);
       const [sessionsRes, roomsRes, sympRes, allPresRes, eventTypesRes] = await Promise.all([
-        supabase.from('sessions').select('*, rooms(name, venues(name)), symposiums(id, name), presentations(count)')
+        supabase.from('sessions').select('*, rooms(name, venues(name)), symposiums(id, name), presentations(id, title, authors)')
           .order('date')
           .order('start_time'), 
         supabase.from('rooms').select('*, venues(name)').order('venue_id'), 
@@ -75,6 +82,20 @@ const SessionsManager = () => {
     });
     return grouped;
   }, [rooms]);
+
+  // LÓGICA DE FILTRADO MAESTRO
+  const filteredSessions = useMemo(() => {
+    return sessions.filter(s => {
+      const matchDate = !filterDate || s.date === filterDate;
+      const matchSymp = !filterSymp || (s.symposium_id && s.symposium_id.toString() === filterSymp);
+      const matchVenue = !filterVenue || (s.rooms?.venues?.name && s.rooms.venues.name === filterVenue);
+      return matchDate && matchSymp && matchVenue;
+    });
+  }, [sessions, filterDate, filterSymp, filterVenue]);
+
+  // EXTRACCIÓN DE OPCIONES PARA LOS SELECTS DE FILTROS
+  const uniqueDates = useMemo(() => [...new Set(sessions.map(s => s.date).filter(Boolean))].sort(), [sessions]);
+  const uniqueVenues = useMemo(() => [...new Set(sessions.map(s => s.rooms?.venues?.name).filter(Boolean))].sort(), [sessions]);
 
   useEffect(() => {
     const loadPresentations = async () => {
@@ -170,7 +191,6 @@ const SessionsManager = () => {
     return [...new Set(conflicts)];
   }, [selectedWithTimes, formData.event_type]);
 
-  // CORREGIDO: Evita choque falso por segundos
   const isTimeConflicting = (timeToCheck) => {
     if (!timeToCheck) return false;
     const checkStart = timeToCheck.slice(0,5);
@@ -181,7 +201,6 @@ const SessionsManager = () => {
     });
   };
 
-  // CORREGIDO: Evita que "12:00:00" choque con "12:00" quitando los segundos
   const mainTimeConflict = useMemo(() => {
     if (!formData.start_time || !formData.end_time || occupiedSlots.length === 0) return null;
     
@@ -244,7 +263,6 @@ const SessionsManager = () => {
     finally { setDeleteId(null); }
   };
 
-  // CORREGIDO: Comprobación segura en el backend
   const checkRoomConflict = async () => {
     const { data } = await supabase
       .from('sessions')
@@ -349,13 +367,13 @@ const SessionsManager = () => {
               onClick={() => setFormData({...formData, event_type: 'mesa'})} 
               className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${formData.event_type === 'mesa' ? 'bg-white shadow-md text-blue-600' : 'text-gray-400 hover:bg-gray-200'}`}
             >
-              <LucideIcons.Users size={16}/> Mesa de Simposio
+              <Users size={16}/> Mesa de Simposio
             </button>
             <button 
               onClick={() => setFormData({...formData, event_type: 'inauguracion'})} 
               className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${formData.event_type !== 'mesa' ? 'bg-white shadow-md text-amber-600' : 'text-gray-400 hover:bg-gray-200'}`}
             >
-              <LucideIcons.Star size={16}/> Actividad Especial
+              <Star size={16}/> Actividad Especial
             </button>
           </div>
 
@@ -582,7 +600,7 @@ const SessionsManager = () => {
     );
   }
 
-  // --- VISTA 1: GRID PRINCIPAL (VISTA POR DEFECTO) ---
+  // --- VISTA 1: GRID PRINCIPAL Y PESTAÑAS ---
   return (
     <div className="space-y-6 p-4 md:p-6 animate-in fade-in pb-20 md:pb-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -598,77 +616,137 @@ const SessionsManager = () => {
         ))}
       </div>
 
-      <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">     
-        <h2 className="text-xl font-black text-[#1e3a5f] uppercase italic pl-2">Gestión de Agenda</h2>
+      <div className="flex flex-col xl:flex-row justify-between items-center bg-white p-4 rounded-2xl border border-gray-100 shadow-sm gap-4">     
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full xl:w-auto">
+          <h2 className="text-xl font-black text-[#1e3a5f] uppercase italic pl-2">Gestión de Agenda</h2>
+          
+          <div className="flex bg-gray-100 p-1 rounded-xl w-full sm:w-auto justify-center">
+             <button 
+               onClick={() => setActiveTab('list')} 
+               className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'list' ? 'bg-white text-[#1e3a5f] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+             >
+               <LayoutGrid size={16}/> Lista
+             </button>
+             <button 
+               onClick={() => setActiveTab('calendar')} 
+               className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'calendar' ? 'bg-white text-[#1e3a5f] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+             >
+               <Calendar size={16}/> Mapa
+             </button>
+          </div>
+        </div>
+
         <button onClick={() => { 
             setEditingId(null); 
             setFormData({name:'', symposium_id:'', room_id:'', date:'', start_time:'', end_time:'', event_type: 'mesa'}); 
             setOccupiedSlots([]); setAvailableGaps([]); setSelectedWithTimes([]); 
             setIsEditorOpen(true); 
             window.scrollTo({ top: 0, behavior: 'smooth' });
-          }} className="bg-[#1e3a5f] text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-black transition-all flex gap-2 items-center shadow-lg active:scale-95">
+          }} className="bg-[#1e3a5f] text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-black transition-all flex gap-2 items-center shadow-lg active:scale-95 w-full xl:w-auto justify-center">
           <Plus size={16} /> Nuevo Evento
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {sessions.map(s => {
-          const venueStyle = getVenueStyle(s.rooms?.venues?.name);
-          const paperCount = s.presentations?.[0]?.count || 0;
-          const evt = getEventData(s.event_type || 'mesa');
-          const EventIcon = evt.IconComponent;
+      <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200 flex flex-wrap gap-4 items-center shadow-inner">
+         <div className="flex items-center gap-2 text-[#1e3a5f] font-black text-xs uppercase tracking-widest mr-2">
+            <Filter size={16} /> Filtros:
+         </div>
+         
+         <select className="bg-white border border-gray-200 text-sm font-bold text-gray-700 p-2.5 rounded-xl outline-none focus:ring-2 focus:ring-[#1e3a5f] min-w-[150px]" value={filterDate} onChange={(e) => setFilterDate(e.target.value)}>
+            <option value="">Todas las Fechas</option>
+            {uniqueDates.map(d => <option key={d} value={d}>{d}</option>)}
+         </select>
 
-          return (
-            <div key={s.id} className={`bg-white p-5 rounded-3xl border-t-[5px] ${evt.color_border} border-x border-b border-x-gray-100 border-b-gray-100 shadow-sm relative group hover:shadow-xl transition-all flex flex-col justify-between`}>
-              <div className="mb-4">
-                <div className="flex justify-between items-start mb-2 pr-14">
-                   <div className="flex flex-col">
-                      <span className={`text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-1.5 ${evt.color_text}`}>
-                        <div className={`p-1.5 rounded-lg ${evt.color_bg}`}><EventIcon size={12}/></div>
-                        {s.event_type === 'mesa' ? (s.symposiums?.id ? `Simposio ${s.symposiums.id}` : 'Mesa General') : evt.label}
-                      </span>
-                      {s.symposiums?.name && s.event_type === 'mesa' && (
-                        <span className="text-[11px] font-bold text-gray-500 uppercase leading-tight line-clamp-1 mb-1" title={s.symposiums.name}>
-                           {s.symposiums.name}
-                        </span>
-                      )}
-                   </div>
-                </div>
-                <h3 className="font-black text-[#1e3a5f] text-lg leading-tight line-clamp-2">{s.name || evt.label}</h3>
-              </div>
-              
-              <div className="absolute top-4 right-4 flex gap-1.5 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onClick={() => handleEdit(s)} className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-colors shadow-sm"><Edit2 size={16}/></button>
-                <button onClick={() => setDeleteId(s.id)} className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-colors shadow-sm"><Trash2 size={16}/></button>
-              </div>
+         <select className="bg-white border border-gray-200 text-sm font-bold text-gray-700 p-2.5 rounded-xl outline-none focus:ring-2 focus:ring-[#1e3a5f] min-w-[200px]" value={filterSymp} onChange={(e) => setFilterSymp(e.target.value)}>
+            <option value="">Todos los Simposios</option>
+            {symposiums.map(s => <option key={s.id} value={s.id.toString()}>Simposio {s.id}</option>)}
+         </select>
 
-              <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-gray-100 text-[11px] font-bold uppercase mt-auto">
-                <div className="flex items-center gap-1.5 bg-gray-50 text-gray-600 px-2.5 py-1.5 rounded-lg border border-gray-200">
-                   <Clock size={14}/> {s.start_time?.slice(0,5)} - {s.end_time?.slice(0,5)}
-                </div>
-                <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border max-w-[150px] ${venueStyle.bg} ${venueStyle.text} ${venueStyle.border}`}>
-                   <MapPin size={14} className={venueStyle.icon}/> 
-                   <span className="truncate">{s.rooms?.venues?.name || 'Sin sede'}</span>
-                </div>
-                {s.event_type === 'mesa' && (
-                  <div className="flex -space-x-2 ml-auto items-center">
-                     {paperCount > 0 ? (
-                       [...Array(Math.min(paperCount, 4))].map((_, i) => (
-                         <div key={i} className="w-6 h-6 rounded-full bg-blue-100 border-2 border-white flex items-center justify-center text-[8px] text-blue-800 font-black shadow-sm" title={`${paperCount} Ponencias`}>
-                            <User size={10} />
-                         </div>
-                       ))
-                     ) : (
-                       <div className="w-6 h-6 rounded-full border-2 border-dashed border-gray-200 flex items-center justify-center"><div className="w-1.5 h-1.5 bg-gray-300 rounded-full"></div></div>
-                     )}
-                     {paperCount > 4 && <div className="w-6 h-6 rounded-full bg-gray-100 border-2 border-white flex items-center justify-center text-[8px] text-gray-600 font-bold z-10 shadow-sm">+{paperCount - 4}</div>}
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
+         <select className="bg-white border border-gray-200 text-sm font-bold text-gray-700 p-2.5 rounded-xl outline-none focus:ring-2 focus:ring-[#1e3a5f] min-w-[180px]" value={filterVenue} onChange={(e) => setFilterVenue(e.target.value)}>
+            <option value="">Todas las Sedes</option>
+            {uniqueVenues.map(v => <option key={v} value={v}>{v}</option>)}
+         </select>
+
+         {(filterDate || filterSymp || filterVenue) && (
+            <button onClick={() => { setFilterDate(''); setFilterSymp(''); setFilterVenue(''); }} className="flex items-center gap-2 text-xs font-bold text-red-500 hover:bg-red-50 px-3 py-2 rounded-lg transition-colors ml-auto">
+               <RefreshCw size={14} /> Limpiar
+            </button>
+         )}
       </div>
+
+      {activeTab === 'list' ? (
+        <>
+          <div className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2 pl-2">
+            Mostrando {filteredSessions.length} resultados
+          </div>
+          {filteredSessions.length === 0 ? (
+            <div className="bg-white p-10 rounded-3xl border-2 border-dashed border-gray-200 text-center text-gray-400 font-bold">
+              No hay eventos que coincidan con los filtros seleccionados.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {filteredSessions.map(s => {
+                const venueStyle = getVenueStyle(s.rooms?.venues?.name);
+                const paperCount = s.presentations?.length || 0; 
+                const evt = getEventData(s.event_type || 'mesa');
+                const EventIcon = evt.IconComponent;
+
+                return (
+                  <div key={s.id} className={`bg-white p-5 rounded-3xl border-t-[5px] ${evt.color_border} border-x border-b border-x-gray-100 border-b-gray-100 shadow-sm relative group hover:shadow-xl transition-all flex flex-col justify-between`}>
+                    <div className="mb-4">
+                      <div className="flex justify-between items-start mb-2 pr-14">
+                         <div className="flex flex-col">
+                            <span className={`text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-1.5 ${evt.color_text}`}>
+                              <div className={`p-1.5 rounded-lg ${evt.color_bg}`}><EventIcon size={12}/></div>
+                              {s.event_type === 'mesa' ? (s.symposiums?.id ? `Simposio ${s.symposiums.id}` : 'Mesa General') : evt.label}
+                            </span>
+                            {s.symposiums?.name && s.event_type === 'mesa' && (
+                              <span className="text-[11px] font-bold text-gray-500 uppercase leading-tight line-clamp-1 mb-1" title={s.symposiums.name}>
+                                 {s.symposiums.name}
+                              </span>
+                            )}
+                         </div>
+                      </div>
+                      <h3 className="font-black text-[#1e3a5f] text-lg leading-tight line-clamp-2">{s.name || evt.label}</h3>
+                    </div>
+                    
+                    <div className="absolute top-4 right-4 flex gap-1.5 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => handleEdit(s)} className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-colors shadow-sm"><Edit2 size={16}/></button>
+                      <button onClick={() => setDeleteId(s.id)} className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-colors shadow-sm"><Trash2 size={16}/></button>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-gray-100 text-[11px] font-bold uppercase mt-auto">
+                      <div className="flex items-center gap-1.5 bg-gray-50 text-gray-600 px-2.5 py-1.5 rounded-lg border border-gray-200">
+                         <Clock size={14}/> {s.start_time?.slice(0,5)} - {s.end_time?.slice(0,5)}
+                      </div>
+                      <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border max-w-[150px] ${venueStyle.bg} ${venueStyle.text} ${venueStyle.border}`}>
+                         <MapPin size={14} className={venueStyle.icon}/> 
+                         <span className="truncate">{s.rooms?.venues?.name || 'Sin sede'}</span>
+                      </div>
+                      {s.event_type === 'mesa' && (
+                        <div className="flex -space-x-2 ml-auto items-center">
+                           {paperCount > 0 ? (
+                             [...Array(Math.min(paperCount, 4))].map((_, i) => (
+                               <div key={i} className="w-6 h-6 rounded-full bg-blue-100 border-2 border-white flex items-center justify-center text-[8px] text-blue-800 font-black shadow-sm" title={`${paperCount} Ponencias`}>
+                                  <User size={10} />
+                               </div>
+                             ))
+                           ) : (
+                             <div className="w-6 h-6 rounded-full border-2 border-dashed border-gray-200 flex items-center justify-center"><div className="w-1.5 h-1.5 bg-gray-300 rounded-full"></div></div>
+                           )}
+                           {paperCount > 4 && <div className="w-6 h-6 rounded-full bg-gray-100 border-2 border-white flex items-center justify-center text-[8px] text-gray-600 font-bold z-10 shadow-sm">+{paperCount - 4}</div>}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
+      ) : (
+        <AgendaCalendario sessions={filteredSessions} rooms={rooms} />
+      )}
 
       {deleteId && (
         <div className="fixed inset-0 bg-[#1e3a5f]/60 backdrop-blur-sm z-[80] flex items-center justify-center p-4 animate-in fade-in">
