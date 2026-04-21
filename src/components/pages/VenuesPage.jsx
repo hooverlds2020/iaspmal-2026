@@ -1,14 +1,17 @@
 // src/components/pages/VenuesPage.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
+import { MapPin, Maximize2, X, Info, Thermometer, Mountain, Loader2 } from 'lucide-react';
 
 function VenuesPage({ lang }) {
   const [selectedVenue, setSelectedVenue] = useState(null);
   const [venues, setVenues] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Estado para el Pop-up del Mapa Corredor
+  const [isMapModalOpen, setIsMapModalOpen] = useState(false);
 
-  // Array de iconos variados para las tarjetas
   const icons = ['🏛️', '🎭', '⚖️', '🏰', '🎨', '🖼️', '🎪', '🏢', '🏫'];
 
   useEffect(() => {
@@ -22,10 +25,8 @@ function VenuesPage({ lang }) {
         supabase.from('venues').select('*').order('id'),
         supabase.from('rooms').select('*').order('name')
       ]);
-
       if (venuesRes.error) throw venuesRes.error;
       if (roomsRes.error) throw roomsRes.error;
-
       setVenues(venuesRes.data || []);
       setRooms(roomsRes.data || []);
     } catch (error) {
@@ -37,311 +38,196 @@ function VenuesPage({ lang }) {
 
   const openInMaps = (venue) => {
     const query = encodeURIComponent(`${venue.name} San Cristóbal de las Casas`);
-    const url = venue.map_url || `https://maps.google.com/?q=${query}`;
+    const url = venue.map_url || `https://www.google.com/maps/search/?api=1&query=${query}`;
     window.open(url, '_blank');
   };
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-teal-600 mb-4"></div>
-        <p className="text-gray-500 font-bold uppercase tracking-widest text-sm">
-          {lang === 'es' ? 'Cargando sedes...' : 'Loading venues...'}
+      <div className="flex flex-col items-center justify-center py-20 text-[#1e3a5f]">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-[#1e3a5f] mb-4"></div>
+        <p className="font-bold uppercase tracking-widest text-sm">
+           {lang === 'es' ? 'Cargando sedes...' : 'Carregando sedes...'}
         </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      {/* Descripción inicial */}
-      <div>
-        <p className="text-gray-700 text-lg mb-4">
+    <div className="space-y-10 animate-in fade-in duration-500 pb-20">
+      {/* Introducción */}
+      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+        <p className="text-gray-700 text-lg leading-relaxed">
           {lang === 'es'
-            ? 'El XVII Congreso de la IASPM-AL 2026 se llevará a cabo en diversos espacios culturales e institucionales del centro histórico de San Cristóbal de Las Casas.'
-            : 'The 17th IASPM-AL Congress 2026 will take place in various cultural and institutional spaces in the historic center of San Cristóbal de Las Casas.'}
+            ? 'El XVII Congreso de la IASPM-AL 2026 se llevará a cabo en el corredor cultural del centro histórico de San Cristóbal de Las Casas. Todas las sedes están conectadas por andadores peatonales.'
+            : 'O XVII Congresso IASPM-AL 2026 acontecerá no corredor cultural do centro histórico de San Cristóbal de Las Casas. Todas as sedes estão conectadas por vias pedestres.'}
         </p>
       </div>
 
-      {/* Grid de sedes */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {venues.map((venue, index) => {
-          // Obtener las salas correspondientes a esta sede
-          const venueRooms = rooms.filter(r => r.venue_id === venue.id);
-          const venueIcon = icons[index % icons.length]; // Asigna un icono cíclicamente
+      {/* SECCIÓN DEL MAPA PERSONALIZADO (CROQUIS) */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between px-2">
+            <h3 className="text-xl font-black text-[#1e3a5f] uppercase italic tracking-tight flex items-center gap-2">
+                <MapPin className="text-orange-500" /> {lang === 'es' ? 'Corredor de Sedes' : 'Corredor de Sedes'}
+            </h3>
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest animate-pulse">
+                {lang === 'es' ? 'Click para ampliar' : 'Clique para ampliar'}
+            </span>
+        </div>
+        
+        <div 
+            onClick={() => setIsMapModalOpen(true)}
+            className="relative group cursor-pointer rounded-2xl overflow-hidden border-4 border-white shadow-xl bg-gray-100 aspect-[16/9] md:aspect-[21/9]"
+        >
+            <img 
+                src="/images/corredor_sedes.jpeg" 
+                alt="Mapa Corredor Sedes" 
+                className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
+            />
+            {/* Capa de interacción */}
+            <div className="absolute inset-0 bg-[#1e3a5f]/10 group-hover:bg-black/40 transition-all flex items-center justify-center">
+                <div className="bg-white/90 p-4 rounded-full shadow-2xl transform scale-0 group-hover:scale-100 transition-all duration-300">
+                    <Maximize2 size={32} className="text-[#1e3a5f]" />
+                </div>
+            </div>
+            <div className="absolute bottom-4 left-6 bg-white/95 backdrop-blur-sm px-4 py-2 rounded-xl shadow-lg border border-gray-100">
+                <p className="text-[#1e3a5f] font-black text-[10px] uppercase tracking-[0.2em]">
+                    {lang === 'es' ? 'Ver Mapa Detallado' : 'Ver Mapa Detalhado'}
+                </p>
+            </div>
+        </div>
+      </div>
 
+      {/* Grid de Sedes */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {venues.map((venue, index) => {
+          const venueRooms = rooms.filter(r => r.venue_id === venue.id);
+          const venueIcon = icons[index % icons.length];
           return (
             <div
               key={venue.id}
-              className="bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-200 cursor-pointer group flex flex-col h-full"
+              className="bg-white rounded-2xl shadow-sm hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 cursor-pointer group flex flex-col h-full"
               onClick={() => setSelectedVenue({ ...venue, rooms: venueRooms, icon: venueIcon })}
             >
-              {/* Imagen */}
-              <div className="relative h-56 overflow-hidden bg-gray-100">
-                {venue.image_url ? (
-                  <img
-                    src={venue.image_url}
-                    alt={venue.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                    onError={(e) => {
-                      if (e.target.src.includes('.webp')) {
-                         e.target.src = e.target.src.replace('.webp', '.jpg');
-                      } else {
-                         e.target.src = `https://via.placeholder.com/800x600/0d9488/ffffff?text=${encodeURIComponent(venue.name)}`;
-                      }
-                    }}
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-300">
-                    <span className="text-6xl">{venueIcon}</span>
-                  </div>
-                )}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300"></div>
-                
-                {/* Icono flotante */}
-                <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-full w-10 h-10 flex items-center justify-center shadow-md">
-                  <span className="text-xl">{venueIcon}</span>
+              <div className="relative h-48 overflow-hidden bg-gray-100">
+                <img
+                  src={venue.image_url || 'https://via.placeholder.com/400x300'}
+                  alt={venue.name}
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                />
+                <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-md rounded-xl w-10 h-10 flex items-center justify-center shadow-lg text-xl">
+                  {venueIcon}
                 </div>
               </div>
-
-              {/* Contenido */}
-              <div className="p-5 flex-1 flex flex-col">
-                <h3 className="font-bold text-lg text-gray-800 mb-2 group-hover:text-teal-700 transition-colors">
+              <div className="p-6 flex-1 flex flex-col">
+                <h3 className="font-black text-[#1e3a5f] text-lg mb-2 group-hover:text-orange-500 transition-colors uppercase leading-tight">
                   {venue.name}
                 </h3>
-                
-                {/* Dirección */}
-                <div className="mb-3 text-xs text-gray-500 flex items-start gap-1.5">
-                  <span className="text-teal-600 mt-0.5">📍</span>
-                  <span className="line-clamp-2">
-                    {venue.address || (lang === 'es' ? 'Centro Histórico' : 'Historic Center')}
-                  </span>
+                <div className="mb-4 text-[11px] font-bold text-gray-500 flex items-center gap-1.5 uppercase tracking-wide">
+                  <MapPin size={14} className="text-orange-500" /> {venue.address || 'Centro Histórico'}
                 </div>
-
-                <p className="text-gray-600 text-sm mb-4 line-clamp-2 flex-1">
-                  {venue.description || (lang === 'es' ? 'Sede oficial del congreso.' : 'Official congress venue.')}
+                <p className="text-gray-600 text-sm line-clamp-2 mb-6 leading-relaxed">
+                  {venue.description}
                 </p>
-
-                {/* Espacios (Salas) */}
-                <div className="mb-4">
-                  <div className="flex flex-wrap gap-1.5">
-                    {venueRooms.length === 0 && (
-                       <span className="text-[10px] uppercase tracking-wide font-medium bg-gray-50 text-gray-400 px-2 py-1 rounded-md border border-gray-200">
-                         {lang === 'es' ? 'Múltiples espacios' : 'Multiple spaces'}
-                       </span>
-                    )}
-                    {venueRooms.slice(0, 2).map((room) => (
-                      <span
-                        key={room.id}
-                        className="text-[10px] uppercase tracking-wide font-medium bg-teal-50 text-teal-700 px-2 py-1 rounded-md border border-teal-100"
-                      >
-                        {room.name}
-                      </span>
-                    ))}
-                    {venueRooms.length > 2 && (
-                      <span className="text-[10px] font-medium bg-gray-50 text-gray-600 px-2 py-1 rounded-md border border-gray-200">
-                        +{venueRooms.length - 2}
-                      </span>
-                    )}
-                  </div>
+                <div className="mt-auto pt-4 border-t border-gray-50 flex items-center justify-between">
+                    <span className="text-[10px] font-black text-orange-600 uppercase tracking-widest bg-orange-50 px-3 py-1 rounded-lg">
+                        {venueRooms.length} {venueRooms.length === 1 ? 'Espacio' : 'Espacios'}
+                    </span>
+                    <button className="text-[#1e3a5f] font-black text-[10px] uppercase tracking-widest group-hover:translate-x-1 transition-transform">
+                        {lang === 'es' ? 'Ver más →' : 'Ver mais →'}
+                    </button>
                 </div>
-
-                {/* Botón */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openInMaps(venue);
-                  }}
-                  className="w-full bg-white border border-teal-600 text-teal-700 hover:bg-teal-50 font-semibold py-2 px-4 rounded-lg transition-colors text-sm flex items-center justify-center gap-2 group-hover:bg-teal-600 group-hover:text-white"
-                >
-                  <span>🗺️</span>
-                  <span>{lang === 'es' ? 'Ver en Mapa' : 'View on Map'}</span>
-                </button>
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Mapa general */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
-        <div className="bg-gray-800 text-white p-4 flex justify-between items-center">
-          <div>
-            <h3 className="text-lg font-bold">
-              {lang === 'es' ? 'Mapa de Sedes' : 'Venues Map'}
-            </h3>
-            <p className="text-xs text-gray-400">
-              {lang === 'es'
-                ? 'Centro Histórico de San Cristóbal de Las Casas'
-                : 'Historic Center of San Cristóbal de Las Casas'}
-            </p>
-          </div>
-        </div>
-        
-        <div className="h-96 bg-gray-100 relative">
-          <iframe
-            src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d15252.827666248554!2d-92.6375!3d16.7375!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1ses-419!2smx!4v1700000000000!5m2!1ses-419!2smx"
-            width="100%"
-            height="100%"
-            style={{ border: 0 }}
-            allowFullScreen=""
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-            title={lang === 'es' ? 'Mapa de las sedes' : 'Venues map'}
-          ></iframe>
-          
-          <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur p-2 rounded shadow text-xs text-gray-500 font-bold">
-            San Cristóbal de Las Casas, Chiapas
-          </div>
-        </div>
+      {/* Info Cards */}
+      <div className="grid md:grid-cols-3 gap-6">
+        <InfoCard icon="🚶" title={lang === 'es' ? 'Todo Cerca' : 'Perto de Tudo'} text={lang === 'es' ? 'Sedes a máximo 15 min caminando.' : 'Sedes a no máximo 15 min a pé.'} />
+        <InfoCard icon="🌡️" title={lang === 'es' ? 'Clima' : 'Clima'} text={lang === 'es' ? 'Promedio 18°C. Traiga abrigo.' : 'Média de 18°C. Traga agasalho.'} />
+        <InfoCard icon="🏔️" title={lang === 'es' ? 'Altitud' : 'Altitude'} text={lang === 'es' ? '2,200 msnm. Vaya con calma.' : '2.200 msnm. Vá com calma.'} />
       </div>
 
-      {/* Información adicional */}
-      <div className="grid md:grid-cols-3 gap-4">
-        <div className="bg-blue-50 p-5 rounded-xl border border-blue-100 flex items-start gap-4">
-          <div className="text-3xl bg-white p-2 rounded-full shadow-sm">🚶</div>
-          <div>
-            <h3 className="font-bold text-blue-900 mb-1">
-              {lang === 'es' ? 'Todo cerca' : 'Everything close'}
-            </h3>
-            <p className="text-blue-800 text-sm leading-relaxed">
-              {lang === 'es'
-                ? 'Todas las sedes se encuentran en el centro histórico, a una distancia máxima de 15 minutos caminando.'
-                : 'All venues are located in the historic center, within a maximum 15-minute walking distance.'}
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-orange-50 p-5 rounded-xl border border-orange-100 flex items-start gap-4">
-          <div className="text-3xl bg-white p-2 rounded-full shadow-sm">🌡️</div>
-          <div>
-            <h3 className="font-bold text-orange-900 mb-1">
-              {lang === 'es' ? 'Clima' : 'Climate'}
-            </h3>
-            <p className="text-orange-800 text-sm leading-relaxed">
-              {lang === 'es'
-                ? 'Templado húmedo. Promedio 18°C. Las noches pueden ser frías. Se recomienda traer ropa abrigada.'
-                : 'Humid temperate. Average 18°C. Nights can be cold. Warm clothing is recommended.'}
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-purple-50 p-5 rounded-xl border border-purple-100 flex items-start gap-4">
-          <div className="text-3xl bg-white p-2 rounded-full shadow-sm">🏔️</div>
-          <div>
-            <h3 className="font-bold text-purple-900 mb-1">
-              {lang === 'es' ? 'Altitud' : 'Altitude'}
-            </h3>
-            <p className="text-purple-800 text-sm leading-relaxed">
-              {lang === 'es'
-                ? '2,200 msnm. Tómate el primer día con calma para aclimatarte a la altura.'
-                : '2,200 meters above sea level. Take the first day easy to acclimatize to the altitude.'}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Modal de detalle */}
-      {selectedVenue && (
-        <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200"
-          onClick={() => setSelectedVenue(null)}
+      {/* ========================================== */}
+      {/* MODAL POP-UP DEL MAPA CORREDOR            */}
+      {/* ========================================== */}
+      {isMapModalOpen && (
+        <div 
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-10 animate-in fade-in duration-300"
+            onClick={() => setIsMapModalOpen(false)}
         >
-          <div
-            className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="relative h-72 bg-gray-100">
-              {selectedVenue.image_url ? (
-                <img
-                  src={selectedVenue.image_url}
-                  alt={selectedVenue.name}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    if (e.target.src.includes('.webp')) {
-                       e.target.src = e.target.src.replace('.webp', '.jpg');
-                    } else {
-                       e.target.src = `https://via.placeholder.com/800x600/0d9488/ffffff?text=${encodeURIComponent(selectedVenue.name)}`;
-                    }
-                  }}
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-gray-300">
-                  <span className="text-6xl">{selectedVenue.icon}</span>
-                </div>
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
-              <button
-                onClick={() => setSelectedVenue(null)}
-                className="absolute top-4 right-4 bg-black/20 hover:bg-black/40 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center text-white transition-all border border-white/20"
-              >
-                ✕
-              </button>
-              <div className="absolute bottom-6 left-6 text-white">
-                <div className="flex items-center gap-3 mb-2">
-                    <span className="text-3xl bg-white/20 backdrop-blur-md p-2 rounded-lg">{selectedVenue.icon}</span>
-                    <h2 className="text-3xl font-bold text-shadow-sm">
-                    {selectedVenue.name}
-                    </h2>
-                </div>
-              </div>
-            </div>
+            <div className="absolute inset-0 bg-[#1e3a5f]/90 backdrop-blur-md"></div>
             
-            <div className="p-8">
-              <div className="grid md:grid-cols-2 gap-8">
-                  <div>
-                      <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <span className="text-teal-600">ℹ️</span>
-                        {lang === 'es' ? 'Información' : 'Information'}
-                      </h3>
-                      <p className="text-gray-600 mb-6 leading-relaxed text-sm">
-                        {selectedVenue.description || (lang === 'es' ? 'Información de la sede próximamente.' : 'Venue information coming soon.')}
-                      </p>
+            <button 
+                className="absolute top-6 right-6 z-10 bg-white text-[#1e3a5f] p-3 rounded-full hover:rotate-90 transition-transform duration-300 shadow-2xl"
+                onClick={() => setIsMapModalOpen(false)}
+            >
+                <X size={28} />
+            </button>
 
-                      <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                        <h4 className="font-bold text-gray-800 mb-2 text-xs uppercase tracking-wide text-teal-700">
-                            {lang === 'es' ? 'Dirección' : 'Address'}
-                        </h4>
-                        <div className="text-gray-700 text-sm space-y-1">
-                            <p className="font-medium">{selectedVenue.address || 'San Cristóbal de Las Casas'}</p>
-                            <p className="text-gray-500 text-xs mt-2">C.P. 29200, Chiapas, México</p>
-                        </div>
-                      </div>
-                  </div>
-
-                  <div>
-                      <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <span className="text-teal-600">🏛️</span>
-                        {lang === 'es' ? 'Salas / Espacios' : 'Rooms / Spaces'}
-                      </h3>
-                      <ul className="space-y-3">
-                        {selectedVenue.rooms && selectedVenue.rooms.length > 0 ? (
-                          selectedVenue.rooms.map((room) => (
-                            <li key={room.id} className="flex items-center gap-3 text-gray-700 text-sm bg-white border border-gray-100 p-3 rounded-lg shadow-sm">
-                                <span className="text-teal-500 font-bold">✓</span>
-                                {room.name}
-                            </li>
-                          ))
-                        ) : (
-                          <p className="text-sm text-gray-500 italic">
-                            {lang === 'es' ? 'Espacios por confirmar.' : 'Spaces to be confirmed.'}
-                          </p>
-                        )}
-                      </ul>
-
-                      <button
-                        onClick={() => openInMaps(selectedVenue)}
-                        className="w-full mt-6 bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-teal-100 hover:shadow-teal-200 transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
-                    >
-                        <span>🗺️</span> 
-                        {lang === 'es' ? 'Cómo llegar' : 'Get directions'}
-                    </button>
-                  </div>
-              </div>
+            <div 
+                className="relative max-w-6xl w-full h-full flex flex-col items-center justify-center animate-in zoom-in-95 duration-300"
+                onClick={e => e.stopPropagation()}
+            >
+                <div className="bg-white p-1 rounded-3xl shadow-2xl overflow-hidden w-full overflow-y-auto max-h-full scrollbar-hide">
+                    <img 
+                        src="/images/corredor_sedes.jpeg" 
+                        alt="Mapa Completo" 
+                        className="w-full h-auto rounded-2xl"
+                    />
+                </div>
+                <p className="mt-4 text-white font-black uppercase tracking-[0.4em] text-[10px] opacity-60">
+                    XVII Congreso IASPM-AL 2026 • Chiapas, México
+                </p>
             </div>
-          </div>
         </div>
       )}
+
+      {/* Modal de Detalle de Sede */}
+      {selectedVenue && (
+         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in" onClick={() => setSelectedVenue(null)}>
+            <div className="bg-white rounded-3xl max-w-2xl w-full overflow-hidden shadow-2xl animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
+                <div className="relative h-64">
+                    <img src={selectedVenue.image_url} alt="" className="w-full h-full object-cover" />
+                    <button onClick={() => setSelectedVenue(null)} className="absolute top-4 right-4 bg-white/20 hover:bg-white backdrop-blur-md p-2 rounded-full shadow-lg transition-colors"><X size={20}/></button>
+                    <div className="absolute bottom-6 left-8">
+                         <h2 className="text-3xl font-black text-white uppercase italic tracking-tight drop-shadow-lg">{selectedVenue.name}</h2>
+                    </div>
+                </div>
+                <div className="p-8">
+                    <p className="text-gray-600 mb-6 leading-relaxed">{selectedVenue.description}</p>
+                    <h4 className="text-[10px] font-black text-orange-500 uppercase tracking-[0.2em] mb-4">Salas y Espacios</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                        {selectedVenue.rooms.map(room => (
+                            <div key={room.id} className="flex items-center gap-2 bg-gray-50 p-3 rounded-xl border border-gray-100 font-bold text-xs text-[#1e3a5f]">
+                                <span className="text-orange-500">✓</span> {room.name}
+                            </div>
+                        ))}
+                    </div>
+                    <button 
+                        onClick={() => openInMaps(selectedVenue)}
+                        className="w-full mt-8 bg-[#1e3a5f] hover:bg-black text-white font-black py-4 rounded-2xl text-xs uppercase tracking-widest transition-all shadow-lg"
+                    >
+                        {lang === 'es' ? 'Cómo llegar con Google Maps' : 'Como chegar com Google Maps'}
+                    </button>
+                </div>
+            </div>
+         </div>
+      )}
+    </div>
+  );
+}
+
+function InfoCard({ icon, title, text }) {
+  return (
+    <div className="bg-white p-6 rounded-2xl border border-gray-100 flex items-start gap-4 shadow-sm">
+      <div className="text-3xl bg-gray-50 p-3 rounded-xl shadow-inner">{icon}</div>
+      <div>
+        <h4 className="font-black text-[#1e3a5f] uppercase text-[10px] tracking-widest mb-1">{title}</h4>
+        <p className="text-gray-600 text-sm leading-relaxed">{text}</p>
+      </div>
     </div>
   );
 }

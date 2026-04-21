@@ -145,7 +145,7 @@ const CertificateDownload = () => {
     doc.setFontSize(8);
     doc.setTextColor(150, 150, 150);
     // Usamos tu dominio real para que sea válido
-    const validationUrl = `iaspm-al-2026.clickwebhoover.online/constancias`;
+    const validationUrl = `iaspmal2026.com/constancias`;
     const validationText = `Autenticidad verificable en: ${validationUrl} | Código: ${userData.attendance_code}`;
     doc.text(validationText, 148.5, 196, { align: 'center' });
 

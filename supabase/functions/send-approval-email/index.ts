@@ -15,7 +15,7 @@ serve(async (req) => {
 
     // 2. GENERAMOS LA URL Y LA IMAGEN DEL QR
     // Esta es la URL a la que llevará el QR (con autorrelleno)
-    const attendanceUrl = `https://iaspm-al-2026.clickwebhoover.online/asistencia?code=${attendanceCode || ''}`
+    const attendanceUrl = `https://iaspmal2026.com/asistencia?code=${attendanceCode || ''}`
     
     // Usamos QuickChart para generar la imagen del QR incrustable en el email
     // Nota: encodeURIComponent es vital para que la URL pase bien
@@ -31,7 +31,8 @@ serve(async (req) => {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: 'IASPMAL 2026 <registros@clickwebhoover.online>',
+        from: 'IASPMAL 2026 <registros@iaspmal2026.com>',
+        reply_to: 'iaspm.al.2026.inscripcion@gmail.com',
         to: [email],
         subject: '✅ Inscripción Aprobada y Gafete Digital - XVII Congreso IASPM-AL 2026',
         html: `

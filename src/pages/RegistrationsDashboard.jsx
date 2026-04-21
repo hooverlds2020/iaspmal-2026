@@ -292,7 +292,7 @@ const RegistrationsDashboard = () => {
         doc.text('_________________________', 90, 180, { align: 'center' }); doc.text('_________________________', 207, 180, { align: 'center' });
         doc.setFontSize(10); doc.text('Comité Organizador', 90, 185, { align: 'center' }); doc.text('Presidencia IASPM-AL', 207, 185, { align: 'center' });
         doc.setFontSize(8); doc.setTextColor(150, 150, 150);
-        const validationUrl = `iaspm-al-2026.clickwebhoover.online/constancias`;
+        const validationUrl = `iaspmal2026.com/constancias`;
         doc.text(`Autenticidad: ${validationUrl} | Código: ${reg.attendance_code}`, 148.5, 196, { align: 'center' });
         doc.save(`Constancia_${reg.full_name.replace(/\s+/g, '_')}.pdf`);
         toast.success('PDF Generado');
@@ -491,7 +491,7 @@ const RegistrationsDashboard = () => {
                         <div className={`border-2 rounded-xl p-5 ${selectedRegistration.attendance_confirmed ? 'border-blue-200 bg-blue-50/50' : 'border-gray-200'}`}>
                             <div className="flex flex-col md:flex-row gap-6 items-center">
                                 <div className="bg-white p-2 rounded shadow-sm border border-gray-100">
-                                     <QRCodeCanvas value={`https://iaspm-al-2026.clickwebhoover.online/asistencia?code=${selectedRegistration.attendance_code}`} size={140} />
+                                     <QRCodeCanvas value={`https://iaspmal2026.com/asistencia?code=${selectedRegistration.attendance_code}`} size={140} />
                                      <p className="text-center text-xs font-mono font-bold mt-2 tracking-widest">{selectedRegistration.attendance_code}</p>
                                 </div>
                                 <div className="flex-1 text-center md:text-left space-y-3">

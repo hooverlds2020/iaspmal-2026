@@ -19,7 +19,8 @@ serve(async (req) => {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: 'IASPMAL 2026 <registros@clickwebhoover.online>',
+        from: 'IASPMAL 2026 <registros@iaspmal2026.com>',
+        reply_to: 'iaspm.al.2026.inscripcion@gmail.com',
         to: [email],
         subject: 'Información sobre tu Inscripción - XVII Congreso IASPM-AL 2026',
         html: `

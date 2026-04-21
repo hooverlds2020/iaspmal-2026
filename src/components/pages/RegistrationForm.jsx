@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { sendRegistrationConfirmation } from '../../lib/resendClient';
-import { optimizeImage } from '../../lib/imageOptimizer'; // ✅ AJUSTE: Importación del optimizador
+import { optimizeImage } from '../../lib/imageOptimizer'; 
 import { Upload, Check, Search, X, FileText, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -24,7 +24,6 @@ const RegistrationForm = ({ lang, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  // CATEGORÍAS RESTAURADAS A SU ESTADO ORIGINAL
   const categories = [
     { id: 'sur_global', es: 'Del Sur global', pt: 'Do Sul global' },
     { id: 'norte_global', es: 'Del Norte global', pt: 'Do Norte global' },
@@ -57,7 +56,7 @@ const RegistrationForm = ({ lang, onClose }) => {
           {
             description: lang === 'es' 
               ? 'Si no eres ponente, puedes registrarte directamente llenando tus datos abajo.' 
-              : 'Se você não é palestrante, pode se registrar diretamente preenchendo seus dados abaixo.',
+              : 'Se você não é palestrante, pode se registrar directamente preenchendo seus dados abaixo.',
             duration: 6000,
             icon: <AlertCircle className="text-orange-500" />,
             action: {
@@ -90,19 +89,46 @@ const RegistrationForm = ({ lang, onClose }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // VALIDACIÓN RESTAURADA: El comprobante es obligatorio siempre
     if (!file) return toast.error(lang === 'es' ? 'Debes subir tu comprobante' : 'Você deve enviar seu comprovante');
+    const allowedExts = ['jpg', 'jpeg', 'png', 'pdf'];
+    const fileExt = file.name.split('.').pop().toLowerCase();
+    if (!allowedExts.includes(fileExt)) return toast.error(lang === 'es' ? 'Formato no válido. Usa JPG, PNG o PDF' : 'Formato inválido. Use JPG, PNG ou PDF');
     
     setLoading(true);
     try {
+      // ✅ AJUSTE QUIRÚRGICO: Generamos el ID nosotros mismos para que el nombre del archivo y el registro coincidan
+      const newRegistrationId = crypto.randomUUID(); 
+      
+      // ✅ PASO 1: Subir el archivo a tu carpeta original 'payments' con el ID como nombre
+      const filePath = `payments/${newRegistrationId}.${fileExt}`;
+
+      let finalFile = file;
+      if (['jpg', 'jpeg', 'png'].includes(fileExt)) {
+        finalFile = await optimizeImage(file);
+      }
+      
+      const { error: uploadError } = await supabase.storage
+        .from('registrations')
+        .upload(filePath, finalFile, { 
+          upsert: true 
+        });
+
+      if (uploadError) throw uploadError;
+
+      // ✅ PASO 2: Obtener la URL pública (ahora sí apuntando a /payments/)
+      const { data: { publicUrl } } = supabase.storage.from('registrations').getPublicUrl(filePath);
+
+      // ✅ PASO 3: Insertar el registro COMPLETO con el ID que ya generamos y la URL
       const { data: reg, error: regErr } = await supabase
         .from('registrations')
         .insert([{
+          id: newRegistrationId, // <-- Le inyectamos el ID explícitamente
           full_name: formData.full_name,
           email: formData.email.trim().toLowerCase(),
           country: formData.country,
           category: formData.category,
-          status: 'pending' 
+          status: 'pending',
+          payment_proof_url: publicUrl // <-- La URL ya no es NULL
         }])
         .select().single();
 
@@ -115,27 +141,7 @@ const RegistrationForm = ({ lang, onClose }) => {
         }]);
       }
 
-      const fileExt = file.name.split('.').pop().toLowerCase();
-      const filePath = `payments/${reg.id}.${fileExt}`;
-
-      // ✅ AJUSTE: Solo comprimir si es imagen. Si es PDF, subir original.
-      let finalFile = file;
-      if (['jpg', 'jpeg', 'png'].includes(fileExt)) {
-        finalFile = await optimizeImage(file);
-      }
-      
-      const { error: uploadError } = await supabase.storage
-        .from('registrations')
-        .upload(filePath, finalFile, { // <--- Usamos 'finalFile'
-          upsert: true 
-        });
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage.from('registrations').getPublicUrl(filePath);
-      await supabase.from('registrations').update({ payment_proof_url: publicUrl }).eq('id', reg.id);
-
-      await sendRegistrationConfirmation(formData.email, formData.full_name).catch(console.error);
+      await sendRegistrationConfirmation(formData.email, formData.full_name, formData.category).catch(console.error);
       
       setSuccess(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -304,7 +310,6 @@ const RegistrationForm = ({ lang, onClose }) => {
                 </div>
             </div>
 
-            {/* SECCIÓN DEL COMPROBANTE DE VUELTA A LA NORMALIDAD */}
             {formData.category !== '' && (
               <div className="pt-4 animate-in fade-in slide-in-from-top-2 duration-300">
                   <label className="block text-xs font-bold text-gray-700 mb-3 uppercase tracking-wide">

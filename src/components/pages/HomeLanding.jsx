@@ -2,7 +2,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Calendar, MapPin, Users, Search, CheckCircle, Ticket, AlertCircle, 
-  Clock, Flag, FileText, Mic, ChevronLeft, ChevronRight, ArrowRight 
+  Clock, Flag, FileText, Mic, ChevronLeft, ChevronRight, ArrowRight,
+  UserPlus, Book, Edit3, DollarSign, CreditCard 
 } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 
@@ -40,7 +41,6 @@ const MainHeroSlider = ({ lang, setCurrentPage }) => {
         if (activeSlides.length > 0) {
           setSlides(activeSlides);
         } else {
-          // Banner de respaldo por si no hay sliders configurados
           setSlides([{
             id: 'default',
             image_url: '/images/facultad-derecho.jpg',
@@ -64,7 +64,6 @@ const MainHeroSlider = ({ lang, setCurrentPage }) => {
   const prevSlide = () => setCurrent(current === 0 ? slides.length - 1 : current - 1);
   const goToSlide = (index) => setCurrent(index);
 
-  // Lógica Swipe para celulares
   const minSwipeDistance = 50;
   const onTouchStart = (e) => { setTouchEnd(null); setTouchStart(e.targetTouches[0].clientX); };
   const onTouchMove = (e) => { setTouchEnd(e.targetTouches[0].clientX); };
@@ -75,16 +74,14 @@ const MainHeroSlider = ({ lang, setCurrentPage }) => {
     if (distance < -minSwipeDistance) prevSlide();
   };
 
-  // Autoplay
   useEffect(() => { autoPlayRef.current = nextSlide; });
   useEffect(() => {
-    if (slides.length <= 1) return; // No hace autoplay si solo hay 1 foto
+    if (slides.length <= 1) return;
     const play = () => { autoPlayRef.current(); };
     const interval = setInterval(play, 6000);
     return () => clearInterval(interval);
   }, [slides.length]);
 
-  // Manejador Inteligente de Enlaces
   const handleLinkClick = (url, newTab) => {
     if (!url) return;
     if (url.startsWith('http')) {
@@ -104,7 +101,6 @@ const MainHeroSlider = ({ lang, setCurrentPage }) => {
       onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
     >
       {slides.map((slide, index) => {
-        // La regla condicional maestra
         const hasText = slide.titulo || slide.descripcion;
         const isClickableImage = !hasText && slide.enlace_url;
 
@@ -117,7 +113,6 @@ const MainHeroSlider = ({ lang, setCurrentPage }) => {
                <img src={slide.image_url} alt={slide.titulo || 'Slider IASPM-AL'} className="w-full h-full object-cover" />
             </div>
             
-            {/* Solo pinta el texto y el velo oscuro si el organizador escribió algo */}
             {hasText && (
               <>
                 <div className="absolute inset-0 bg-gradient-to-t from-[#1e3a5f]/95 via-[#1e3a5f]/50 to-transparent pointer-events-none"></div>
@@ -135,7 +130,7 @@ const MainHeroSlider = ({ lang, setCurrentPage }) => {
                     )}
                     {slide.enlace_url && (
                       <div className="pt-2 animate-in slide-in-from-bottom-4 duration-700 fade-in delay-500">
-                        <button onClick={() => handleLinkClick(slide.enlace_url, slide.abrir_nueva_pestana)} className="bg-iaspm-orange hover:bg-orange-600 text-white px-6 md:px-8 py-3 rounded-xl font-bold uppercase text-xs tracking-widest transition-all shadow-lg hover:shadow-orange-500/30 flex items-center gap-2 hover:-translate-y-1 active:scale-95">
+                        <button onClick={() => handleLinkClick(slide.enlace_url, slide.abrir_nueva_pestana)} className="bg-[#f97316] hover:bg-orange-600 text-white px-6 md:px-8 py-3 rounded-xl font-bold uppercase text-xs tracking-widest transition-all shadow-lg hover:shadow-orange-500/30 flex items-center gap-2 hover:-translate-y-1 active:scale-95">
                           <span>{lang === 'es' ? 'Saber Más' : 'Saiba Mais'}</span> <ArrowRight size={16} />
                         </button>
                       </div>
@@ -148,7 +143,6 @@ const MainHeroSlider = ({ lang, setCurrentPage }) => {
         );
       })}
 
-      {/* Flechas y puntitos (Solo aparecen si hay más de 1 foto) */}
       {slides.length > 1 && (
         <>
           <button onClick={prevSlide} className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/10 transition-all hover:scale-110 z-30 group">
@@ -160,7 +154,7 @@ const MainHeroSlider = ({ lang, setCurrentPage }) => {
 
           <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-2 z-30">
             {slides.map((_, idx) => (
-              <button key={idx} onClick={() => goToSlide(idx)} className={`h-1.5 rounded-full transition-all duration-500 shadow-sm ${idx === current ? 'w-8 bg-iaspm-orange' : 'w-2 bg-white/40 hover:bg-white/80'}`} />
+              <button key={idx} onClick={() => goToSlide(idx)} className={`h-1.5 rounded-full transition-all duration-500 shadow-sm ${idx === current ? 'w-8 bg-[#f97316]' : 'w-2 bg-white/40 hover:bg-white/80'}`} />
             ))}
           </div>
         </>
@@ -169,21 +163,19 @@ const MainHeroSlider = ({ lang, setCurrentPage }) => {
   );
 };
 
-// --- 2. COMPONENTE DE LÍNEA DE TIEMPO (EXISTENTE) ---
+// --- 2. COMPONENTE DE LÍNEA DE TIEMPO (CORREGIDO ESPACIADO) ---
 const TimelineItem = ({ date, title, desc, icon: Icon, status, align, index }) => {
   const [isVisible, setIsVisible] = useState(false);
   const domRef = useRef();
 
   useEffect(() => {
-    const observer = new IntersectionObserver(entries => {
-      entries.forEach(entry => setIsVisible(entry.isIntersecting));
-    });
+    const observer = new IntersectionObserver(([entry]) => setIsVisible(entry.isIntersecting));
     if (domRef.current) observer.observe(domRef.current);
     return () => observer.disconnect();
   }, []);
 
   const colors = {
-    done: 'bg-blue-100 text-iaspm-blue border-blue-200',
+    done: 'bg-blue-100 text-[#1e3a5f] border-blue-200',
     active: 'bg-orange-100 text-orange-700 border-orange-200 animate-pulse',
     future: 'bg-gray-50 text-gray-400 border-gray-100'
   };
@@ -191,36 +183,43 @@ const TimelineItem = ({ date, title, desc, icon: Icon, status, align, index }) =
   const isLeft = align === 'left';
 
   return (
-    <div ref={domRef} className={`relative flex items-center justify-between md:justify-center gap-8 mb-12 transition-all duration-1000 transform ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-20'}`} style={{ transitionDelay: `${index * 150}ms` }}>
-      <div className={`hidden md:block w-5/12 ${isLeft ? 'text-right' : ''}`}>
+    <div ref={domRef} className={`relative flex flex-col md:flex-row items-center justify-between mb-12 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
+      
+      {/* LADO IZQUIERDO (Escritorio) */}
+      <div className="hidden md:block w-1/2 pr-12 text-right">
         {isLeft && (
           <div>
-            <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold mb-2 ${status === 'done' ? 'bg-blue-100 text-iaspm-blue' : 'bg-gray-100 text-gray-500'}`}>{date}</span>
-            <h3 className="text-xl font-bold text-gray-800">{title}</h3>
-            <p className="text-gray-500 text-sm mt-1">{desc}</p>
+            <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold mb-2 ${status === 'done' ? 'bg-blue-100 text-[#1e3a5f]' : 'bg-gray-100 text-gray-500'}`}>{date}</span>
+            <h3 className="text-lg font-bold text-gray-800">{title}</h3>
+            <p className="text-gray-500 text-sm mt-1 leading-relaxed">{desc}</p>
           </div>
         )}
       </div>
+
+      {/* ICONO CENTRAL */}
       <div className="absolute left-4 md:left-1/2 md:-translate-x-1/2 flex items-center justify-center">
         <div className={`w-12 h-12 rounded-full border-4 border-white shadow-lg flex items-center justify-center z-10 ${colors[status] || colors.future}`}>
           <Icon size={20} />
         </div>
       </div>
-      <div className={`w-full pl-20 md:pl-0 md:w-5/12 ${!isLeft ? 'text-left' : ''}`}>
-        <div className="block md:hidden">
-          <span className="text-xs font-bold text-iaspm-blue block mb-1">{date}</span>
+
+      {/* LADO DERECHO (Móvil y Escritorio) */}
+      <div className="w-full pl-20 md:w-1/2 md:pl-12 text-left">
+        {/* Vista Móvil */}
+        <div className="md:hidden">
+          <span className="text-xs font-bold text-[#1e3a5f] block mb-1 uppercase tracking-wider">{date}</span>
           <h3 className="text-lg font-bold text-gray-800">{title}</h3>
           <p className="text-gray-500 text-sm">{desc}</p>
         </div>
-        <div className="hidden md:block">
-          {!isLeft && (
-            <div>
-              <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold mb-2 ${status === 'done' ? 'bg-blue-100 text-iaspm-blue' : 'bg-gray-100 text-gray-500'}`}>{date}</span>
-              <h3 className="text-xl font-bold text-gray-800">{title}</h3>
-              <p className="text-gray-500 text-sm mt-1">{desc}</p>
-            </div>
-          )}
-        </div>
+        
+        {/* Vista Escritorio */}
+        {!isLeft && (
+          <div className="hidden md:block">
+            <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold mb-2 ${status === 'done' ? 'bg-blue-100 text-[#1e3a5f]' : 'bg-gray-100 text-gray-500'}`}>{date}</span>
+            <h3 className="text-lg font-bold text-gray-800">{title}</h3>
+            <p className="text-gray-500 text-sm mt-1 leading-relaxed">{desc}</p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -231,6 +230,27 @@ const HomeLanding = ({ lang, setCurrentPage }) => {
   const [emailCheck, setEmailCheck] = useState('');
   const [statusResult, setStatusResult] = useState(null);
   const [loadingCheck, setLoadingCheck] = useState(false);
+  
+  // Estados para la línea mágica
+  const [lineProgress, setLineProgress] = useState(0);
+  const timelineRef = useRef(null);
+
+  // Efecto que pinta la línea conforme scrolleas
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!timelineRef.current) return;
+      const rect = timelineRef.current.getBoundingClientRect();
+      const windowHeight = window.innerHeight;
+      
+      const scrollPercentage = ((windowHeight / 2) - rect.top) / rect.height * 100;
+      const clampedPercentage = Math.max(0, Math.min(100, scrollPercentage));
+      setLineProgress(clampedPercentage);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    handleScroll(); 
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   useEffect(() => {
     if (statusResult) {
@@ -262,17 +282,20 @@ const HomeLanding = ({ lang, setCurrentPage }) => {
   };
 
   const timelineEvents = [
-    { date: 'Noviembre 2025', title: lang === 'es' ? 'Publicación de Convocatoria' : 'Call for Papers', desc: lang === 'es' ? 'Apertura oficial para recepción de propuestas.' : 'Official opening for proposal submissions.', icon: FileText, status: 'done' },
-    { date: 'Febrero 2026', title: lang === 'es' ? 'Inicio de Inscripciones' : 'Registration Opens', desc: lang === 'es' ? 'Registro disponible para asistentes y ponentes.' : 'Registration available for attendees and speakers.', icon: Ticket, status: 'done' },
-    { date: '31 Mayo 2026', title: lang === 'es' ? 'Límite Pago Reducido' : 'Early Bird Deadline', desc: lang === 'es' ? 'Último día para aprovechar el descuento.' : 'Last day to take advantage of the discount.', icon: AlertCircle, status: 'active' },
-    { date: '15 Julio 2026', title: lang === 'es' ? 'Programa Preliminar' : 'Preliminary Program', desc: lang === 'es' ? 'Publicación de horarios y mesas de trabajo.' : 'Publication of schedules and working tables.', icon: Mic, status: 'future' },
-    { date: '28 Sept 2026', title: lang === 'es' ? 'Inauguración del Congreso' : 'Congress Opening', desc: lang === 'es' ? 'Ceremonia de apertura en el Teatro Zebadúa.' : 'Opening ceremony at Zebadúa Theater.', icon: Flag, status: 'future' }
+    { date: lang === 'es' ? '8 de Febrero 2026' : '8 de Fevereiro 2026', title: lang === 'es' ? 'Ponencias Aceptadas' : 'Trabalhos Aceitos', desc: lang === 'es' ? 'Publicación de resultados de trabajos aceptados.' : 'Publicação dos resultados dos trabalhos aceitos.', icon: CheckCircle, status: 'done' },
+    { date: lang === 'es' ? 'Abril 2026' : 'Abril 2026', title: lang === 'es' ? 'Inicio de Inscripciones' : 'Início das Inscrições', desc: lang === 'es' ? 'Registro disponible para asistentes y ponentes.' : 'Registro disponível para participantes e palestrantes.', icon: UserPlus, status: 'active' },
+    { date: '31 Mayo 2026', title: lang === 'es' ? 'Concluye 1er plazo de pago' : 'Encerra 1º prazo de pagamento', desc: lang === 'es' ? 'Último día para aprovechar el mayor descuento.' : 'Último dia para aproveitar o maior desconto.', icon: DollarSign, status: 'future' },
+    { date: '15 de Junio 2026', title: lang === 'es' ? 'Presentaciones de libros' : 'Apresentações de livros', desc: lang === 'es' ? 'Finaliza el plazo para enviar propuestas.' : 'Encerra o prazo para envio de propostas.', icon: Book, status: 'future' },
+    { date: '22 de Junio 2026', title: lang === 'es' ? 'Resúmenes y títulos definitivos' : 'Resumos e títulos definitivos', desc: lang === 'es' ? 'Remitirlos a las y los coordinadores de simposio.' : 'Enviá-los aos coordenadores de simpósio.', icon: Edit3, status: 'future' },
+    { date: '31 de Julio 2026', title: lang === 'es' ? 'Finaliza 2o plazo de pago' : 'Encerra 2º prazo de pagamento', desc: lang === 'es' ? 'Concluye el descuento por pago anticipado.' : 'Encerra o desconto por pagamento antecipado.', icon: CreditCard, status: 'future' },
+    { date: '15 de Agosto 2026', title: lang === 'es' ? 'Programa general' : 'Programa geral', desc: lang === 'es' ? 'Horario de las mesas de los simposios y de todo lo demás.' : 'Horários das mesas de simpósios e de todas as atividades.', icon: Mic, status: 'future' },
+    { date: '28 Sept 2026', title: lang === 'es' ? 'Comienza el Congreso' : 'Começa o Congresso', desc: lang === 'es' ? 'El registro, desde las 9am en la Casa Mazariegos.' : 'O credenciamento começa às 9h na Casa Mazariegos.', icon: Flag, status: 'future' }
   ];
 
   return (
     <div className="space-y-16 animate-in fade-in duration-500">
 
-      {/* 1. HERO SLIDER (INTEGRADO) */}
+      {/* 1. HERO SLIDER */}
       <div className="mb-4">
         <MainHeroSlider lang={lang} setCurrentPage={setCurrentPage} />
       </div>
@@ -280,36 +303,48 @@ const HomeLanding = ({ lang, setCurrentPage }) => {
       {/* 2. TARJETAS DE ACCESO RÁPIDO */}
       <div className="grid md:grid-cols-3 gap-6">
         {[
-          { id: 'programa', icon: Calendar, color: 'blue', title: { es: 'Agenda Académica', en: 'Academic Agenda' }, desc: { es: 'Consulta los simposios, ponencias y actividades.', en: 'Check symposia and activities.' } },
-          { id: 'sedes', icon: MapPin, color: 'orange', title: { es: 'Sedes y Mapas', en: 'Venues & Maps' }, desc: { es: 'Ubica los auditorios en el centro histórico.', en: 'Locate auditoriums in the center.' } },
-          { id: 'cuotas', icon: Users, color: 'blue', title: { es: 'Inscripción y Costos', en: 'Registration & Fees' }, desc: { es: 'Revisa costos para estudiantes e investigadores.', en: 'Check fees for students and researchers.' } }
+          { id: 'programa', icon: Calendar, color: 'blue', title: { es: 'Agenda Académica', pt: 'Agenda Acadêmica' }, desc: { es: 'Consulta los simposios, ponencias y actividades.', pt: 'Consulte os simpósios, palestras e atividades.' } },
+          { id: 'sedes', icon: MapPin, color: 'orange', title: { es: 'Sedes y Mapas', pt: 'Sedes e Mapas' }, desc: { es: 'Ubica los auditorios en el centro histórico.', pt: 'Localize os auditórios no centro histórico.' } },
+          { id: 'cuotas', icon: Users, color: 'blue', title: { es: 'Inscripción y Costos', pt: 'Inscrição e Custos' }, desc: { es: 'Revisa costos para estudiantes e investigadores.', pt: 'Verifique os custos para estudantes e pesquisadores.' } }
         ].map((item) => (
-          <button key={item.id} onClick={() => setCurrentPage(item.id)} className="text-left group bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-iaspm-blue transition-all duration-300 hover:-translate-y-1">
-            <div className={`w-12 h-12 bg-${item.color}-50 text-${item.color}-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
+          <button key={item.id} onClick={() => setCurrentPage(item.id)} className="text-left group bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-[#1e3a5f] transition-all duration-300 hover:-translate-y-1">
+            <div className={`w-12 h-12 bg-blue-50 text-[#1e3a5f] rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
               <item.icon className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-bold text-gray-800 mb-2 group-hover:text-iaspm-blue transition-colors">{lang === 'es' ? item.title.es : item.title.en}</h3>
-            <p className="text-sm text-gray-500">{lang === 'es' ? item.desc.es : item.desc.en}</p>
+            <h3 className="text-lg font-bold text-gray-800 mb-2 group-hover:text-[#1e3a5f] transition-colors">{lang === 'es' ? item.title.es : item.title.pt}</h3>
+            <p className="text-sm text-gray-500 leading-snug">{lang === 'es' ? item.desc.es : item.desc.pt}</p>
           </button>
         ))}
       </div>
 
-      {/* 3. LÍNEA DE TIEMPO */}
+      {/* 3. LÍNEA DE TIEMPO CON SCROLL MÁGICO */}
       <div className="relative py-8">
-        <div className="text-center mb-12">
+        <div className="text-center mb-16">
            <h2 className="text-3xl font-bold text-gray-900 flex items-center justify-center gap-3">
-             <Clock className="text-iaspm-blue" />
-             {lang === 'es' ? 'Camino al Congreso' : 'Road to Congress'}
+             <Clock className="text-[#1e3a5f]" />
+             {lang === 'es' ? 'Camino al Congreso' : 'Caminho ao Congresso'}
            </h2>
-           <p className="text-gray-500 mt-2">
-             {lang === 'es' ? 'Fechas clave para tu participación' : 'Key dates for your participation'}
+           <p className="text-gray-500 mt-2 font-medium">
+             {lang === 'es' ? 'Fechas clave para tu participación' : 'Datas-chave para sua participação'}
            </p>
         </div>
-        <div className="absolute left-4 md:left-1/2 top-24 bottom-0 w-0.5 bg-gray-200 -translate-x-1/2"></div>
-        <div className="relative">
-          {timelineEvents.map((event, index) => (
-            <TimelineItem key={index} index={index} {...event} align={index % 2 === 0 ? 'left' : 'right'} />
-          ))}
+        
+        {/* Contenedor que medimos con useRef */}
+        <div className="relative" ref={timelineRef}>
+           {/* Línea Gris Base (Inactiva) */}
+           <div className="absolute left-4 md:left-1/2 top-0 bottom-0 w-0.5 bg-gray-200 -translate-x-1/2 rounded-full"></div>
+           
+           {/* Línea Azul que se llena con el scroll */}
+           <div 
+             className="absolute left-4 md:left-1/2 top-0 w-1 bg-[#1e3a5f] -translate-x-1/2 rounded-b-full shadow-[0_0_10px_rgba(30,58,95,0.4)] transition-all duration-150 ease-out z-0"
+             style={{ height: `${lineProgress}%` }}
+           ></div>
+
+           <div className="relative z-10 pt-4 pb-4">
+             {timelineEvents.map((event, index) => (
+               <TimelineItem key={index} index={index} {...event} align={index % 2 === 0 ? 'left' : 'right'} />
+             ))}
+           </div>
         </div>
       </div>
 
@@ -317,20 +352,20 @@ const HomeLanding = ({ lang, setCurrentPage }) => {
       <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-6 md:p-8 border border-gray-200 shadow-sm flex flex-col md:flex-row items-center gap-8">
         <div className="flex-1 space-y-3">
           <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <Search className="w-6 h-6 text-iaspm-blue" />
-            {lang === 'es' ? 'Verifica tu Inscripción' : 'Check Registration'}
+            <Search className="w-6 h-6 text-[#1e3a5f]" />
+            {lang === 'es' ? 'Verifica tu Inscripción' : 'Verificar Inscrição'}
           </h2>
-          <p className="text-gray-600 leading-relaxed">
-            {lang === 'es' ? 'Si ya realizaste tu pago, ingresa tu correo para verificar tu estatus.' : 'If you already paid, enter your email to check your status.'}
+          <p className="text-gray-600 leading-relaxed text-sm">
+            {lang === 'es' ? 'Si ya realizaste tu pago, ingresa tu correo para verificar tu estatus.' : 'Se você já realizou seu pagamento, insira seu e-mail para verificar seu status.'}
           </p>
         </div>
-        <div className="flex-1 w-full max-w-md bg-white p-6 rounded-xl shadow-lg border border-gray-100 ring-1 ring-gray-100">       
+        <div className="flex-1 w-full max-w-md bg-white p-6 rounded-xl shadow-lg border border-gray-100 ring-1 ring-gray-100">        
           <form onSubmit={checkStatus} className="space-y-4">
             <div>
-              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5 block">{lang === 'es' ? 'Correo Electrónico' : 'Email Address'}</label>
+              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5 block">{lang === 'es' ? 'Correo Electrónico' : 'Endereço de E-mail'}</label>
               <div className="flex gap-2">
-                <input type="email" required placeholder="ejemplo@correo.com" value={emailCheck} onChange={(e) => setEmailCheck(e.target.value)} className="flex-1 min-w-0 border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-iaspm-blue focus:border-transparent outline-none transition-all" />
-                <button disabled={loadingCheck} type="submit" className="shrink-0 bg-iaspm-blue hover:bg-blue-800 text-white px-5 py-2.5 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg flex items-center justify-center">
+                <input type="email" required placeholder="ejemplo@correo.com" value={emailCheck} onChange={(e) => setEmailCheck(e.target.value)} className="flex-1 min-w-0 border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-[#1e3a5f] focus:border-transparent outline-none transition-all" />
+                <button disabled={loadingCheck} type="submit" className="shrink-0 bg-[#1e3a5f] hover:bg-blue-800 text-white px-5 py-2.5 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg flex items-center justify-center">
                   {loadingCheck ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <Search className="w-5 h-5" />}
                 </button>
               </div>
@@ -345,13 +380,13 @@ const HomeLanding = ({ lang, setCurrentPage }) => {
                       <div className="mt-1 flex flex-wrap items-center gap-2">
                         <span>{lang === 'es' ? 'Estado:' : 'Status:'}</span>
                         <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${statusResult.status === 'paid' ? 'bg-green-200 text-green-800' : 'bg-yellow-200 text-yellow-800'}`}>
-                          {statusResult.status === 'paid' ? (lang === 'es' ? 'Aprobado' : 'Approved') : (lang === 'es' ? 'En Revisión' : 'Pending')}
+                          {statusResult.status === 'paid' ? (lang === 'es' ? 'Aprobado' : 'Aprovado') : (lang === 'es' ? 'En Revisión' : 'Pendente')}
                         </span>
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-3"><AlertCircle className="w-5 h-5 flex-shrink-0" /><p>{lang === 'es' ? 'No encontramos registros.' : 'No registration found.'}</p></div>
+                  <div className="flex items-center gap-3"><AlertCircle className="w-5 h-5 flex-shrink-0" /><p>{lang === 'es' ? 'No encontramos registros.' : 'Nenhum registro encontrado.'}</p></div>
                 )}
               </div>
             )}
@@ -361,12 +396,12 @@ const HomeLanding = ({ lang, setCurrentPage }) => {
 
       {/* 5. LOGOS */}
       <div className="border-t border-gray-200 pt-10 pb-4">
-        <p className="text-center text-xs text-gray-400 font-bold mb-8 uppercase tracking-[0.2em]">{lang === 'es' ? 'Instituciones Convocantes' : 'Convening Institutions'}</p>
+        <p className="text-center text-xs text-gray-400 font-bold mb-8 uppercase tracking-[0.2em]">{lang === 'es' ? 'Instituciones Convocantes' : 'Instituições Convocantes'}</p>
         <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 opacity-50 grayscale hover:grayscale-0 transition-all duration-700">
-           <div className="h-14 px-6 bg-white border-2 border-gray-100 rounded-lg flex items-center justify-center font-black text-gray-300 text-xl shadow-sm select-none hover:border-iaspm-blue hover:text-iaspm-blue hover:shadow-md transition-all">UNICACH</div>        
-           <div className="h-14 px-6 bg-white border-2 border-gray-100 rounded-lg flex items-center justify-center font-black text-gray-300 text-xl shadow-sm select-none hover:border-iaspm-blue hover:text-iaspm-blue hover:shadow-md transition-all">IASPM</div>
-           <div className="h-14 px-6 bg-white border-2 border-gray-100 rounded-lg flex items-center justify-center font-black text-gray-300 text-xl shadow-sm select-none hover:border-iaspm-blue hover:text-iaspm-blue hover:shadow-md transition-all">CESMECA</div>        
-           <div className="h-14 px-6 bg-white border-2 border-gray-100 rounded-lg flex items-center justify-center font-black text-gray-300 text-xl shadow-sm select-none hover:border-iaspm-blue hover:text-iaspm-blue hover:shadow-md transition-all">CHIAPAS</div>        
+           <div className="h-14 px-6 bg-white border-2 border-gray-100 rounded-lg flex items-center justify-center font-black text-gray-300 text-xl shadow-sm select-none hover:border-[#1e3a5f] hover:text-[#1e3a5f] hover:shadow-md transition-all">UNICACH</div>        
+           <div className="h-14 px-6 bg-white border-2 border-gray-100 rounded-lg flex items-center justify-center font-black text-gray-300 text-xl shadow-sm select-none hover:border-[#1e3a5f] hover:text-[#1e3a5f] hover:shadow-md transition-all">IASPM</div>
+           <div className="h-14 px-6 bg-white border-2 border-gray-100 rounded-lg flex items-center justify-center font-black text-gray-300 text-xl shadow-sm select-none hover:border-[#1e3a5f] hover:text-[#1e3a5f] hover:shadow-md transition-all">CESMECA</div>        
+           <div className="h-14 px-6 bg-white border-2 border-gray-100 rounded-lg flex items-center justify-center font-black text-gray-300 text-xl shadow-sm select-none hover:border-[#1e3a5f] hover:text-[#1e3a5f] hover:shadow-md transition-all">CHIAPAS</div>        
         </div>
       </div>
     </div>

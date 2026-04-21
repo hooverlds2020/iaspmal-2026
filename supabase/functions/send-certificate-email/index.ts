@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
-const RESEND_API_KEY = 're_498uohZL_G1kRygDCXhqJC81ZshksvEnn'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,6 +13,7 @@ serve(async (req) => {
 
   try {
     const { email, name, folio, pdfUrl } = await req.json()
+    const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -22,7 +22,8 @@ serve(async (req) => {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: 'IASPMAL 2026 <onboarding@resend.dev>',
+        from: 'IASPMAL 2026 <registros@iaspmal2026.com>',
+        reply_to: 'iaspm.al.2026.inscripcion@gmail.com',
         to: [email],
         subject: '✅ Tu Constancia del XVII Congreso IASPM-AL 2026',
         html: `

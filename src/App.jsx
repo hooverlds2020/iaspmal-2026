@@ -94,7 +94,7 @@ const MainLayout = ({ lang, setLang }) => {
   submenu: [
     { id: 'sedes', label: 'Las sedes del Congreso', label_pt: 'As sedes do Congresso' },
     { id: 'instituciones-convocantes', label: 'Instituciones convocantes', label_pt: 'Instituições convocantes' },
-    { id: 'organizaciones', label: 'Organizaciones colaboradoras', label_pt: 'Organizações colaboradoras' },
+    { id: 'organizaciones', label: 'Entidades colaboradoras', label_pt: 'Entidades colaboradoras' },
     { id: 'alojamiento', label: 'Alojamiento', label_pt: 'Hospedagem' },
     { id: 'san-cristobal', label: 'Lugares para comer', label_pt: 'Lugares para comer' }, 
     { id: 'musica-vivo', label: 'Música en vivo', label_pt: 'Música ao vivo' }, 
@@ -125,7 +125,7 @@ const MainLayout = ({ lang, setLang }) => {
       'actividad2': { es: 'Actividad 2', pt: 'Atividade 2' },
       'sedes': { es: 'Sedes del Congreso', pt: 'Locais do Congresso' },
       'instituciones-convocantes': { es: 'Instituciones convocantes', pt: 'Instituições convocantes' },
-      'organizaciones': { es: 'Organizaciones colaboradoras', pt: 'Organizações colaboradoras' },
+      'organizaciones': { es: 'Entidades colaboradoras', pt: 'Entidades colaboradoras' },
       'alojamiento': { es: 'Alojamiento', pt: 'Hospedagem' },
       'san-cristobal': { es: 'San Cristóbal de Las Casas', pt: 'San Cristóbal de Las Casas' },
       'cartel': { es: 'Cartel Oficial', pt: 'Cartaz Oficial' },
@@ -385,12 +385,13 @@ const MainLayout = ({ lang, setLang }) => {
           </div>
         );
     
-    case 'comite-organizador': return <div className="space-y-4"><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">María Luisa de la Garza Chávez</p><p className="text-sm text-gray-600">CESMECA-UNICACH</p></div><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">Roberto Campos Velázquez</p><p className="text-sm text-gray-600">FaM-UNICACH</p></div></div></div>;
+    case 'comite-organizador': return <div className="space-y-6"><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">María Luisa de la Garza Chávez</p><p className="text-sm text-gray-600">CESMECA-UNICACH, coordinadora</p></div><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">Roberto Campos Velázquez</p><p className="text-sm text-gray-600">FaM-UNICACH, coordinador</p></div><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">Emmanuel Nájera de León</p><p className="text-sm text-gray-600">CESMECA-UNICACH</p></div><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">Alain Basail Rodríguez</p><p className="text-sm text-gray-600">CESMECA-UNICACH</p></div><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">Yoimí Castañeda Ceijas</p><p className="text-sm text-gray-600">UNICH</p></div><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">Mónica Bayuelo García</p><p className="text-sm text-gray-600">CIMSUR-UNAM</p></div></div><div className="mt-4"><p className="font-semibold text-gray-700 mb-3">Comisión de logística</p><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">Gabriela Fragoso Samaniego</p><p className="text-sm text-gray-600">CESMECA-UNICACH</p></div></div></div><div className="mt-4"><p className="font-semibold text-gray-700 mb-3">Página web</p><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">Roberto Carlos Hoover Silvano</p><p className="text-sm text-gray-600">CESMECA-UNICACH</p></div></div></div></div>;
 
       case 'programa': return <Program lang={lang} />;
       case 'sedes': return <VenuesPage lang={lang} />;
       case 'alojamiento': return <Alojamiento lang={lang} />;
-      case 'galeria': return <Gallery lang={lang} />; 
+      case 'galeria': return <Gallery lang={lang} />;
+      case 'instituciones-convocantes': return <div className="text-center"><img src="/images/instituciones.png" alt="Instituciones convocantes" className="max-w-full mx-auto" /></div>; 
       
       default: return <div className="p-8 text-center text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-300">{lang === 'es' ? 'Contenido en preparación.' : 'Conteúdo em preparação.'}</div>;
     }
