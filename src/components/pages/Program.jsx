@@ -22,7 +22,7 @@ const Program = () => {
   const [scheduleData, setScheduleData] = useState([]);
   const [filteredSchedule, setFilteredSchedule] = useState([]);
 
-  // Estados de Vista (Navegación Profunda en lugar de Modales)
+  // Estados de Vista
   const [selectedSession, setSelectedSession] = useState(null);
   const [selectedPaper, setSelectedPaper] = useState(null);
 
@@ -35,7 +35,6 @@ const Program = () => {
     fetchScheduleData();
   }, []);
 
-  // Scroll al top cuando cambiamos de vista
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [selectedSession, selectedPaper, activeTab]);
@@ -74,7 +73,7 @@ const Program = () => {
     const term = searchTerm.toLowerCase();
     const filtered = simposios.filter(s => 
       s.name.toLowerCase().includes(term) || 
-      s.presentations.some(p => p.title.toLowerCase().includes(term) || p.authors.toLowerCase().includes(term))
+      s.presentations.some(p => (p.title && p.title.toLowerCase().includes(term)) || (p.authors && p.authors.toLowerCase().includes(term)))
     );
     setFilteredSimposios(filtered);
   }, [searchTerm, simposios]);
@@ -104,9 +103,18 @@ const Program = () => {
     }
   };
 
-  // =========================================================================
-  // LOGICA DE IMPRESIÓN MEJORADA (Sin caracteres especiales que fallan)
-  // =========================================================================
+  // Extraer fechas dinámicamente
+  const getSymposiumDates = (sympId) => {
+    const sympSessions = scheduleData.filter(ev => ev.symposiums?.id === sympId && ev.date);
+    if (sympSessions.length === 0) return null;
+    const uniqueDates = [...new Set(sympSessions.map(ev => ev.date))];
+    const labels = uniqueDates.map(dateVal => {
+       const match = CONGRESS_DATES.find(d => d.value === dateVal);
+       return match ? match.label : dateVal;
+    });
+    return labels.join(' y '); 
+  };
+
   const handlePrint = () => {
     const isSymposium = activeTab === 'simposios';
     const dataToPrint = isSymposium ? filteredSimposios : filteredSchedule;
@@ -121,20 +129,15 @@ const Program = () => {
         body { font-family: 'Helvetica', 'Arial', sans-serif; padding: 40px; color: #1a1a1a; font-size: 10pt; line-height: 1.4; }
         h1 { font-size: 16pt; text-align: center; margin: 0 0 5px 0; text-transform: uppercase; color: #1e3a5f; }
         .meta { text-align: center; font-size: 10pt; margin-bottom: 30px; border-bottom: 2px solid #1e3a5f; padding-bottom: 15px; text-transform: uppercase; font-weight: bold; color: #555; }
-        
         .badge { background: #1e3a5f; color: #fff; padding: 2px 6px; font-weight: bold; font-size: 8pt; text-transform: uppercase; border-radius: 4px; display: inline-block; }
         .badge-gray { background: #eee; color: #555; padding: 2px 6px; font-weight: bold; font-size: 8pt; text-transform: uppercase; border-radius: 4px; border: 1px solid #ddd; }
-
         table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 10px; }
         th { background: #f0f4f8; font-weight: bold; text-align: left; padding: 8px; border: 1px solid #dde2e5; color: #1e3a5f; text-transform: uppercase; font-size: 8pt; }
         td { border: 1px solid #dde2e5; padding: 8px; vertical-align: top; }
-        
         .col-time { text-align: center; font-weight: bold; width: 70px; color: #1e3a5f; }
         .col-loc { width: 200px; font-size: 8.5pt; color: #444; }
-        
         .mesa-info { font-weight: bold; color: #e65100; font-size: 8.5pt; text-transform: uppercase; margin: 4px 0; display: block; border-top: 1px solid #eee; padding-top: 2px; }
         .p-time { font-family: monospace; font-size: 7.5pt; background: #f0f0f0; padding: 0 4px; border: 1px solid #ddd; margin-right: 5px; font-weight: bold; border-radius: 3px; }
-
         .symp { margin-bottom: 25px; page-break-inside: avoid; border-bottom: 1px solid #eee; padding-bottom: 15px; }
         .symp-name { font-weight: bold; font-size: 11pt; color: #000; margin-left: 10px; }
         .symp-meta { font-size: 9pt; color: #666; margin-top: 5px; margin-bottom: 8px; }
@@ -170,9 +173,7 @@ const Program = () => {
             <td>
               ${ev.symposiums ? `<span class="badge">Simposio ${ev.symposiums.id}</span>` : '<span class="badge-gray">GENERAL</span>'}
               <div style="font-size:10pt; font-weight:bold; margin-top:4px;">${ev.symposiums?.name || ev.name}</div>
-              
               <span class="mesa-info">MESA: ${ev.name}</span>
-
               ${ev.presentations?.length > 0 ? `<div style="margin-top:8px;">
                 ${ev.presentations.sort((a,b)=>(a.start_time||'').localeCompare(b.start_time||'')).map(p=>`
                   <div style="margin-bottom:6px; font-size:8.5pt;">
@@ -206,9 +207,7 @@ const Program = () => {
     return timeString.slice(0, 5);
   };
 
-  // =========================================================================
-  // VISTA 3: FICHA DE PONENCIA (VISTA PLANA - NIVEL 3)
-  // =========================================================================
+  // VISTA 3: FICHA DE PONENCIA 
   if (selectedPaper && selectedSession) {
     return (
       <div className="w-full min-h-[600px] animate-in slide-in-from-right duration-300 bg-white rounded-2xl shadow-sm border border-gray-100">
@@ -272,9 +271,7 @@ const Program = () => {
     );
   }
 
-  // =========================================================================
-  // VISTA 2: DETALLE DE MESA (VISTA PLANA - NIVEL 2)
-  // =========================================================================
+  // VISTA 2: DETALLE DE MESA 
   if (selectedSession) {
     return (
       <div className="w-full min-h-[600px] animate-in slide-in-from-right duration-300 bg-white rounded-2xl shadow-sm border border-gray-100">
@@ -355,9 +352,7 @@ const Program = () => {
     );
   }
 
-  // =========================================================================
   // VISTA 1: PROGRAMA GENERAL
-  // =========================================================================
   if (loading) return <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1e3a5f]"></div></div>;
 
   return (
@@ -395,9 +390,32 @@ const Program = () => {
               <div key={symp.id} id={`symp-${symp.id}`} className={`bg-white rounded-xl border transition-all duration-200 ${openId === symp.id ? 'border-[#1e3a5f] ring-1 ring-blue-50 shadow-md' : 'border-gray-100 shadow-sm'}`}>
                 <button onClick={() => toggleAccordion(symp.id)} className="w-full text-left p-4 flex items-center justify-between gap-3 hover:bg-gray-50/50 rounded-xl transition-colors">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
                       <span className="bg-[#1e3a5f] text-white text-[9px] font-black px-2 py-0.5 rounded-md uppercase">Simposio {symp.id}</span>
                       <span className="bg-blue-50 text-blue-700 text-[9px] font-black px-2 py-0.5 rounded-md uppercase">{symp.presentations?.length || 0} PONENCIAS</span>
+                      
+                      {/* === NUEVO DISEÑO: FECHAS Y SEDES SEPARADAS CON ICONOS === */}
+                      {(() => {
+                        const dateText = symp.fecha || getSymposiumDates(symp.id);
+                        const venueText = symp.venues?.name;
+                        
+                        if (!dateText && !venueText) return null;
+
+                        return (
+                          <div className="flex items-center gap-3 border-l-2 border-gray-200 pl-3 ml-1">
+                            {dateText && (
+                              <span className="text-[10px] font-bold text-[#1e3a5f] uppercase tracking-wider flex items-center gap-1.5">
+                                <Calendar size={12} className="opacity-60" /> {dateText}
+                              </span>
+                            )}
+                            {venueText && (
+                              <span className="text-[10px] font-bold text-orange-600 uppercase tracking-wider flex items-center gap-1.5">
+                                <MapPin size={12} className="opacity-70" /> SEDE: {venueText}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                     <h3 className={`text-sm md:text-base font-bold leading-tight ${openId === symp.id ? 'text-[#1e3a5f]' : 'text-gray-800'}`}>{symp.name}</h3>
                     {symp.coordinators && <p className="text-[10px] font-bold text-gray-400 uppercase mt-1 truncate">COORD: {symp.coordinators}</p>}
@@ -407,14 +425,41 @@ const Program = () => {
                 {openId === symp.id && (
                   <div className="px-4 pb-4 animate-in fade-in slide-in-from-top-1">
                     <div className="h-px bg-gray-100 mb-3" />
+                    
+                    {/* LISTA DE PONENCIAS CON BUSCADOR INTELIGENTE Y NUEVO COLOR */}
                     <div className="grid grid-cols-1 gap-2">
-                      {symp.presentations.map((pres) => (
-                        <div key={pres.id} className="p-3 rounded-lg border border-gray-100 bg-gray-50/50">
-                          <h4 className="font-bold text-gray-800 text-xs leading-snug mb-1">{pres.title}</h4>
-                          <p className="text-[10px] font-black uppercase text-gray-500 flex items-center gap-1"><Users size={10} className="text-[#1e3a5f]" /> {pres.authors}</p>
-                        </div>
-                      ))}
+                      {symp.presentations.map((pres) => {
+                        const term = searchTerm.toLowerCase().trim();
+                        const isMatch = term.length > 2 && (
+                          (pres.title && pres.title.toLowerCase().includes(term)) || 
+                          (pres.authors && pres.authors.toLowerCase().includes(term))
+                        );
+
+                        return (
+                          <div 
+                            key={pres.id} 
+                            // Aquí está el nuevo color: Un ámbar/naranja suave y elegante con un ligero resplandor
+                            className={`p-3 rounded-lg border transition-all duration-500 ${
+                              isMatch 
+                                ? 'border-orange-300 bg-orange-50/80 shadow-md transform scale-[1.01] ring-1 ring-orange-200' 
+                                : 'border-gray-100 bg-gray-50/50'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <h4 className={`font-bold text-xs leading-snug mb-1 ${isMatch ? 'text-orange-900' : 'text-gray-800'}`}>
+                                  {pres.title}
+                                </h4>
+                                <p className={`text-[10px] font-black uppercase flex items-center gap-1 ${isMatch ? 'text-orange-700' : 'text-gray-500'}`}>
+                                  <Users size={10} className={isMatch ? 'text-orange-500' : 'text-[#1e3a5f]'} /> {pres.authors}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
+
                   </div>
                 )}
               </div>
