@@ -30,9 +30,16 @@ const Program = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [openId, setOpenId] = useState(null);
 
+  // Reloj en tiempo real para la función "En Vivo"
+  const [currentTime, setCurrentTime] = useState(new Date());
+
   useEffect(() => {
     fetchData();
     fetchScheduleData();
+    
+    // Actualizamos el reloj interno cada 60 segundos
+    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+    return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
@@ -103,19 +110,44 @@ const Program = () => {
     }
   };
 
-  // Extraer fechas dinámicamente
+  // Extraer fechas dinámicamente y ORDENADAS
   const getSymposiumDates = (sympId) => {
     const sympSessions = scheduleData.filter(ev => ev.symposiums?.id === sympId && ev.date);
     if (sympSessions.length === 0) return null;
-    const uniqueDates = [...new Set(sympSessions.map(ev => ev.date))];
+    let uniqueDates = [...new Set(sympSessions.map(ev => ev.date))];
+    uniqueDates.sort();
     const labels = uniqueDates.map(dateVal => {
        const match = CONGRESS_DATES.find(d => d.value === dateVal);
        return match ? match.label : dateVal;
     });
-    return labels.join(' y '); 
+    if (labels.length > 1) {
+        const lastDate = labels.pop();
+        return labels.join(', ') + ' Y ' + lastDate;
+    }
+    return labels[0];
+  };
+
+  // Evaluador de Eventos "En Vivo"
+  const isEventLive = (evDate, startTime, endTime) => {
+    if (!evDate || !startTime || !endTime) return false;
+    
+    // Obtenemos la fecha actual en formato local YYYY-MM-DD
+    const year = currentTime.getFullYear();
+    const month = String(currentTime.getMonth() + 1).padStart(2, '0');
+    const day = String(currentTime.getDate()).padStart(2, '0');
+    const todayStr = `${year}-${month}-${day}`;
+
+    // Obtenemos la hora actual en formato HH:MM
+    const hours = String(currentTime.getHours()).padStart(2, '0');
+    const minutes = String(currentTime.getMinutes()).padStart(2, '0');
+    const timeStr = `${hours}:${minutes}`;
+
+    // Evaluamos si es hoy y estamos dentro del rango horario
+    return evDate === todayStr && timeStr >= startTime.slice(0,5) && timeStr <= endTime.slice(0,5);
   };
 
   const handlePrint = () => {
+    // ... (El código de impresión se mantiene intacto) ...
     const isSymposium = activeTab === 'simposios';
     const dataToPrint = isSymposium ? filteredSimposios : filteredSchedule;
     const title = isSymposium ? "RELACIÓN DE SIMPOSIOS Y PONENCIAS" : `AGENDA - ${CONGRESS_DATES.find(d=>d.value===selectedDate)?.label}`;
@@ -358,7 +390,7 @@ const Program = () => {
   return (
     <div className="max-w-7xl mx-auto px-2 py-2 animate-in fade-in duration-300">
 
-      {/* CABECERA DE CONTROL (Tabs y Filtros) */}
+      {/* CABECERA DE CONTROL */}
       <div className="mb-6 flex flex-col md:flex-row justify-end items-center gap-2 bg-white p-2 rounded-lg border border-gray-100 shadow-sm sticky top-0 z-30">
          <div className="mr-auto pl-2 hidden md:block text-xs font-bold text-gray-400 tracking-widest uppercase">
             {activeTab === 'simposios' ? 'Listado de Simposios' : 'Agenda Diaria'}
@@ -394,7 +426,6 @@ const Program = () => {
                       <span className="bg-[#1e3a5f] text-white text-[9px] font-black px-2 py-0.5 rounded-md uppercase">Simposio {symp.id}</span>
                       <span className="bg-blue-50 text-blue-700 text-[9px] font-black px-2 py-0.5 rounded-md uppercase">{symp.presentations?.length || 0} PONENCIAS</span>
                       
-                      {/* === NUEVO DISEÑO: FECHAS Y SEDES SEPARADAS CON ICONOS === */}
                       {(() => {
                         const dateText = symp.fecha || getSymposiumDates(symp.id);
                         const venueText = symp.venues?.name;
@@ -426,7 +457,6 @@ const Program = () => {
                   <div className="px-4 pb-4 animate-in fade-in slide-in-from-top-1">
                     <div className="h-px bg-gray-100 mb-3" />
                     
-                    {/* LISTA DE PONENCIAS CON BUSCADOR INTELIGENTE Y NUEVO COLOR */}
                     <div className="grid grid-cols-1 gap-2">
                       {symp.presentations.map((pres) => {
                         const term = searchTerm.toLowerCase().trim();
@@ -438,7 +468,6 @@ const Program = () => {
                         return (
                           <div 
                             key={pres.id} 
-                            // Aquí está el nuevo color: Un ámbar/naranja suave y elegante con un ligero resplandor
                             className={`p-3 rounded-lg border transition-all duration-500 ${
                               isMatch 
                                 ? 'border-orange-300 bg-orange-50/80 shadow-md transform scale-[1.01] ring-1 ring-orange-200' 
@@ -468,7 +497,7 @@ const Program = () => {
         </>
       )}
 
-      {/* --- CONTENIDO: PESTAÑA AGENDA --- */}
+      {/* --- CONTENIDO: PESTAÑA AGENDA (CON EVENTOS EN VIVO) --- */}
       {activeTab === 'agenda' && (
         <>
             <div className="flex gap-2 overflow-x-auto pb-4 mb-2 no-scrollbar">
@@ -490,16 +519,35 @@ const Program = () => {
             </div>
 
             <div className="space-y-4 min-h-[300px]">
-            {filteredSchedule.length > 0 ? filteredSchedule.map(ev => (
+            {filteredSchedule.length > 0 ? filteredSchedule.map(ev => {
+                // Evaluamos si esta sesión está ocurriendo AHORA MISMO
+                const isLive = isEventLive(ev.date, ev.start_time, ev.end_time);
+
+                return (
                 <div
                     key={ev.id}
                     onClick={() => setSelectedSession(ev)} 
-                    className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg hover:border-[#1e3a5f] hover:-translate-y-0.5 transition-all cursor-pointer flex overflow-hidden group"
+                    // Si está "En Vivo", le ponemos borde naranja, resplandor e impedimos que se vea apagado
+                    className={`bg-white rounded-xl border shadow-sm transition-all cursor-pointer flex overflow-hidden group ${
+                        isLive 
+                        ? 'border-orange-400 ring-2 ring-orange-200 transform scale-[1.01] hover:shadow-lg' 
+                        : 'border-gray-200 hover:border-[#1e3a5f] hover:-translate-y-0.5 hover:shadow-lg'
+                    }`}
                 >
-                <div className="bg-gray-50 p-4 w-24 flex flex-col items-center justify-center border-r border-gray-100 group-hover:bg-blue-50 transition-colors shrink-0">
-                    <span className="text-sm font-black text-[#1e3a5f]">{ev.start_time?.slice(0,5)}</span>
-                    <div className="h-0.5 w-8 bg-gray-300 my-1 group-hover:bg-[#1e3a5f]"></div>
-                    <span className="text-xs font-bold text-gray-400">{ev.end_time?.slice(0,5)}</span>
+                
+                {/* Panel de hora izquierdo - Cambia a Naranja si está en vivo */}
+                <div className={`p-4 w-24 flex flex-col items-center justify-center border-r shrink-0 transition-colors ${
+                    isLive ? 'bg-orange-50 border-orange-100' : 'bg-gray-50 border-gray-100 group-hover:bg-blue-50'
+                }`}>
+                    {/* Alerta parpadeante de EN VIVO */}
+                    {isLive && (
+                        <span className="text-[9px] font-black text-orange-600 mb-1 animate-pulse flex items-center gap-1 tracking-widest">
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>EN VIVO
+                        </span>
+                    )}
+                    <span className={`text-sm font-black ${isLive ? 'text-orange-900' : 'text-[#1e3a5f]'}`}>{ev.start_time?.slice(0,5)}</span>
+                    <div className={`h-0.5 w-8 my-1 ${isLive ? 'bg-orange-300' : 'bg-gray-300 group-hover:bg-[#1e3a5f]'}`}></div>
+                    <span className={`text-xs font-bold ${isLive ? 'text-orange-700' : 'text-gray-400'}`}>{ev.end_time?.slice(0,5)}</span>
                 </div>
 
                 <div className="p-4 flex-1 min-w-0 flex flex-col justify-center">
@@ -512,7 +560,9 @@ const Program = () => {
                         <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest truncate">{ev.name}</span>      
                     </div>
 
-                    <h3 className="text-base font-bold text-gray-900 leading-tight mb-3 line-clamp-2 group-hover:text-[#1e3a5f] transition-colors">
+                    <h3 className={`text-base font-bold leading-tight mb-3 line-clamp-2 transition-colors ${
+                        isLive ? 'text-orange-900' : 'text-gray-900 group-hover:text-[#1e3a5f]'
+                    }`}>
                         {ev.symposiums?.name || ev.name}
                     </h3>
 
@@ -529,11 +579,11 @@ const Program = () => {
                         )}
                     </div>
                 </div>
-                <div className="flex items-center px-3 text-gray-300 group-hover:text-[#1e3a5f]">
+                <div className={`flex items-center px-3 ${isLive ? 'text-orange-400' : 'text-gray-300 group-hover:text-[#1e3a5f]'}`}>
                     <ChevronRight size={24} />
                 </div>
                 </div>
-            )) : (
+            )}) : (
                 <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-dashed border-gray-200 text-gray-400">
                     <Calendar size={48} className="mb-4 opacity-20"/>
                     <p className="text-base font-bold">No hay actividades para este día.</p>
