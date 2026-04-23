@@ -11,8 +11,9 @@ serve(async (req) => {
   try {
     const { email, name, category } = await req.json()
     const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
-    const TELEGRAM_BOT_TOKEN = '8651018116:AAF1rPBZg0v5o_3RznqSJnFDtVAjbnMxOWU'
-    const TELEGRAM_CHAT_ID = '1608294578'
+    const TELEGRAM_BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN')
+    const TELEGRAM_CHAT_ID = Deno.env.get('TELEGRAM_CHAT_ID')
+    
 
     // 1. Correo de confirmación al usuario
     await fetch('https://api.resend.com/emails', {
