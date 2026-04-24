@@ -28,6 +28,7 @@ import RegistrationForm from './components/pages/RegistrationForm';
 import VenuesPage from './components/pages/VenuesPage';
 import Alojamiento from './components/pages/Alojamiento'; 
 import Gallery from './components/pages/Gallery';
+import IaspmInfo from './components/pages/IaspmInfo';
 
 // Admin Pages
 import Login from './pages/Login';
@@ -103,7 +104,8 @@ const MainLayout = ({ lang, setLang }) => {
     // --- NUEVO NIVEL: INSTITUCIONES CONVOCANTES ---
     { id: 'instituciones-convocantes', label: 'Instituciones convocantes', label_pt: 'Instituições convocantes' },
     //--- NUEVA PESTAÑA: GALERÍA ---
-    { id: 'galeria', label: 'Galería', label_pt: 'Galeria' }
+    { id: 'galeria', label: 'Galería', label_pt: 'Galeria' },
+    { id: 'iaspm-al', label: 'La IASPM-AL', label_pt: 'A IASPM-AL' }	  
   ];
 
   const toggleSubmenu = (id) => {
@@ -130,7 +132,8 @@ const MainLayout = ({ lang, setLang }) => {
       'alojamiento': { es: 'Alojamiento', pt: 'Hospedagem' },
       'san-cristobal': { es: 'San Cristóbal de Las Casas', pt: 'San Cristóbal de Las Casas' },
       'cartel': { es: 'Cartel Oficial', pt: 'Cartaz Oficial' },
-      'galeria': { es: 'Galería', pt: 'Galeria' }
+      'galeria': { es: 'Galería', pt: 'Galeria' },
+      'iaspm-al': { es: 'La IASPM-AL', pt: 'A IASPM-AL' }	    
     };
     const titleObj = titles[currentPage];
     if (!titleObj) return lang === 'es' ? 'Contenido' : 'Conteúdo';
@@ -388,6 +391,7 @@ const MainLayout = ({ lang, setLang }) => {
       case 'sedes': return <VenuesPage lang={lang} />;
       case 'alojamiento': return <Alojamiento lang={lang} />;
       case 'galeria': return <Gallery lang={lang} />;
+      case 'iaspm-al': return <IaspmInfo lang={lang} />;		    
       case 'instituciones-convocantes': return <div className="text-center"><img src="/images/instituciones.png" alt="Instituciones convocantes" className="max-w-full mx-auto" /></div>; 
       
       // --- NUEVO CASO: CARTEL ---
