@@ -88,20 +88,21 @@ const MainLayout = ({ lang, setLang }) => {
       ]      
     },
     {
-  id: 'info-complementaria',
-  label: 'Información complementaria',
-  label_pt: 'Informações complementares',
-  submenu: [
-    { id: 'sedes', label: 'Las sedes del Congreso', label_pt: 'As sedes do Congresso' },
+      id: 'info-complementaria',
+      label: 'Información complementaria',
+      label_pt: 'Informações complementares',
+      submenu: [
+        { id: 'sedes', label: 'Las sedes del Congreso', label_pt: 'As sedes do Congresso' },
+        { id: 'organizaciones', label: 'Entidades colaboradoras', label_pt: 'Entidades colaboradoras' },
+        { id: 'alojamiento', label: 'Alojamiento', label_pt: 'Hospedagem' },
+        { id: 'san-cristobal', label: 'Lugares para comer', label_pt: 'Lugares para comer' }, 
+        { id: 'musica-vivo', label: 'Música en vivo', label_pt: 'Música ao vivo' }, 
+        { id: 'cartel', label: 'Cartel del congreso', label_pt: 'Pôster do congresso' }
+      ]
+    },    
+    // --- NUEVO NIVEL: INSTITUCIONES CONVOCANTES ---
     { id: 'instituciones-convocantes', label: 'Instituciones convocantes', label_pt: 'Instituições convocantes' },
-    { id: 'organizaciones', label: 'Entidades colaboradoras', label_pt: 'Entidades colaboradoras' },
-    { id: 'alojamiento', label: 'Alojamiento', label_pt: 'Hospedagem' },
-    { id: 'san-cristobal', label: 'Lugares para comer', label_pt: 'Lugares para comer' }, 
-    { id: 'musica-vivo', label: 'Música en vivo', label_pt: 'Música ao vivo' }, 
-    { id: 'cartel', label: 'Cartel del congreso', label_pt: 'Pôster do congresso' }
-  ]
-},    
-      //--- NUEVA PESTAÑA: GALERÍA ---
+    //--- NUEVA PESTAÑA: GALERÍA ---
     { id: 'galeria', label: 'Galería', label_pt: 'Galeria' }
   ];
 
@@ -292,7 +293,6 @@ const MainLayout = ({ lang, setLang }) => {
                   : 'O XVII Congresso convida a expor a produção bibliográfica dos sócios da IASPM-AL e a apresentar as obras que tenham sido publicadas de 2023 até a presente data.'}
               </p>
 
-              {/* NUEVO BLOQUE: Fecha límite y correo */}
               <div className="mb-8 p-5 md:p-6 bg-blue-50/80 rounded-xl border-l-4 border-[#1e3a5f] shadow-sm flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
                 <div>
                   <h4 className="font-black text-[#1e3a5f] uppercase tracking-wide text-sm mb-1.5">
@@ -308,7 +308,6 @@ const MainLayout = ({ lang, setLang }) => {
                   iaspm.al.2026@gmail.com
                 </a>
               </div>
-              {/* FIN DEL NUEVO BLOQUE */}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="flex items-start gap-4 p-5 bg-blue-50/50 rounded-xl border border-blue-100">
@@ -360,7 +359,6 @@ const MainLayout = ({ lang, setLang }) => {
       case 'comite-academico': 
         return (
           <div className="space-y-6 animate-in fade-in duration-500">
-            {/* Grid de 2 columnas para mantener el tamaño de la primera imagen */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[
                 { name: 'Lizette Alegre', country: 'México' },
@@ -371,7 +369,6 @@ const MainLayout = ({ lang, setLang }) => {
                 { name: 'Mercedes Liska', country: 'Argentina' },
                 { name: 'Darío Tejeda', country: 'República Dominicana' }
               ].map((member, idx) => (
-                // rounded-none quita cualquier redondeo de las esquinas
                 <div key={idx} className="bg-gray-50 p-6 rounded-none border border-gray-200 hover:bg-white transition-colors">
                   <p className="font-bold text-gray-900 text-base">
                     {member.name}
@@ -393,6 +390,19 @@ const MainLayout = ({ lang, setLang }) => {
       case 'galeria': return <Gallery lang={lang} />;
       case 'instituciones-convocantes': return <div className="text-center"><img src="/images/instituciones.png" alt="Instituciones convocantes" className="max-w-full mx-auto" /></div>; 
       
+      // --- NUEVO CASO: CARTEL ---
+      case 'cartel': 
+        return (
+          <div className="flex justify-center py-8 animate-in fade-in duration-500">
+            <img 
+              src="/images/cartel-congreso.png" 
+              alt={lang === 'es' ? 'Cartel Oficial' : 'Pôster Oficial'} 
+              className="w-full h-auto max-w-4xl rounded-xl shadow-2xl border border-gray-200" 
+            />
+          </div>
+        );
+      // --------------------------
+
       default: return <div className="p-8 text-center text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-300">{lang === 'es' ? 'Contenido en preparación.' : 'Conteúdo em preparação.'}</div>;
     }
   };
@@ -430,7 +440,6 @@ const MainLayout = ({ lang, setLang }) => {
             lang={lang}
           />
 
-          {/* AJUSTE APLICADO: Aquí está el min-w-0 para evitar el empuje del contenido */}
           <section className="min-w-0 bg-white rounded-2xl shadow-xl min-h-[600px] relative overflow-hidden transition-all duration-300">
 
             <div className="absolute inset-0 z-0 opacity-[0.02] bg-[url('/images/Marimba_Watermark.png')] bg-cover bg-center bg-no-repeat pointer-events-none"></div>

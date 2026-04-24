@@ -7,6 +7,9 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 
+// Importamos el nuevo componente modular
+import InstitutionCarousel from '../common/InstitutionCarousel';
+
 // --- 1. COMPONENTE DEL SLIDER INTELIGENTE (CONECTADO A SUPABASE) ---
 const MainHeroSlider = ({ lang, setCurrentPage }) => {
   const [current, setCurrent] = useState(0);
@@ -163,7 +166,7 @@ const MainHeroSlider = ({ lang, setCurrentPage }) => {
   );
 };
 
-// --- 2. COMPONENTE DE LÍNEA DE TIEMPO (CORREGIDO ESPACIADO) ---
+// --- 2. COMPONENTE DE LÍNEA DE TIEMPO ---
 const TimelineItem = ({ date, title, desc, icon: Icon, status, align, index }) => {
   const [isVisible, setIsVisible] = useState(false);
   const domRef = useRef();
@@ -184,8 +187,6 @@ const TimelineItem = ({ date, title, desc, icon: Icon, status, align, index }) =
 
   return (
     <div ref={domRef} className={`relative flex flex-col md:flex-row items-center justify-between mb-12 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
-      
-      {/* LADO IZQUIERDO (Escritorio) */}
       <div className="hidden md:block w-1/2 pr-12 text-right">
         {isLeft && (
           <div>
@@ -196,23 +197,18 @@ const TimelineItem = ({ date, title, desc, icon: Icon, status, align, index }) =
         )}
       </div>
 
-      {/* ICONO CENTRAL */}
       <div className="absolute left-4 md:left-1/2 md:-translate-x-1/2 flex items-center justify-center">
         <div className={`w-12 h-12 rounded-full border-4 border-white shadow-lg flex items-center justify-center z-10 ${colors[status] || colors.future}`}>
           <Icon size={20} />
         </div>
       </div>
 
-      {/* LADO DERECHO (Móvil y Escritorio) */}
       <div className="w-full pl-20 md:w-1/2 md:pl-12 text-left">
-        {/* Vista Móvil */}
         <div className="md:hidden">
           <span className="text-xs font-bold text-[#1e3a5f] block mb-1 uppercase tracking-wider">{date}</span>
           <h3 className="text-lg font-bold text-gray-800">{title}</h3>
           <p className="text-gray-500 text-sm">{desc}</p>
         </div>
-        
-        {/* Vista Escritorio */}
         {!isLeft && (
           <div className="hidden md:block">
             <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold mb-2 ${status === 'done' ? 'bg-blue-100 text-[#1e3a5f]' : 'bg-gray-100 text-gray-500'}`}>{date}</span>
@@ -231,17 +227,14 @@ const HomeLanding = ({ lang, setCurrentPage }) => {
   const [statusResult, setStatusResult] = useState(null);
   const [loadingCheck, setLoadingCheck] = useState(false);
   
-  // Estados para la línea mágica
   const [lineProgress, setLineProgress] = useState(0);
   const timelineRef = useRef(null);
 
-  // Efecto que pinta la línea conforme scrolleas
   useEffect(() => {
     const handleScroll = () => {
       if (!timelineRef.current) return;
       const rect = timelineRef.current.getBoundingClientRect();
       const windowHeight = window.innerHeight;
-      
       const scrollPercentage = ((windowHeight / 2) - rect.top) / rect.height * 100;
       const clampedPercentage = Math.max(0, Math.min(100, scrollPercentage));
       setLineProgress(clampedPercentage);
@@ -282,7 +275,7 @@ const HomeLanding = ({ lang, setCurrentPage }) => {
   };
 
   const timelineEvents = [
-    { date: lang === 'es' ? '8 de Febrero 2026' : '8 de Fevereiro 2026', title: lang === 'es' ? 'Ponencias Aceptadas' : 'Trabalhos Aceitos', desc: lang === 'es' ? 'Publicación de resultados de trabajos aceptados.' : 'Publicação dos resultados dos trabalhos aceitos.', icon: CheckCircle, status: 'done' },
+    { date: lang === 'es' ? '8 de Febrero 2026' : '8 de Fevereiro 2026', title: lang === 'es' ? 'Ponencias Aceptadas' : 'Trabalhos Aceitos', desc: lang === 'es' ? 'Publicación de resultados de trabajos aceptados.' : 'Publicação dos resultados dos trabajos aceitos.', icon: CheckCircle, status: 'done' },
     { date: lang === 'es' ? 'Abril 2026' : 'Abril 2026', title: lang === 'es' ? 'Inicio de Inscripciones' : 'Início das Inscrições', desc: lang === 'es' ? 'Registro disponible para asistentes y ponentes.' : 'Registro disponível para participantes e palestrantes.', icon: UserPlus, status: 'active' },
     { date: '31 Mayo 2026', title: lang === 'es' ? 'Concluye 1er plazo de pago' : 'Encerra 1º prazo de pagamento', desc: lang === 'es' ? 'Último día para aprovechar el mayor descuento.' : 'Último dia para aproveitar o maior desconto.', icon: DollarSign, status: 'future' },
     { date: '15 de Junio 2026', title: lang === 'es' ? 'Presentaciones de libros' : 'Apresentações de livros', desc: lang === 'es' ? 'Finaliza el plazo para enviar propuestas.' : 'Encerra o prazo para envio de propostas.', icon: Book, status: 'future' },
@@ -329,12 +322,8 @@ const HomeLanding = ({ lang, setCurrentPage }) => {
            </p>
         </div>
         
-        {/* Contenedor que medimos con useRef */}
         <div className="relative" ref={timelineRef}>
-           {/* Línea Gris Base (Inactiva) */}
            <div className="absolute left-4 md:left-1/2 top-0 bottom-0 w-0.5 bg-gray-200 -translate-x-1/2 rounded-full"></div>
-           
-           {/* Línea Azul que se llena con el scroll */}
            <div 
              className="absolute left-4 md:left-1/2 top-0 w-1 bg-[#1e3a5f] -translate-x-1/2 rounded-b-full shadow-[0_0_10px_rgba(30,58,95,0.4)] transition-all duration-150 ease-out z-0"
              style={{ height: `${lineProgress}%` }}
@@ -356,7 +345,7 @@ const HomeLanding = ({ lang, setCurrentPage }) => {
             {lang === 'es' ? 'Verifica tu Inscripción' : 'Verificar Inscrição'}
           </h2>
           <p className="text-gray-600 leading-relaxed text-sm">
-            {lang === 'es' ? 'Si ya realizaste tu pago, ingresa tu correo para verificar tu estatus.' : 'Se você já realizou seu pagamento, insira seu e-mail para verificar seu status.'}
+            {lang === 'es' ? 'Si ya realizaste tu pago, ingresa tu correo para verificar tu estatus.' : 'Se você ya realizó su pago, insira seu e-mail para verificar seu status.'}
           </p>
         </div>
         <div className="flex-1 w-full max-w-md bg-white p-6 rounded-xl shadow-lg border border-gray-100 ring-1 ring-gray-100">        
@@ -394,16 +383,9 @@ const HomeLanding = ({ lang, setCurrentPage }) => {
         </div>
       </div>
 
-      {/* 5. LOGOS */}
-      <div className="border-t border-gray-200 pt-10 pb-4">
-        <p className="text-center text-xs text-gray-400 font-bold mb-8 uppercase tracking-[0.2em]">{lang === 'es' ? 'Instituciones Convocantes' : 'Instituições Convocantes'}</p>
-        <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 opacity-50 grayscale hover:grayscale-0 transition-all duration-700">
-           <div className="h-14 px-6 bg-white border-2 border-gray-100 rounded-lg flex items-center justify-center font-black text-gray-300 text-xl shadow-sm select-none hover:border-[#1e3a5f] hover:text-[#1e3a5f] hover:shadow-md transition-all">UNICACH</div>        
-           <div className="h-14 px-6 bg-white border-2 border-gray-100 rounded-lg flex items-center justify-center font-black text-gray-300 text-xl shadow-sm select-none hover:border-[#1e3a5f] hover:text-[#1e3a5f] hover:shadow-md transition-all">IASPM</div>
-           <div className="h-14 px-6 bg-white border-2 border-gray-100 rounded-lg flex items-center justify-center font-black text-gray-300 text-xl shadow-sm select-none hover:border-[#1e3a5f] hover:text-[#1e3a5f] hover:shadow-md transition-all">CESMECA</div>        
-           <div className="h-14 px-6 bg-white border-2 border-gray-100 rounded-lg flex items-center justify-center font-black text-gray-300 text-xl shadow-sm select-none hover:border-[#1e3a5f] hover:text-[#1e3a5f] hover:shadow-md transition-all">CHIAPAS</div>        
-        </div>
-      </div>
+      {/* 5. SECCIÓN DE LOGOS (Usando el nuevo componente modular) */}
+      <InstitutionCarousel lang={lang} />
+
     </div>
   );
 };

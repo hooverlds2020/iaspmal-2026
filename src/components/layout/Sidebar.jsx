@@ -2,7 +2,7 @@
 import React from 'react';
 import { 
   Home, Info, Mic, Ticket, Users, FileText, Calendar, 
-  BookOpen, MapPin, Building, ChevronDown, ChevronRight, Briefcase, Globe, Music 
+  BookOpen, MapPin, Building, ChevronDown, ChevronRight, Briefcase, Globe, Music, Image 
 } from 'lucide-react';
 
 const Sidebar = ({ menuItems, currentPage, setCurrentPage, submenuOpen, toggleSubmenu, lang }) => {
@@ -27,7 +27,8 @@ const Sidebar = ({ menuItems, currentPage, setCurrentPage, submenuOpen, toggleSu
       'alojamiento': Home,
       'san-cristobal': MapPin,
       'musica-vivo': Music, 
-      'cartel': FileText
+      'cartel': FileText,
+      'galeria': Image // <--- Agregamos el ícono de la cámara/foto para Galería
     };
     return icons[id] || ChevronRight;
   };
