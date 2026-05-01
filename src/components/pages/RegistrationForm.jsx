@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { sendRegistrationConfirmation } from '../../lib/resendClient';
-import { optimizeImage } from '../../lib/imageOptimizer'; 
+import { optimizeImage } from '../../lib/imageOptimizer';
 import { Upload, Check, Search, X, FileText, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -32,11 +32,11 @@ const RegistrationForm = ({ lang, onClose }) => {
 
   const handleSearch = async (e) => {
     if (e) e.preventDefault();
-    if (searchTerm.length < 3) return toast.warning(lang === 'es' ? 'Escribe al menos 3 letras' : 'Digite pelo menos 3 letras');      
-    
+    if (searchTerm.length < 3) return toast.warning(lang === 'es' ? 'Escribe al menos 3 letras' : 'Digite pelo menos 3 letras');
+
     setLoading(true);
     setHasSearched(true);
-    
+
     try {
       const { data, error } = await supabase
         .from('presentations')
@@ -50,12 +50,12 @@ const RegistrationForm = ({ lang, onClose }) => {
 
       if (!data || data.length === 0) {
         toast.warning(
-          lang === 'es' 
-            ? 'No encontramos coincidencias.' 
+          lang === 'es'
+            ? 'No encontramos coincidencias.'
             : 'Nenhuma correspondência encontrada.',
           {
-            description: lang === 'es' 
-              ? 'Si no eres ponente, puedes registrarte directamente llenando tus datos abajo.' 
+            description: lang === 'es'
+              ? 'Si no eres ponente, puedes registrarte directamente llenando tus datos abajo.'
               : 'Se você não é palestrante, pode se registrar directamente preenchendo seus dados abaixo.',
             duration: 6000,
             icon: <AlertCircle className="text-orange-500" />,
@@ -88,47 +88,65 @@ const RegistrationForm = ({ lang, onClose }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!file) return toast.error(lang === 'es' ? 'Debes subir tu comprobante' : 'Você deve enviar seu comprovante');
+
+    // BLOQUEO Y ALERTA: Si no hay archivo, muestra mensaje y detiene el proceso.
+    if (!file) {
+        return toast.error(
+            lang === 'es' 
+            ? '⚠️ ATENCIÓN: Es obligatorio subir tu comprobante de pago para realizar el registro.' 
+            : '⚠️ ATENÇÃO: É obrigatório enviar seu comprovante de pagamento para se registrar.',
+            {
+                duration: 5000,
+                position: 'top-center',
+                style: { background: '#fee2e2', color: '#991b1b', border: '1px solid #f87171' }
+            }
+        );
+    }
+
     const allowedExts = ['jpg', 'jpeg', 'png', 'pdf'];
     const fileExt = file.name.split('.').pop().toLowerCase();
     if (!allowedExts.includes(fileExt)) return toast.error(lang === 'es' ? 'Formato no válido. Usa JPG, PNG o PDF' : 'Formato inválido. Use JPG, PNG ou PDF');
-    
+
     setLoading(true);
     try {
-      // ✅ AJUSTE QUIRÚRGICO: Generamos el ID nosotros mismos para que el nombre del archivo y el registro coincidan
-      const newRegistrationId = crypto.randomUUID(); 
-      
-      // ✅ PASO 1: Subir el archivo a tu carpeta original 'payments' con el ID como nombre
+      const newRegistrationId = crypto.randomUUID();
       const filePath = `payments/${newRegistrationId}.${fileExt}`;
 
       let finalFile = file;
       if (['jpg', 'jpeg', 'png'].includes(fileExt)) {
-        finalFile = await optimizeImage(file);
+          try {
+              finalFile = await optimizeImage(file);
+          } catch (optErr) {
+              console.error("Error optimizando imagen:", optErr);
+              finalFile = file;
+          }
       }
-      
+
+      // 1. SUBIR AL STORAGE PRIMERO
       const { error: uploadError } = await supabase.storage
         .from('registrations')
-        .upload(filePath, finalFile, { 
-          upsert: true 
+        .upload(filePath, finalFile, {
+          upsert: true
         });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+          throw new Error(lang === 'es' ? 'No se pudo subir el comprobante. Revisa tu conexión.' : 'Não foi possível enviar o comprovante.');
+      }
 
-      // ✅ PASO 2: Obtener la URL pública (ahora sí apuntando a /payments/)
+      // 2. OBTENER URL
       const { data: { publicUrl } } = supabase.storage.from('registrations').getPublicUrl(filePath);
 
-      // ✅ PASO 3: Insertar el registro COMPLETO con el ID que ya generamos y la URL
+      // 3. INSERTAR EN BD (Solo si la subida fue exitosa)
       const { data: reg, error: regErr } = await supabase
         .from('registrations')
         .insert([{
-          id: newRegistrationId, // <-- Le inyectamos el ID explícitamente
+          id: newRegistrationId,
           full_name: formData.full_name,
           email: formData.email.trim().toLowerCase(),
           country: formData.country,
           category: formData.category,
           status: 'pending',
-          payment_proof_url: publicUrl // <-- La URL ya no es NULL
+          payment_proof_url: publicUrl 
         }])
         .select().single();
 
@@ -142,10 +160,10 @@ const RegistrationForm = ({ lang, onClose }) => {
       }
 
       await sendRegistrationConfirmation(formData.email, formData.full_name, formData.category).catch(console.error);
-      
+
       setSuccess(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      
+
     } catch (err) {
       console.error(err);
       toast.error(lang === 'es' ? 'Error al registrar: ' + err.message : 'Erro ao registrar: ' + err.message);
@@ -167,12 +185,12 @@ const RegistrationForm = ({ lang, onClose }) => {
             {lang === 'es' ? '¡Registro Exitoso!' : 'Registro Bem-sucedido!'}
         </h3>
         <p className="text-gray-500 text-base mb-10 max-w-sm mx-auto leading-relaxed">
-            {lang === 'es' 
-              ? 'Hemos recibido tu comprobante e información. Te enviaremos un correo de confirmación.' 
+            {lang === 'es'
+              ? 'Hemos recibido tu comprobante e información. Te enviaremos un correo de confirmación.'
               : 'Recebemos seu comprovante e informações. Enviaremos um e-mail de confirmação.'}
         </p>
-        <button 
-          onClick={onClose} 
+        <button
+          onClick={onClose}
           className="px-10 bg-[#1e3a5f] hover:bg-black text-white py-4 rounded-xl font-bold uppercase text-xs tracking-widest transition-all shadow-lg hover:shadow-2xl active:scale-95"
         >
             {lang === 'es' ? 'Volver al Inicio' : 'Voltar ao Início'}
@@ -187,7 +205,7 @@ const RegistrationForm = ({ lang, onClose }) => {
         <div>
           <h2 className="text-xl font-black text-[#1e3a5f] uppercase italic tracking-tight">
             {lang === 'es' ? 'Formulario de Inscripción' : 'Formulário de Inscrição'}
-          </h2>  
+          </h2>
         </div>
       </div>
 
@@ -225,7 +243,7 @@ const RegistrationForm = ({ lang, onClose }) => {
             <div className="mt-5 space-y-3 animate-in slide-in-from-top-2">
               <p className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Resultados:</p>
               {suggestions.map((p) => (
-                <button key={p.id} type="button" onClick={() => handleSelectPresentation(p)} className="w-full text-left p-4 bg-white border-2 border-blue-100 rounded-xl flex justify-between items-center hover:border-orange-400 hover:shadow-md transition-all group">   
+                <button key={p.id} type="button" onClick={() => handleSelectPresentation(p)} className="w-full text-left p-4 bg-white border-2 border-blue-100 rounded-xl flex justify-between items-center hover:border-orange-400 hover:shadow-md transition-all group">
                   <div className="flex-1 pr-4">
                     <p className="text-sm font-bold text-[#1e3a5f] leading-snug group-hover:text-orange-600 transition-colors">{p.authors}</p>
                     <p className="text-xs text-gray-500 mt-1 line-clamp-1">{p.title}</p>
@@ -239,7 +257,7 @@ const RegistrationForm = ({ lang, onClose }) => {
           )}
 
           {selectedFromList && (
-            <div className="mt-5 flex justify-between items-start bg-white p-4 rounded-xl border-l-4 border-emerald-500 shadow-sm">   
+            <div className="mt-5 flex justify-between items-start bg-white p-4 rounded-xl border-l-4 border-emerald-500 shadow-sm">
               <div className="flex gap-4">
                  <div className="bg-emerald-100 p-2 rounded-full mt-0.5">
                     <Check size={18} className="text-emerald-600" />
@@ -313,15 +331,15 @@ const RegistrationForm = ({ lang, onClose }) => {
             {formData.category !== '' && (
               <div className="pt-4 animate-in fade-in slide-in-from-top-2 duration-300">
                   <label className="block text-xs font-bold text-gray-700 mb-3 uppercase tracking-wide">
-                    {lang === 'es' ? 'Comprobante de Pago' : 'Comprovante de Pagamento'}
+                    {lang === 'es' ? 'Comprobante de Pago (Obligatorio)' : 'Comprovante de Pagamento (Obrigatório)'}
                   </label>
-                  <div className="relative border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center bg-gray-50 hover:bg-blue-50 hover:border-[#1e3a5f] transition-all cursor-pointer group">
-                    <input 
-                      type="file" 
+                  <div className={`relative border-2 border-dashed rounded-2xl p-8 text-center bg-gray-50 transition-all cursor-pointer group ${!file ? 'border-red-300 hover:bg-red-50' : 'border-gray-300 hover:bg-blue-50 hover:border-[#1e3a5f]'}`}>
+                    <input
+                      type="file"
                       required
-                      accept="image/jpeg,image/png,image/jpg,application/pdf" 
-                      onChange={(e) => setFile(e.target.files[0])} 
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+                      accept="image/jpeg,image/png,image/jpg,application/pdf"
+                      onChange={(e) => setFile(e.target.files[0])}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                     />
 
                     <div className="flex flex-col items-center gap-3 group-hover:scale-105 transition-transform">
@@ -337,7 +355,7 @@ const RegistrationForm = ({ lang, onClose }) => {
 
                       <div className="text-center">
                           <p className={`text-sm font-black uppercase tracking-wide ${file ? 'text-emerald-600' : 'text-[#1e3a5f]'}`}>
-                              {file ? 'Archivo Listo' : 'Subir Comprobante'}
+                              {file ? 'Archivo Listo' : 'Subir Comprobante (Requerido)'}
                           </p>
                           <p className="text-xs text-gray-500 mt-1 max-w-[250px] mx-auto truncate font-medium">
                               {file ? file.name : 'Formatos aceptados: PDF, JPG, PNG'}
@@ -347,7 +365,7 @@ const RegistrationForm = ({ lang, onClose }) => {
                   </div>
               </div>
             )}
-            
+
           </div>
         </form>
       </div>

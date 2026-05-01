@@ -79,6 +79,7 @@ const MainLayout = ({ lang, setLang }) => {
     { id: 'programa', label: 'Programa', label_pt: 'Programa' },
     { id: 'conciertos', label: 'Conciertos', label_pt: 'Concertos' },
     { id: 'presentaciones-libros', label: 'Presentaciones de libros', label_pt: 'Apresentações de livros' },
+    { id: 'instituciones-convocantes', label: 'Instituciones convocantes', label_pt: 'Instituições convocantes' },
     {
       id: 'actividades-congreso',
       label: 'Actividades previas y posteriores',
@@ -100,9 +101,7 @@ const MainLayout = ({ lang, setLang }) => {
         { id: 'musica-vivo', label: 'Música en vivo', label_pt: 'Música ao vivo' }, 
         { id: 'cartel', label: 'Cartel del congreso', label_pt: 'Pôster do congresso' }
       ]
-    },    
-    // --- NUEVO NIVEL: INSTITUCIONES CONVOCANTES ---
-    { id: 'instituciones-convocantes', label: 'Instituciones convocantes', label_pt: 'Instituições convocantes' },
+    },
     //--- NUEVA PESTAÑA: GALERÍA ---
     { id: 'galeria', label: 'Galería', label_pt: 'Galeria' },
     { id: 'iaspm-al', label: 'La IASPM-AL', label_pt: 'A IASPM-AL' }	  
@@ -235,7 +234,7 @@ const MainLayout = ({ lang, setLang }) => {
             <div className="bg-white border border-blue-100 rounded-2xl p-6 md:p-8 shadow-sm space-y-6 text-sm md:text-base text-gray-700 leading-relaxed">
               <p>
                 {lang === 'es'
-                  ? 'El pago de la cuota deberá hacerse mediante transferencia. Favor de indicar, en el "Concepto", únicamente su nombre (tan completo como quepa). Después, hay que volver a esta página y formalizar la inscripción desde el botón de abajo ("Registrarse Ahora"). Tengan a la mano el comprobante de pago, pues habrá que adjuntarlo.'
+                  ? 'El pago de la cuota deberá hacerse mediante transferencia. Favor de indicar, en el "Concepto", únicamente su nombre (tan completo como quepa). Después, hay que volver a esta página y formalizar la inscripción desde el botón de abajo ("Inscribirse ahora"). Tengan a la mano el comprobante de pago, pues habrá que adjuntarlo.'
                   : 'O pagamento da taxa deve ser feito por transferência. Favor indicar, no "Conceito", apenas o seu nome (o mais completo possível). Depois, é necessário voltar a esta página e formalizar a inscrição pelo botão abaixo ("Inscrever-se Agora"). Tenha em mãos o comprovante de pagamento, pois será necessário anexá-lo.'}
               </p>
 
@@ -279,7 +278,7 @@ const MainLayout = ({ lang, setLang }) => {
               >
                 <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
                 <Ticket className="w-6 h-6" />
-                <span className="tracking-wide uppercase text-sm font-black">{lang === 'es' ? 'Registrarse Ahora' : 'Inscrever-se Agora'}</span>
+                <span className="tracking-wide uppercase text-sm font-black">{lang === 'es' ? 'Inscribirse ahora' : 'Inscrever-se Agora'}</span>
               </button>
             </div>
           </div>

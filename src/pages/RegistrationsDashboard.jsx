@@ -175,7 +175,8 @@ const RegistrationsDashboard = () => {
       toast.warning('Por favor ingresa el monto del pago.');
       return;
     }
-    if (!selectedRegistration.payment_proof_url) {
+    // ✅ AJUSTE: También validamos si dice "pendiente_comprobante" para lanzar la alerta manual
+    if (!selectedRegistration.payment_proof_url || selectedRegistration.payment_proof_url === 'pendiente_comprobante' || selectedRegistration.payment_proof_url === 'null') {
       setShowForceAuth(true);
     } else {
       executeStatusUpdate(selectedRegistration.id, 'paid');
@@ -212,7 +213,7 @@ const RegistrationsDashboard = () => {
         await sendPaymentApproval(currentReg.email, currentReg.full_name, finalCode, currentReg.category);
       } else if (newStatus === 'rejected') {
         await sendRejectionNotice(currentReg.email, currentReg.full_name);
-        const note = currentReg.payment_proof_url ? "Rechazado por Admin" : "Rechazado: Faltaba archivo adjunto";
+        const note = currentReg.payment_proof_url && currentReg.payment_proof_url !== 'pendiente_comprobante' ? "Rechazado por Admin" : "Rechazado: Faltaba archivo adjunto";
         await supabase.from('registrations').update({ notes: (currentReg.notes || '') + '\n' + note }).eq('id', id);
       }
       setPaymentAmount('');
@@ -276,7 +277,7 @@ const RegistrationsDashboard = () => {
         doc.setFont('helvetica', 'bold'); doc.setFontSize(28); doc.setTextColor(...primaryColor);
         doc.text('CONSTANCIA DE PARTICIPACIÓN', 148.5, 40, { align: 'center' });
         doc.setFont('helvetica', 'normal'); doc.setFontSize(14); doc.setTextColor(...darkColor);
-        doc.text('El Comité Organizador del XVII Congreso de la IASPM-AL otorga la presente a:', 148.5, 60, { align: 'center' });      
+        doc.text('El Comité Organizador del XVII Congreso de la IASPM-AL otorga la presente a:', 148.5, 60, { align: 'center' });
         doc.setFont('times', 'bold'); doc.setFontSize(32); doc.setTextColor(0, 0, 0);
         doc.text(reg.full_name, 148.5, 85, { align: 'center' });
         doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.5); doc.line(70, 90, 227, 90);
@@ -299,17 +300,17 @@ const RegistrationsDashboard = () => {
     } catch (e) { toast.error('Error al generar PDF'); }
   };
 
-  const getCategoryLabel = (cat) => { 
-    const map = { 
-      'sur_global': 'Sur Global', 
-      'norte_global': 'Norte Global', 
-      'institucion_convocante': 'Inst. Convocante', 
-      'estudiante': 'Estudiante', 
-      'asistente': 'Asistente' 
-    }; 
-    return map[cat] || cat; 
+  const getCategoryLabel = (cat) => {
+    const map = {
+      'sur_global': 'Sur Global',
+      'norte_global': 'Norte Global',
+      'institucion_convocante': 'Inst. Convocante',
+      'estudiante': 'Estudiante',
+      'asistente': 'Asistente'
+    };
+    return map[cat] || cat;
   };
-  
+
   const getStatusBadge = (status) => { const styles = { pending: 'bg-yellow-100 text-yellow-800 border-yellow-200', paid: 'bg-green-100 text-green-800 border-green-200', rejected: 'bg-red-100 text-red-800 border-red-200' }; const labels = { pending: 'Pendiente', paid: 'Pagado', rejected: 'Rechazado' }; return <span className={`px-3 py-1 rounded-full text-xs font-bold border ${styles[status]}`}>{labels[status]}</span>; };
   const filteredRegistrations = registrations.filter(reg => reg.full_name.toLowerCase().includes(searchTerm.toLowerCase()) || reg.email.toLowerCase().includes(searchTerm.toLowerCase()) || (reg.attendance_code && reg.attendance_code.toLowerCase().includes(searchTerm.toLowerCase())));
   const stats = { total: registrations.length, pending: registrations.filter(r => r.status === 'pending').length, paid: registrations.filter(r => r.status === 'paid').length, rejected: registrations.filter(r => r.status === 'rejected').length };
@@ -323,7 +324,7 @@ const RegistrationsDashboard = () => {
                   const changes = [];
                   if (log.operation === 'UPDATE' && log.old_data && log.new_data) {
                       Object.keys(log.new_data).forEach(key => {
-                          if (JSON.stringify(log.new_data[key]) !== JSON.stringify(log.old_data[key]) && key !== 'updated_at') {      
+                          if (JSON.stringify(log.new_data[key]) !== JSON.stringify(log.old_data[key]) && key !== 'updated_at') {
                               changes.push({ key, old: log.old_data[key], new: log.new_data[key] });
                           }
                       });
@@ -384,10 +385,10 @@ const RegistrationsDashboard = () => {
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-h-[400px]">
-          {loading ? <TableSkeleton /> : errorState ? <div className="flex flex-col items-center justify-center py-20 text-center"><WifiOff className="w-16 h-16 text-gray-300 mb-4" /><h3 className="text-xl font-bold text-gray-700">Error de conexión</h3><button onClick={() => fetchRegistrations()} className="bg-teal-600 text-white px-6 py-2 rounded-lg hover:bg-teal-700 transition">Reintentar</button></div> : filteredRegistrations.length === 0 ? <div className="flex flex-col items-center justify-center py-20 text-center"><Search className="w-16 h-16 text-gray-200 mb-4" /><h3 className="text-lg font-medium text-gray-900">No se encontraron resultados</h3></div> : ( 
+          {loading ? <TableSkeleton /> : errorState ? <div className="flex flex-col items-center justify-center py-20 text-center"><WifiOff className="w-16 h-16 text-gray-300 mb-4" /><h3 className="text-xl font-bold text-gray-700">Error de conexión</h3><button onClick={() => fetchRegistrations()} className="bg-teal-600 text-white px-6 py-2 rounded-lg hover:bg-teal-700 transition">Reintentar</button></div> : filteredRegistrations.length === 0 ? <div className="flex flex-col items-center justify-center py-20 text-center"><Search className="w-16 h-16 text-gray-200 mb-4" /><h3 className="text-lg font-medium text-gray-900">No se encontraron resultados</h3></div> : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200"><tr><th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Participante</th><th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Categoría</th><th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Código</th><th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Estado</th><th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Asistencia</th><th className="px-6 py-4 text-center text-xs font-semibold text-gray-500 uppercase">Acciones</th></tr></thead>        
+                <thead className="bg-gray-50 border-b border-gray-200"><tr><th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Participante</th><th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Categoría</th><th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Código</th><th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Estado</th><th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Asistencia</th><th className="px-6 py-4 text-center text-xs font-semibold text-gray-500 uppercase">Acciones</th></tr></thead>
                 <tbody className="divide-y divide-gray-100">
                   {filteredRegistrations.map((reg) => (
                     <tr key={reg.id} className="hover:bg-gray-50 transition group">
@@ -408,14 +409,14 @@ const RegistrationsDashboard = () => {
         {selectedRegistration && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
             <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl relative overflow-hidden">
-              
+
               <div className="shrink-0 bg-white border-b px-6 py-4 flex justify-between items-center z-30 relative shadow-sm">
                 <div className="flex-1">
                     {isEditing ? (
                        <input type="text" value={editForm.full_name} onChange={(e) => setEditForm({...editForm, full_name: e.target.value})} className="text-xl font-bold text-gray-800 border-b border-teal-500 focus:outline-none w-full" placeholder="Nombre completo" />
                     ) : ( <h2 className="text-xl font-bold text-gray-800">{selectedRegistration.full_name}</h2> )}
                     {isEditing ? (
-                        <input type="email" value={editForm.email} onChange={(e) => setEditForm({...editForm, email: e.target.value})} className="text-sm text-gray-500 border-b border-gray-300 focus:outline-none w-full mt-1" placeholder="Correo electrónico" />        
+                        <input type="email" value={editForm.email} onChange={(e) => setEditForm({...editForm, email: e.target.value})} className="text-sm text-gray-500 border-b border-gray-300 focus:outline-none w-full mt-1" placeholder="Correo electrónico" />
                     ) : ( <p className="text-sm text-gray-500">{selectedRegistration.email}</p> )}
                 </div>
                 <div className="flex items-center gap-2">
@@ -461,11 +462,12 @@ const RegistrationsDashboard = () => {
                                                 <option value="institucion_convocante">Inst. Convocante</option>
                                                 <option value="asistente">Asistente</option>
                                             </select>
-                                            ) : <p className="font-medium">{getCategoryLabel(selectedRegistration.category)}</p>}      
+                                            ) : <p className="font-medium">{getCategoryLabel(selectedRegistration.category)}</p>}
                                     </div>
                                     <div className="col-span-2">
                                       <p className="text-xs text-gray-500">Comprobante</p>
-                                      {selectedRegistration.payment_proof_url ? <a href={selectedRegistration.payment_proof_url} target="_blank" rel="noopener noreferrer" className="text-sm text-teal-600 hover:underline flex items-center gap-1"><Download className="w-3 h-3" /> Ver archivo</a> : <span className="text-sm text-red-500 bg-red-50 px-2 py-0.5 rounded flex items-center gap-1 w-fit"><AlertTriangle className="w-3 h-3"/> No adjuntado</span>}
+                                      {/* ✅ AJUSTE APLICADO AQUÍ PARA RECHAZAR "pendiente_comprobante" VISUALMENTE */}
+                                      {selectedRegistration.payment_proof_url && selectedRegistration.payment_proof_url !== 'pendiente_comprobante' && selectedRegistration.payment_proof_url !== 'null' ? <a href={selectedRegistration.payment_proof_url} target="_blank" rel="noopener noreferrer" className="text-sm text-teal-600 hover:underline flex items-center gap-1"><Download className="w-3 h-3" /> Ver archivo</a> : <span className="text-sm text-red-500 bg-red-50 px-2 py-0.5 rounded flex items-center gap-1 w-fit"><AlertTriangle className="w-3 h-3"/> Archivo no adjunto</span>}
                                     </div>
                                 </div>
                             </div>
@@ -516,7 +518,7 @@ const RegistrationsDashboard = () => {
               <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in zoom-in-95 duration-200">
                 <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full border border-gray-100">
                   <div className="flex flex-col items-center text-center">
-                    <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mb-4">        
+                    <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mb-4">
                       <ShieldAlert className="w-6 h-6" />
                     </div>
                     <h3 className="text-lg font-bold text-gray-900 mb-2">Aprobación Manual</h3>

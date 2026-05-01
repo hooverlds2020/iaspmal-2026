@@ -9,7 +9,7 @@ const FinancesDashboard = () => {
     total: 0,
     paid: 0,
     pending: 0,
-    totalAmount: 0,
+    totalAmount: { MXN: 0, USD: 0, EUR: 0 },
     byCategory: {}
   });
 
@@ -30,9 +30,19 @@ const FinancesDashboard = () => {
       const regs = data || [];
       setRegistrations(regs);
 
-      // Calcular estadísticas
       const paidRegistrations = regs.filter(r => r.status === 'paid');
-      const totalAmount = paidRegistrations.reduce((sum, r) => sum + (parseFloat(r.payment_amount) || 0), 0);
+      
+      // Separar totales por moneda
+      const totalAmount = { MXN: 0, USD: 0, EUR: 0 };
+      paidRegistrations.forEach(r => {
+        const currency = r.payment_currency || 'MXN';
+        const amount = parseFloat(r.payment_amount) || 0;
+        if (totalAmount[currency] !== undefined) {
+          totalAmount[currency] += amount;
+        } else {
+          totalAmount[currency] = amount;
+        }
+      });
 
       // Agrupar por categoría
       const byCategory = {};
@@ -69,11 +79,10 @@ const FinancesDashboard = () => {
     return labels[category] || category;
   };
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('es-MX', {
-      style: 'currency',
-      currency: 'MXN'
-    }).format(amount);
+  const formatCurrency = (amount, currency = 'MXN') => {
+    if (currency === 'EUR') return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount);
+    if (currency === 'USD') return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+    return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
   };
 
   const exportToCSV = () => {
@@ -81,7 +90,7 @@ const FinancesDashboard = () => {
     const csv = [
       ['Nombre', 'Email', 'Categoría', 'Monto', 'Moneda', 'Fecha de Pago'].join(','),
       ...paidRegs.map(r => [
-        r.full_name,
+        `"${r.full_name}"`,
         r.email,
         getCategoryLabel(r.category),
         r.payment_amount || 0,
@@ -90,7 +99,7 @@ const FinancesDashboard = () => {
       ].join(','))
     ].join('\n');
 
-    const blob = new Blob([csv], { type: 'text/csv' });
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -109,6 +118,7 @@ const FinancesDashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
+        
         {/* Header */}
         <div className="mb-6 flex justify-between items-center">
           <div>
@@ -128,8 +138,8 @@ const FinancesDashboard = () => {
           </button>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        {/* Stats Cards (Operativos) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
             <div className="flex items-center justify-between">
               <div>
@@ -159,24 +169,35 @@ const FinancesDashboard = () => {
               <Calendar className="w-10 h-10 text-yellow-500 opacity-50" />
             </div>
           </div>
+        </div>
 
-          <div className="bg-white rounded-lg shadow p-6 border-l-4 border-teal-500">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm text-gray-600 mb-1">Total Recaudado</div>
-                <div className="text-3xl font-bold text-gray-800">
-                  {formatCurrency(stats.totalAmount)}
-                </div>
-              </div>
-              <DollarSign className="w-10 h-10 text-teal-500 opacity-50" />
-            </div>
+        {/* Resumen Financiero (Bolsas Separadas) */}
+        <h2 className="text-xl font-bold text-gray-800 mb-4">Ingresos por Moneda</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div className="bg-white rounded-lg shadow p-6 border border-emerald-100">
+            <p className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-1">Total Pesos (MXN)</p>
+            <h3 className="text-3xl font-black text-emerald-700">
+              {formatCurrency(stats.totalAmount.MXN, 'MXN')}
+            </h3>
+          </div>
+          <div className="bg-white rounded-lg shadow p-6 border border-blue-100">
+            <p className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-1">Total Dólares (USD)</p>
+            <h3 className="text-3xl font-black text-blue-700">
+              {formatCurrency(stats.totalAmount.USD, 'USD')}
+            </h3>
+          </div>
+          <div className="bg-white rounded-lg shadow p-6 border border-purple-100">
+            <p className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-1">Total Euros (EUR)</p>
+            <h3 className="text-3xl font-black text-purple-700">
+              {formatCurrency(stats.totalAmount.EUR, 'EUR')}
+            </h3>
           </div>
         </div>
 
-        {/* Ingresos por Categoría */}
+        {/* Ingresos por Categoría (Recuperado) */}
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h2 className="text-xl font-bold text-gray-800 mb-4">
-            Ingresos por Categoría
+            Ingresos por Categoría (Referencia)
           </h2>
           <div className="space-y-4">
             {Object.entries(stats.byCategory).map(([category, data]) => (
@@ -184,11 +205,6 @@ const FinancesDashboard = () => {
                 <div>
                   <div className="font-semibold text-gray-800">{getCategoryLabel(category)}</div>
                   <div className="text-sm text-gray-600">{data.count} inscripciones</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-teal-600">
-                    {formatCurrency(data.amount)}
-                  </div>
                 </div>
               </div>
             ))}
@@ -231,7 +247,7 @@ const FinancesDashboard = () => {
                       {getCategoryLabel(reg.category)}
                     </td>
                     <td className="px-6 py-4 text-sm font-semibold text-teal-600">
-                      {formatCurrency(parseFloat(reg.payment_amount) || 0)}
+                      {formatCurrency(parseFloat(reg.payment_amount) || 0, reg.payment_currency)}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500">
                       {reg.payment_date ? new Date(reg.payment_date).toLocaleDateString('es-ES') : '-'}
@@ -242,6 +258,7 @@ const FinancesDashboard = () => {
             </table>
           </div>
         </div>
+
       </div>
     </div>
   );
