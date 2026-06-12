@@ -26,7 +26,7 @@ import AcceptedFormats from './components/pages/AcceptedFormats';
 import Program from './components/pages/Program';
 import RegistrationForm from './components/pages/RegistrationForm';
 import VenuesPage from './components/pages/VenuesPage';
-import Alojamiento from './components/pages/Alojamiento'; 
+import Alojamiento from './components/pages/Alojamiento';
 import Gallery from './components/pages/Gallery';
 import IaspmInfo from './components/pages/IaspmInfo';
 
@@ -87,7 +87,7 @@ const MainLayout = ({ lang, setLang }) => {
       submenu: [
         { id: 'actividad1', label: 'Actividad 1', label_pt: 'Atividade 1' },
         { id: 'actividad2', label: 'Actividad 2', label_pt: 'Atividade 2' }
-      ]      
+      ]
     },
     {
       id: 'info-complementaria',
@@ -97,14 +97,14 @@ const MainLayout = ({ lang, setLang }) => {
         { id: 'sedes', label: 'Las sedes del Congreso', label_pt: 'As sedes do Congresso' },
         { id: 'organizaciones', label: 'Entidades colaboradoras', label_pt: 'Entidades colaboradoras' },
         { id: 'alojamiento', label: 'Alojamiento', label_pt: 'Hospedagem' },
-        { id: 'san-cristobal', label: 'Lugares para comer', label_pt: 'Lugares para comer' }, 
-        { id: 'musica-vivo', label: 'Música en vivo', label_pt: 'Música ao vivo' }, 
+        { id: 'san-cristobal', label: 'Lugares para comer', label_pt: 'Lugares para comer' },
+        { id: 'musica-vivo', label: 'Música en vivo', label_pt: 'Música ao vivo' },
         { id: 'cartel', label: 'Cartel del congreso', label_pt: 'Pôster do congresso' }
       ]
     },
     //--- NUEVA PESTAÑA: GALERÍA ---
     { id: 'galeria', label: 'Galería', label_pt: 'Galeria' },
-    { id: 'iaspm-al', label: 'La IASPM-AL', label_pt: 'A IASPM-AL' }	  
+    { id: 'iaspm-al', label: 'La IASPM-AL', label_pt: 'A IASPM-AL' }
   ];
 
   const toggleSubmenu = (id) => {
@@ -132,7 +132,7 @@ const MainLayout = ({ lang, setLang }) => {
       'san-cristobal': { es: 'San Cristóbal de Las Casas', pt: 'San Cristóbal de Las Casas' },
       'cartel': { es: 'Cartel Oficial', pt: 'Cartaz Oficial' },
       'galeria': { es: 'Galería', pt: 'Galeria' },
-      'iaspm-al': { es: 'La IASPM-AL', pt: 'A IASPM-AL' }	    
+      'iaspm-al': { es: 'La IASPM-AL', pt: 'A IASPM-AL' }
     };
     const titleObj = titles[currentPage];
     if (!titleObj) return lang === 'es' ? 'Contenido' : 'Conteúdo';
@@ -238,6 +238,13 @@ const MainLayout = ({ lang, setLang }) => {
                   : 'O pagamento da taxa deve ser feito por transferência. Favor indicar, no "Conceito", apenas o seu nome (o mais completo possível). Depois, é necessário voltar a esta página e formalizar a inscrição pelo botão abaixo ("Inscrever-se Agora"). Tenha em mãos o comprovante de pagamento, pois será necessário anexá-lo.'}
               </p>
 
+              {/* ✅ TEXTO IMPORTANTE AÑADIDO AQUÍ */}
+              <p>
+                {lang === 'es'
+                  ? <><strong>Importante:</strong> No olviden que, para participar en el congreso, deben ser socios de la IASPM-AL y estar al día con las cuotas. Para ello, escribir a Paula Mesa, a <a href="mailto:tesoreria.iaspm.al@gmail.com" className="font-bold underline text-[#1e3a5f] hover:text-orange-600">tesoreria.iaspm.al@gmail.com</a>.</>
+                  : <><strong>Importante:</strong> Não se esqueçam que, para participar do congresso, devem ser membros da IASPM-AL e estar em dia com as quotas. Para isso, escreva para Paula Mesa, em <a href="mailto:tesoreria.iaspm.al@gmail.com" className="font-bold underline text-[#1e3a5f] hover:text-orange-600">tesoreria.iaspm.al@gmail.com</a>.</>}
+              </p>
+
               <div className="bg-blue-50/50 p-5 rounded-xl border border-blue-100">
                 <p className="font-black text-[#1e3a5f] mb-4">
                   {lang === 'es' ? 'Las cuentas para transferencia entre bancos mexicanos son las siguientes:' : 'As contas para transferência entre bancos mexicanos son las siguientes:'}
@@ -301,8 +308,8 @@ const MainLayout = ({ lang, setLang }) => {
                     {lang === 'es' ? 'Envío de propuestas' : 'Envio de propostas'}
                   </h4>
                   <p className="text-[#1e3a5f] font-medium text-sm md:text-base">
-                    {lang === 'es' 
-                      ? 'Fecha límite: 15 de junio de 2026' 
+                    {lang === 'es'
+                      ? 'Fecha límite: 15 de junio de 2026'
                       : 'Prazo final: 15 de junho de 2026'}
                   </p>
                 </div>
@@ -358,7 +365,7 @@ const MainLayout = ({ lang, setLang }) => {
         );
 
 
-      case 'comite-academico': 
+      case 'comite-academico':
         return (
           <div className="space-y-6 animate-in fade-in duration-500">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -383,24 +390,24 @@ const MainLayout = ({ lang, setLang }) => {
             </div>
           </div>
         );
-    
+
     case 'comite-organizador': return <div className="space-y-6"><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">María Luisa de la Garza Chávez</p><p className="text-sm text-gray-600">CESMECA-UNICACH, coordinadora</p></div><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">Roberto Campos Velázquez</p><p className="text-sm text-gray-600">FaM-UNICACH, coordinador</p></div><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">Emmanuel Nájera de León</p><p className="text-sm text-gray-600">CESMECA-UNICACH</p></div><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">Alain Basail Rodríguez</p><p className="text-sm text-gray-600">CESMECA-UNICACH</p></div><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">Yoimí Castañeda Ceijas</p><p className="text-sm text-gray-600">UNICH</p></div><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">Mónica Bayuelo García</p><p className="text-sm text-gray-600">CIMSUR-UNAM</p></div></div><div className="mt-4"><p className="font-semibold text-gray-700 mb-3">Comisión de logística</p><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">Gabriela Fragoso Samaniego</p><p className="text-sm text-gray-600">CESMECA-UNICACH</p></div></div></div><div className="mt-4"><p className="font-semibold text-gray-700 mb-3">Página web</p><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">Roberto Carlos Hoover Silvano</p><p className="text-sm text-gray-600">CESMECA-UNICACH</p></div></div></div></div>;
 
       case 'programa': return <Program lang={lang} />;
       case 'sedes': return <VenuesPage lang={lang} />;
       case 'alojamiento': return <Alojamiento lang={lang} />;
       case 'galeria': return <Gallery lang={lang} />;
-      case 'iaspm-al': return <IaspmInfo lang={lang} />;		    
-      case 'instituciones-convocantes': return <div className="text-center"><img src="/images/instituciones.png" alt="Instituciones convocantes" className="max-w-full mx-auto" /></div>; 
-      
+      case 'iaspm-al': return <IaspmInfo lang={lang} />;
+      case 'instituciones-convocantes': return <div className="text-center"><img src="/images/instituciones.png" alt="Instituciones convocantes" className="max-w-full mx-auto" /></div>;
+
       // --- NUEVO CASO: CARTEL ---
-      case 'cartel': 
+      case 'cartel':
         return (
           <div className="flex justify-center py-8 animate-in fade-in duration-500">
-            <img 
-              src="/images/cartel-congreso.png" 
-              alt={lang === 'es' ? 'Cartel Oficial' : 'Pôster Oficial'} 
-              className="w-full h-auto max-w-4xl rounded-xl shadow-2xl border border-gray-200" 
+            <img
+              src="/images/cartel-congreso.png"
+              alt={lang === 'es' ? 'Cartel Oficial' : 'Pôster Oficial'}
+              className="w-full h-auto max-w-4xl rounded-xl shadow-2xl border border-gray-200"
             />
           </div>
         );
@@ -459,7 +466,7 @@ const MainLayout = ({ lang, setLang }) => {
                 )}
 
                 <div className="p-4 sm:p-10 flex-1">
-                  <div className="prose prose-slate max-w-none prose-headings:font-black prose-headings:text-[#1e3a5f] prose-a:text-iaspm-orange hover:prose-a:text-orange-600 prose-img:rounded-xl">   
+                  <div className="prose prose-slate max-w-none prose-headings:font-black prose-headings:text-[#1e3a5f] prose-a:text-iaspm-orange hover:prose-a:text-orange-600 prose-img:rounded-xl">
                     {renderContent()}
                   </div>
                 </div>

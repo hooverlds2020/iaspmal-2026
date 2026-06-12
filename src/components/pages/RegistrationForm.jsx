@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { sendRegistrationConfirmation } from '../../lib/resendClient';
-import { optimizeImage } from '../../lib/imageOptimizer';
 import { Upload, Check, Search, X, FileText, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -25,8 +24,8 @@ const RegistrationForm = ({ lang, onClose }) => {
   const [success, setSuccess] = useState(false);
 
   const categories = [
-    { id: 'sur_global', es: 'Del Sur global', pt: 'Do Sul global' },
-    { id: 'norte_global', es: 'Del Norte global', pt: 'Do Norte global' },
+    { id: 'sur_global', es: 'Ponente del Sur global', pt: 'Palestrante do Sul global' },
+    { id: 'norte_global', es: 'Ponente del Norte global', pt: 'Palestrante do Norte global' },
     { id: 'asistente', es: 'Asistente (si desea constancia)', pt: 'Assistente (se desejar certificado)' }
   ];
 
@@ -92,8 +91,8 @@ const RegistrationForm = ({ lang, onClose }) => {
     // BLOQUEO Y ALERTA: Si no hay archivo, muestra mensaje y detiene el proceso.
     if (!file) {
         return toast.error(
-            lang === 'es' 
-            ? '⚠️ ATENCIÓN: Es obligatorio subir tu comprobante de pago para realizar el registro.' 
+            lang === 'es'
+            ? '⚠️ ATENCIÓN: Es obligatorio subir tu comprobante de pago para realizar el registro.'
             : '⚠️ ATENÇÃO: É obrigatório enviar seu comprovante de pagamento para se registrar.',
             {
                 duration: 5000,
@@ -107,20 +106,24 @@ const RegistrationForm = ({ lang, onClose }) => {
     const fileExt = file.name.split('.').pop().toLowerCase();
     if (!allowedExts.includes(fileExt)) return toast.error(lang === 'es' ? 'Formato no válido. Usa JPG, PNG o PDF' : 'Formato inválido. Use JPG, PNG ou PDF');
 
+    // NUEVA VALIDACIÓN DE TAMAÑO MÁXIMO (1.5 MB)
+    const MAX_FILE_SIZE = 1.5 * 1024 * 1024; 
+    if (file.size > MAX_FILE_SIZE) {
+        return toast.error(
+            lang === 'es' 
+            ? '⚠️ El archivo es muy pesado. El tamaño máximo permitido es 1.5 MB.' 
+            : '⚠️ O arquivo é muito pesado. O tamanho máximo permitido é 1.5 MB.',
+            { duration: 6000, position: 'top-center', style: { background: '#fee2e2', color: '#991b1b', border: '1px solid #f87171' } }
+        );
+    }
+
     setLoading(true);
     try {
       const newRegistrationId = crypto.randomUUID();
       const filePath = `payments/${newRegistrationId}.${fileExt}`;
 
-      let finalFile = file;
-      if (['jpg', 'jpeg', 'png'].includes(fileExt)) {
-          try {
-              finalFile = await optimizeImage(file);
-          } catch (optErr) {
-              console.error("Error optimizando imagen:", optErr);
-              finalFile = file;
-          }
-      }
+      // Mandamos el archivo íntegro, sin optimizador
+      const finalFile = file;
 
       // 1. SUBIR AL STORAGE PRIMERO
       const { error: uploadError } = await supabase.storage
@@ -133,10 +136,15 @@ const RegistrationForm = ({ lang, onClose }) => {
           throw new Error(lang === 'es' ? 'No se pudo subir el comprobante. Revisa tu conexión.' : 'Não foi possível enviar o comprovante.');
       }
 
-      // 2. OBTENER URL
-      const { data: { publicUrl } } = supabase.storage.from('registrations').getPublicUrl(filePath);
+      // 2. OBTENER URL (Corrección robusta a prueba de fallos)
+      const urlResponse = supabase.storage.from('registrations').getPublicUrl(filePath);
+      const finalUrl = urlResponse?.data?.publicUrl || urlResponse?.publicURL;
 
-      // 3. INSERTAR EN BD (Solo si la subida fue exitosa)
+      if (!finalUrl) {
+          throw new Error('No se pudo procesar el enlace del comprobante. Intenta nuevamente.');
+      }
+
+      // 3. INSERTAR EN BD (Usando la url blindada: finalUrl)
       const { data: reg, error: regErr } = await supabase
         .from('registrations')
         .insert([{
@@ -146,7 +154,7 @@ const RegistrationForm = ({ lang, onClose }) => {
           country: formData.country,
           category: formData.category,
           status: 'pending',
-          payment_proof_url: publicUrl 
+          payment_proof_url: finalUrl
         }])
         .select().single();
 
@@ -358,7 +366,7 @@ const RegistrationForm = ({ lang, onClose }) => {
                               {file ? 'Archivo Listo' : 'Subir Comprobante (Requerido)'}
                           </p>
                           <p className="text-xs text-gray-500 mt-1 max-w-[250px] mx-auto truncate font-medium">
-                              {file ? file.name : 'Formatos aceptados: PDF, JPG, PNG'}
+                              {file ? file.name : 'Formatos: PDF, JPG, PNG (Máx. 1.5 MB)'}
                           </p>
                       </div>
                     </div>
