@@ -89,7 +89,9 @@ const generatePreviewPDF = (cert) => {
   doc.setTextColor(150, 150, 150);
   doc.text(`Folio: ${cert.folio || '(sin folio aún)'} — Tipo: ${certTypeLabel(cert.certificate_type)}`, 148.5, 190, { align: 'center' });
 
-  doc.save(`Vista_previa_${(cert.participant_name || 'constancia').replace(/\s+/g, '_')}.pdf`);
+  // Abre en una pestaña nueva del navegador en vez de forzar la descarga
+  const blobUrl = doc.output('bloburl');
+  window.open(blobUrl, '_blank');
 };
 
 const emptyForm = {
