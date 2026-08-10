@@ -44,6 +44,7 @@ const CertificatesManager = () => {
   const [personResults, setPersonResults] = useState([]);
   const [selectedPerson, setSelectedPerson] = useState(null);
   const [searchingPerson, setSearchingPerson] = useState(false);
+  const [manualMode, setManualMode] = useState(false); // Persona sin registro en la plataforma
 
   // Ponencias de la persona seleccionada (para autocompletar en tipo "ponente")
   const [personPresentations, setPersonPresentations] = useState([]);
@@ -135,8 +136,12 @@ const CertificatesManager = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      if (!formData.registration_id) {
+      if (!manualMode && !formData.registration_id) {
         toast.error('Selecciona a la persona antes de guardar');
+        return;
+      }
+      if (!formData.participant_name?.trim()) {
+        toast.error('Falta el nombre de la persona');
         return;
       }
 
@@ -148,10 +153,12 @@ const CertificatesManager = () => {
         if (error) throw error;
         toast.success('Constancia actualizada correctamente');
       } else {
+        const folio = generateFolio(formData.certificate_type);
         const payload = {
           ...formData,
-          folio: generateFolio(formData.certificate_type),
-          qr_data: `${formData.registration_id}|${formData.certificate_type}`,
+          registration_id: formData.registration_id || null,
+          folio,
+          qr_data: `${formData.registration_id || folio}|${formData.certificate_type}`,
           generated_date: new Date().toISOString(),
           verified: true,
         };
@@ -176,6 +183,16 @@ const CertificatesManager = () => {
     setPersonQuery('');
     setPersonResults([]);
     setPersonPresentations([]);
+    setManualMode(false);
+  };
+
+  const handleActivateManualMode = () => {
+    setManualMode(true);
+    setPersonResults([]);
+    setPersonQuery('');
+    // Marcamos como "seleccionada" con datos vacíos para mostrar el bloque de edición manual
+    setSelectedPerson({ id: null, manual: true });
+    setFormData(prev => ({ ...prev, registration_id: null, participant_name: '', participant_email: '' }));
   };
 
   const handleEdit = (cert) => {
@@ -189,6 +206,7 @@ const CertificatesManager = () => {
       symposium_title: cert.symposium_title || '',
     });
     setSelectedPerson({ id: cert.registration_id, full_name: cert.participant_name, email: cert.participant_email });
+    setManualMode(!cert.registration_id);
     setPersonPresentations([]);
     setIsEditorOpen(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -263,7 +281,32 @@ const CertificatesManager = () => {
             <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
               <Label>Persona (buscar por nombre o correo en Inscripciones)</Label>
 
-              {selectedPerson ? (
+              {manualMode ? (
+                <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 space-y-3">
+                  <p className="text-[10px] font-black text-amber-700 uppercase tracking-widest">
+                    Persona sin registro en la plataforma — captura sus datos manualmente
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Nombre completo</Label>
+                      <input required className={InputClasses} value={formData.participant_name} onChange={e => setFormData({ ...formData, participant_name: e.target.value })} placeholder="Nombre de la persona" />
+                    </div>
+                    <div>
+                      <Label>Correo (opcional)</Label>
+                      <input type="email" className={InputClasses} value={formData.participant_email} onChange={e => setFormData({ ...formData, participant_email: e.target.value })} placeholder="correo@ejemplo.com" />
+                    </div>
+                  </div>
+                  {!editingId && (
+                    <button
+                      type="button"
+                      onClick={() => { setSelectedPerson(null); setManualMode(false); setFormData(prev => ({ ...prev, registration_id: '', participant_name: '', participant_email: '' })); }}
+                      className="text-xs font-black uppercase text-amber-700 hover:text-amber-900"
+                    >
+                      Buscar en inscripciones en su lugar
+                    </button>
+                  )}
+                </div>
+              ) : selectedPerson ? (
                 <div className="flex items-center justify-between p-4 rounded-xl bg-blue-50 border border-blue-200">
                   <div className="flex items-center gap-3">
                     <div className="bg-white p-2 rounded-lg text-[#1e3a5f] border border-blue-100"><User size={18} /></div>
@@ -310,6 +353,13 @@ const CertificatesManager = () => {
                       ))}
                     </div>
                   )}
+                  <button
+                    type="button"
+                    onClick={handleActivateManualMode}
+                    className="mt-2 text-xs font-black uppercase text-blue-600 hover:text-blue-800"
+                  >
+                    ¿No la encuentras? Registrar persona externa
+                  </button>
                 </div>
               )}
             </div>
