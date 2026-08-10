@@ -28,36 +28,28 @@ const buildCertificateText = (cert) => {
   const nombre = cert.participant_name || '[nombre]';
   const intro = 'La rama latinoamericana de la Asociación Internacional para el Estudio de la Música Popular otorga la presente';
   const fechas = 'de su XVII Congreso, celebrado en San Cristóbal de Las Casas, México, del 28 de septiembre al 2 de octubre de 2026';
+  const fechasChis = fechas.replace('México,', 'Chiapas,');
   const temaGeneral = 'cuyo tema general fue "Ética, política y música popular"';
 
+  let body;
   switch (cert.certificate_type) {
     case 'ponente':
-      return [
-        intro,
-        'CONSTANCIA',
-        `a ${nombre} por haber participado con la ponencia "${cert.presentation_title || '[título de la ponencia]'}", en el simposio ${cert.symposium_title || '[título del simposio]'}, ${fechas}.`,
-      ];
+      body = `por haber participado con la ponencia "${cert.presentation_title || '[título de la ponencia]'}", en el simposio ${cert.symposium_title || '[título del simposio]'}, ${fechas}.`;
+      break;
     case 'coordinador':
-      return [
-        intro,
-        'CONSTANCIA',
-        `a ${nombre} por haber coordinado el simposio ${cert.symposium_title || '[título del simposio]'}, ${fechas.replace('México,', 'Chiapas,')}, ${temaGeneral}.`,
-      ];
+      body = `por haber coordinado el simposio ${cert.symposium_title || '[título del simposio]'}, ${fechasChis}, ${temaGeneral}.`;
+      break;
     case 'moderador':
-      return [
-        intro,
-        'CONSTANCIA',
-        `a ${nombre} por haber moderado la mesa [PENDIENTE: falta texto oficial de la Dra. María Luisa para este tipo] — simposio/mesa: ${cert.symposium_title || '[título]'}, ${fechas.replace('México,', 'Chiapas,')}.`,
-      ];
+      body = `por haber moderado la mesa [PENDIENTE: falta texto oficial de la Dra. María Luisa para este tipo] — simposio/mesa: ${cert.symposium_title || '[título]'}, ${fechasChis}.`;
+      break;
     case 'estelar':
-      return [
-        intro,
-        'CONSTANCIA',
-        `a ${nombre} por haber participado en el ${cert.symposium_title || '[título del concierto/conversatorio]'}, ${fechas.replace('México,', 'Chiapas,')}, ${temaGeneral}.`,
-      ];
+      body = `por haber participado en el ${cert.symposium_title || '[título del concierto/conversatorio]'}, ${fechasChis}, ${temaGeneral}.`;
+      break;
     default:
-      return [intro, 'CONSTANCIA', `a ${nombre}.`];
+      body = '.';
   }
+
+  return { intro, titulo: 'CONSTANCIA', a: 'a', nombre, body };
 };
 
 // Convierte una imagen pública (misma URL de origen) a data URL para insertarla en el PDF
@@ -75,28 +67,44 @@ const loadImageAsDataUrl = (url) => new Promise((resolve, reject) => {
 
 const generatePreviewPDF = async (cert) => {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-  const lines = buildCertificateText(cert);
+  const t = buildCertificateText(cert);
 
   doc.setFontSize(9);
   doc.setTextColor(180, 130, 0);
   doc.text('VISTA PREVIA — SOLO TEXTO, SIN DISEÑO NI LOGOS FINALES (FIRMAS DE MUESTRA)', 148.5, 15, { align: 'center' });
 
+  // Intro
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(13);
+  doc.setFontSize(12);
   doc.setTextColor(60, 60, 60);
-  const introWrapped = doc.splitTextToSize(lines[0], 220);
-  doc.text(introWrapped, 148.5, 35, { align: 'center' });
+  const introWrapped = doc.splitTextToSize(t.intro, 210);
+  doc.text(introWrapped, 148.5, 32, { align: 'center' });
 
+  // CONSTANCIA
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(22);
+  doc.setFontSize(24);
   doc.setTextColor(30, 58, 95);
-  doc.text(lines[1], 148.5, 55, { align: 'center' });
+  doc.text(t.titulo, 148.5, 50, { align: 'center' });
 
+  // "a"
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(12);
+  doc.setTextColor(80, 80, 80);
+  doc.text(t.a, 148.5, 60, { align: 'center' });
+
+  // NOMBRE (grande, destacado)
+  doc.setFont('times', 'bold');
+  doc.setFontSize(26);
+  doc.setTextColor(0, 0, 0);
+  doc.text(t.nombre.toUpperCase(), 148.5, 72, { align: 'center' });
+
+  // Cuerpo: "Por haber participado..." (con mayúscula inicial)
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(13);
   doc.setTextColor(20, 20, 20);
-  const bodyWrapped = doc.splitTextToSize(lines[2], 220);
-  doc.text(bodyWrapped, 148.5, 75, { align: 'center' });
+  const bodyCapitalized = t.body.charAt(0).toUpperCase() + t.body.slice(1);
+  const bodyWrapped = doc.splitTextToSize(bodyCapitalized, 220);
+  doc.text(bodyWrapped, 148.5, 88, { align: 'center' });
 
   // Firmas al pie (mismo origen: se cargan desde public/images/firmas)
   try {
