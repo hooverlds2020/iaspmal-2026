@@ -60,13 +60,26 @@ const buildCertificateText = (cert) => {
   }
 };
 
-const generatePreviewPDF = (cert) => {
+// Convierte una imagen pública (misma URL de origen) a data URL para insertarla en el PDF
+const loadImageAsDataUrl = (url) => new Promise((resolve, reject) => {
+  fetch(url)
+    .then(res => res.blob())
+    .then(blob => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    })
+    .catch(reject);
+});
+
+const generatePreviewPDF = async (cert) => {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const lines = buildCertificateText(cert);
 
   doc.setFontSize(9);
   doc.setTextColor(180, 130, 0);
-  doc.text('VISTA PREVIA — SOLO TEXTO, SIN DISEÑO NI LOGOS NI FIRMAS FINALES', 148.5, 15, { align: 'center' });
+  doc.text('VISTA PREVIA — SOLO TEXTO, SIN DISEÑO NI LOGOS FINALES (FIRMAS DE MUESTRA)', 148.5, 15, { align: 'center' });
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(13);
@@ -84,6 +97,43 @@ const generatePreviewPDF = (cert) => {
   doc.setTextColor(20, 20, 20);
   const bodyWrapped = doc.splitTextToSize(lines[2], 220);
   doc.text(bodyWrapped, 148.5, 75, { align: 'center' });
+
+  // Firmas al pie (mismo origen: se cargan desde public/images/firmas)
+  try {
+    const [darioDataUrl, mariaLuisaDataUrl] = await Promise.all([
+      loadImageAsDataUrl('/images/firmas/firma-dario-tejeda.png'),
+      loadImageAsDataUrl('/images/firmas/firma-maria-luisa-de-la-garza.png'),
+    ]);
+
+    // Ancho fijo en mm, alto proporcional
+    const sigWidth = 45;
+    const darioImg = new Image(); darioImg.src = darioDataUrl;
+    const mlImg = new Image(); mlImg.src = mariaLuisaDataUrl;
+    await Promise.all([
+      new Promise(r => { darioImg.onload = r; }),
+      new Promise(r => { mlImg.onload = r; }),
+    ]);
+    const darioHeight = sigWidth * (darioImg.height / darioImg.width);
+    const mlHeight = sigWidth * (mlImg.height / mlImg.width);
+
+    const sigY = 160;
+    doc.addImage(darioDataUrl, 'PNG', 90 - sigWidth / 2, sigY - darioHeight, sigWidth, darioHeight);
+    doc.addImage(mariaLuisaDataUrl, 'PNG', 207 - sigWidth / 2, sigY - mlHeight, sigWidth, mlHeight);
+
+    doc.setDrawColor(150, 150, 150);
+    doc.setLineWidth(0.3);
+    doc.line(65, sigY + 3, 115, sigY + 3);
+    doc.line(182, sigY + 3, 232, sigY + 3);
+
+    doc.setFontSize(10);
+    doc.setTextColor(60, 60, 60);
+    doc.text('Darío Tejeda', 90, sigY + 8, { align: 'center' });
+    doc.text('Presidente de la IASPM-AL', 90, sigY + 13, { align: 'center' });
+    doc.text('Ma. Luisa de la Garza', 207, sigY + 8, { align: 'center' });
+    doc.text('Coordinadora del Comité Organizador', 207, sigY + 13, { align: 'center' });
+  } catch (e) {
+    console.error('No se pudieron cargar las firmas de muestra:', e);
+  }
 
   doc.setFontSize(9);
   doc.setTextColor(150, 150, 150);
