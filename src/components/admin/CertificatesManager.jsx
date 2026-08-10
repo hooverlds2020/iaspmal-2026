@@ -351,13 +351,15 @@ const CertificatesManager = () => {
                 </div>
               ) : (
                 <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                  <input
-                    className={`${InputClasses} pl-11`}
-                    placeholder="Escribe un nombre o correo..."
-                    value={personQuery}
-                    onChange={e => setPersonQuery(e.target.value)}
-                  />
+                  <div className="relative">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <input
+                      className={`${InputClasses} pl-11`}
+                      placeholder="Escribe un nombre o correo..."
+                      value={personQuery}
+                      onChange={e => setPersonQuery(e.target.value)}
+                    />
+                  </div>
                   {searchingPerson && <p className="text-xs text-gray-400 mt-1.5 font-bold">Buscando...</p>}
                   {personResults.length > 0 && (
                     <div className="mt-2 border border-gray-200 rounded-xl overflow-hidden divide-y divide-gray-100 shadow-lg">
