@@ -142,10 +142,10 @@ const generatePreviewPDF = async (cert) => {
     // La firma de Ma. Luisa tiene bastante espacio en blanco arriba del trazo principal;
     // su trazo horizontal cae al ~33% de la altura de la imagen contando desde abajo.
     // Calculamos el offset para que ese trazo quede justo sobre la línea (sigY + 3),
-    // con un ajuste fino manual (-5mm) porque el remolino/cola de la firma se extendía
-    // por debajo del trazo principal y llegaba a tocar el nombre impreso.
+    // con un ajuste fino manual porque el remolino/cola de la firma se extendía
+    // por debajo del trazo principal. -3 baja un poco respecto a -5 sin volver a cruzar la línea.
     const mlStrokeFractionFromBottom = 0.33;
-    const mlManualCorrection = -5;
+    const mlManualCorrection = -3;
     const mlOffsetY = 3 + mlStrokeFractionFromBottom * mlHeight + mlManualCorrection;
     doc.addImage(darioDataUrl, 'PNG', 90 - sigWidth / 2, sigY - darioHeight, sigWidth, darioHeight);
     doc.addImage(mariaLuisaDataUrl, 'PNG', 207 - sigWidth / 2, sigY - mlHeight + mlOffsetY, sigWidth, mlHeight);
