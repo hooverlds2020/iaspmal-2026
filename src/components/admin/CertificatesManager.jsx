@@ -125,8 +125,9 @@ const generatePreviewPDF = async (cert) => {
     const mlHeight = sigWidth * (mlImg.height / mlImg.width);
 
     const sigY = 160;
+    const mlOffsetY = 3; // baja un poco la firma de Ma. Luisa respecto a la de Darío, a petición suya
     doc.addImage(darioDataUrl, 'PNG', 90 - sigWidth / 2, sigY - darioHeight, sigWidth, darioHeight);
-    doc.addImage(mariaLuisaDataUrl, 'PNG', 207 - sigWidth / 2, sigY - mlHeight, sigWidth, mlHeight);
+    doc.addImage(mariaLuisaDataUrl, 'PNG', 207 - sigWidth / 2, sigY - mlHeight + mlOffsetY, sigWidth, mlHeight);
 
     doc.setDrawColor(150, 150, 150);
     doc.setLineWidth(0.3);
