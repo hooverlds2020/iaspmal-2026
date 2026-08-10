@@ -69,6 +69,20 @@ const generatePreviewPDF = async (cert) => {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const t = buildCertificateText(cert);
 
+  // Marca de agua de fondo (marimba, opacidad baja) — no debe distraer del texto
+  try {
+    const watermarkDataUrl = await loadImageAsDataUrl('/images/marimba-watermark.png');
+    const wmImg = new Image(); wmImg.src = watermarkDataUrl;
+    await new Promise(r => { wmImg.onload = r; });
+    // Cubre el ancho completo de la página, centrada verticalmente en la mitad inferior
+    const pageWidth = 297, pageHeight = 210;
+    const wmWidth = pageWidth;
+    const wmHeight = wmWidth * (wmImg.height / wmImg.width);
+    doc.addImage(watermarkDataUrl, 'PNG', 0, pageHeight - wmHeight, wmWidth, wmHeight);
+  } catch (e) {
+    console.error('No se pudo cargar la marca de agua:', e);
+  }
+
   doc.setFontSize(9);
   doc.setTextColor(180, 130, 0);
   doc.text('VISTA PREVIA — SOLO TEXTO, SIN DISEÑO NI LOGOS FINALES (FIRMAS DE MUESTRA)', 148.5, 15, { align: 'center' });
