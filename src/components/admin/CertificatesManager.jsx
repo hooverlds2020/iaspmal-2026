@@ -1,8 +1,9 @@
 // src/components/admin/CertificatesManager.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
+import { jsPDF } from 'jspdf';
 import {
-  Plus, Edit2, Trash2, Search, Award, Save, ArrowLeft, User, CheckCircle2, XCircle, Copy, Pencil, Check, X as XIcon
+  Plus, Edit2, Trash2, Search, Award, Save, ArrowLeft, User, CheckCircle2, XCircle, Copy, Pencil, Check, X as XIcon, Eye
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -20,6 +21,75 @@ const generateFolio = (certType) => {
   const prefix = { ponente: 'PON', coordinador: 'COO', moderador: 'MOD', estelar: 'EST' }[certType] || 'GEN';
   const rand = Math.random().toString(36).substring(2, 8).toUpperCase();
   return `IASP-2026-${prefix}-${rand}`;
+};
+
+// Construye el texto de la constancia según el tipo (borrador de contenido, sin diseño final)
+const buildCertificateText = (cert) => {
+  const nombre = cert.participant_name || '[nombre]';
+  const intro = 'La rama latinoamericana de la Asociación Internacional para el Estudio de la Música Popular otorga la presente';
+  const fechas = 'de su XVII Congreso, celebrado en San Cristóbal de Las Casas, México, del 28 de septiembre al 2 de octubre de 2026';
+  const temaGeneral = 'cuyo tema general fue "Ética, política y música popular"';
+
+  switch (cert.certificate_type) {
+    case 'ponente':
+      return [
+        intro,
+        'CONSTANCIA',
+        `a ${nombre} por haber participado con la ponencia "${cert.presentation_title || '[título de la ponencia]'}", en el simposio ${cert.symposium_title || '[título del simposio]'}, ${fechas}.`,
+      ];
+    case 'coordinador':
+      return [
+        intro,
+        'CONSTANCIA',
+        `a ${nombre} por haber coordinado el simposio ${cert.symposium_title || '[título del simposio]'}, ${fechas.replace('México,', 'Chiapas,')}, ${temaGeneral}.`,
+      ];
+    case 'moderador':
+      return [
+        intro,
+        'CONSTANCIA',
+        `a ${nombre} por haber moderado la mesa [PENDIENTE: falta texto oficial de la Dra. María Luisa para este tipo] — simposio/mesa: ${cert.symposium_title || '[título]'}, ${fechas.replace('México,', 'Chiapas,')}.`,
+      ];
+    case 'estelar':
+      return [
+        intro,
+        'CONSTANCIA',
+        `a ${nombre} por haber participado en el ${cert.symposium_title || '[título del concierto/conversatorio]'}, ${fechas.replace('México,', 'Chiapas,')}, ${temaGeneral}.`,
+      ];
+    default:
+      return [intro, 'CONSTANCIA', `a ${nombre}.`];
+  }
+};
+
+const generatePreviewPDF = (cert) => {
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const lines = buildCertificateText(cert);
+
+  doc.setFontSize(9);
+  doc.setTextColor(180, 130, 0);
+  doc.text('VISTA PREVIA — SOLO TEXTO, SIN DISEÑO NI LOGOS NI FIRMAS FINALES', 148.5, 15, { align: 'center' });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(13);
+  doc.setTextColor(60, 60, 60);
+  const introWrapped = doc.splitTextToSize(lines[0], 220);
+  doc.text(introWrapped, 148.5, 35, { align: 'center' });
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(22);
+  doc.setTextColor(30, 58, 95);
+  doc.text(lines[1], 148.5, 55, { align: 'center' });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(13);
+  doc.setTextColor(20, 20, 20);
+  const bodyWrapped = doc.splitTextToSize(lines[2], 220);
+  doc.text(bodyWrapped, 148.5, 75, { align: 'center' });
+
+  doc.setFontSize(9);
+  doc.setTextColor(150, 150, 150);
+  doc.text(`Folio: ${cert.folio || '(sin folio aún)'} — Tipo: ${certTypeLabel(cert.certificate_type)}`, 148.5, 190, { align: 'center' });
+
+  doc.save(`Vista_previa_${(cert.participant_name || 'constancia').replace(/\s+/g, '_')}.pdf`);
 };
 
 const emptyForm = {
@@ -648,6 +718,7 @@ const CertificatesManager = () => {
                   </td>
                   <td className="p-4 pr-6 text-right align-top">
                     <div className="flex justify-end gap-2 opacity-0 group-hover/row:opacity-100 transition-opacity">
+                      <button onClick={() => generatePreviewPDF(cert)} title="Vista previa PDF (solo texto)" className="p-2 text-amber-600 bg-white hover:bg-amber-600 hover:text-white rounded-lg transition-all border border-amber-100 shadow-sm"><Eye size={16} /></button>
                       <button onClick={() => handleEdit(cert)} className="p-2 text-blue-600 bg-white hover:bg-blue-600 hover:text-white rounded-lg transition-all border border-blue-100 shadow-sm"><Edit2 size={16} /></button>
                       <button onClick={() => handleDelete(cert.id)} className="p-2 text-red-600 bg-white hover:bg-red-600 hover:text-white rounded-lg transition-all border border-red-100 shadow-sm"><Trash2 size={16} /></button>
                     </div>
