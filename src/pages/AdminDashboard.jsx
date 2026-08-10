@@ -1,6 +1,6 @@
 // src/pages/AdminDashboard.jsx
 import React, { useState } from 'react';
-import { LogOut, Users, Calendar, FileText, Settings, DollarSign, MapPin, LayoutGrid, Image, Building } from 'lucide-react'; // ✅ Añadido Building
+import { LogOut, Users, Calendar, FileText, Settings, DollarSign, MapPin, LayoutGrid, Image, Building, Award } from 'lucide-react'; // ✅ Añadido Building, Award
 import SymposiumsManager from '../components/admin/SymposiumsManager';
 import SessionsManager from '../components/admin/SessionsManager';
 import PresentationsManager from '../components/admin/PresentationsManager';
@@ -10,6 +10,7 @@ import FinancesDashboard from './FinancesDashboard';
 import SliderManager from '../components/admin/SliderManager';
 import GalleryManager from '../components/admin/GalleryManager';
 import AccommodationManager from '../components/admin/AccommodationManager'; // ✅ Nueva importación
+import CertificatesManager from '../components/admin/CertificatesManager'; // ✅ Panel de constancias
 import { supabase } from '../lib/supabaseClient';
 
 const AdminDashboard = ({ user, onLogout }) => {
@@ -107,6 +108,7 @@ const AdminDashboard = ({ user, onLogout }) => {
 
                  <NavButton id="registros" label="Inscripciones" icon={LayoutGrid} />
                  <NavButton id="finanzas" label="Finanzas" icon={DollarSign} />
+                 <NavButton id="constancias" label="Constancias" icon={Award} />
 
                  <div className="my-4 border-t border-gray-100 mx-4"></div>
 
@@ -136,6 +138,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                   {activeSection === 'ponencias' && <PresentationsManager />}
                   {activeSection === 'registros' && <RegistrationsDashboard />}
                   {activeSection === 'finanzas' && <FinancesDashboard />}
+                  {activeSection === 'constancias' && <CertificatesManager />}
                   {activeSection === 'slider' && <SliderManager />}
                   {activeSection === 'galeria-admin' && <GalleryManager />}
                   {activeSection === 'alojamientos' && <AccommodationManager />} {/* ✅ Renderizado del nuevo panel */}
