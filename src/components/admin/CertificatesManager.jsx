@@ -85,11 +85,35 @@ const CertificatesManager = () => {
   const searchPeople = async (q) => {
     try {
       setSearchingPerson(true);
-      const { data, error } = await supabase
-        .from('registrations')
-        .select('id, full_name, email, category')
-        .or(`full_name.ilike.%${q}%,email.ilike.%${q}%`)
-        .limit(10);
+      const isEmailLike = q.includes('@');
+
+      let data, error;
+      if (isEmailLike) {
+        // Búsqueda explícita por correo
+        ({ data, error } = await supabase
+          .from('registrations')
+          .select('id, full_name, email, category')
+          .ilike('email', `%${q}%`)
+          .order('full_name', { ascending: true })
+          .limit(15));
+      } else {
+        // Búsqueda por nombre: prioriza coincidencias que empiezan con el texto,
+        // y solo si no hay suficientes, complementa con "contiene" (evita que
+        // coincidencias falsas en el dominio del correo, ej. "gmail.com", desplacen resultados reales)
+        const [startsWith, contains] = await Promise.all([
+          supabase.from('registrations').select('id, full_name, email, category')
+            .ilike('full_name', `${q}%`).order('full_name', { ascending: true }).limit(15),
+          supabase.from('registrations').select('id, full_name, email, category')
+            .ilike('full_name', `%${q}%`).order('full_name', { ascending: true }).limit(15),
+        ]);
+        if (startsWith.error) throw startsWith.error;
+        if (contains.error) throw contains.error;
+        const seen = new Set();
+        data = [...(startsWith.data || []), ...(contains.data || [])]
+          .filter(p => (seen.has(p.id) ? false : (seen.add(p.id), true)))
+          .slice(0, 15);
+      }
+
       if (error) throw error;
       setPersonResults(data || []);
     } catch (error) {
