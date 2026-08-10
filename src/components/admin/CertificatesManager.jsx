@@ -182,6 +182,11 @@ const CertificatesManager = () => {
 
       // Refleja el cambio en los resultados de búsqueda visibles
       setPersonResults(prev => prev.map(p => p.id === person.id ? { ...p, full_name: newName } : p));
+      // Si es la persona ya seleccionada en el formulario, refleja el cambio ahí también
+      if (selectedPerson?.id === person.id) {
+        setSelectedPerson(prev => ({ ...prev, full_name: newName }));
+        setFormData(prev => ({ ...prev, participant_name: newName }));
+      }
 
       toast.success('Nombre corregido en Inscripciones — se reflejará en todo el sistema');
       setEditingNameId(null);
@@ -375,24 +380,52 @@ const CertificatesManager = () => {
                   )}
                 </div>
               ) : selectedPerson ? (
-                <div className="flex items-center justify-between p-4 rounded-xl bg-blue-50 border border-blue-200">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-white p-2 rounded-lg text-[#1e3a5f] border border-blue-100"><User size={18} /></div>
-                    <div>
-                      <p className="font-black text-[#1e3a5f] text-sm">{formData.participant_name}</p>
-                      <p className="text-xs text-gray-500 font-bold">{formData.participant_email}</p>
+                editingNameId === selectedPerson.id ? (
+                  <div className="flex items-center gap-2 p-4 rounded-xl bg-amber-50 border border-amber-200">
+                    <input
+                      autoFocus
+                      className="flex-1 p-2.5 rounded-lg border border-amber-300 text-sm font-bold outline-none focus:ring-2 focus:ring-amber-200"
+                      value={editingNameValue}
+                      onChange={e => setEditingNameValue(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') handleSaveEditName(selectedPerson, e); if (e.key === 'Escape') handleCancelEditName(e); }}
+                    />
+                    <button type="button" disabled={savingName} onClick={(e) => handleSaveEditName(selectedPerson, e)} className="p-2.5 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50">
+                      <Check size={16} />
+                    </button>
+                    <button type="button" onClick={handleCancelEditName} className="p-2.5 rounded-lg bg-white border border-gray-300 text-gray-500 hover:bg-gray-50 transition-colors">
+                      <XIcon size={16} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-blue-50 border border-blue-200">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-white p-2 rounded-lg text-[#1e3a5f] border border-blue-100"><User size={18} /></div>
+                      <div>
+                        <p className="font-black text-[#1e3a5f] text-sm">{formData.participant_name}</p>
+                        <p className="text-xs text-gray-500 font-bold">{formData.participant_email}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <button
+                        type="button"
+                        onClick={(e) => handleStartEditName(selectedPerson, e)}
+                        title="Corregir nombre (afecta todo el sistema)"
+                        className="p-2 rounded-lg text-blue-500 hover:text-blue-700 hover:bg-blue-100 transition-colors"
+                      >
+                        <Pencil size={15} />
+                      </button>
+                      {!editingId && (
+                        <button
+                          type="button"
+                          onClick={() => { setSelectedPerson(null); setPersonPresentations([]); setFormData(prev => ({ ...prev, registration_id: '', participant_name: '', participant_email: '' })); }}
+                          className="text-xs font-black uppercase text-red-500 hover:text-red-700"
+                        >
+                          Cambiar
+                        </button>
+                      )}
                     </div>
                   </div>
-                  {!editingId && (
-                    <button
-                      type="button"
-                      onClick={() => { setSelectedPerson(null); setPersonPresentations([]); setFormData(prev => ({ ...prev, registration_id: '', participant_name: '', participant_email: '' })); }}
-                      className="text-xs font-black uppercase text-red-500 hover:text-red-700"
-                    >
-                      Cambiar
-                    </button>
-                  )}
-                </div>
+                )
               ) : (
                 <div className="relative">
                   <div className="relative">
