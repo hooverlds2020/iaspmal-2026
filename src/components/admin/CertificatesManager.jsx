@@ -125,7 +125,11 @@ const generatePreviewPDF = async (cert) => {
     const mlHeight = sigWidth * (mlImg.height / mlImg.width);
 
     const sigY = 160;
-    const mlOffsetY = 3; // baja un poco la firma de Ma. Luisa respecto a la de Darío, a petición suya
+    // La firma de Ma. Luisa tiene bastante espacio en blanco arriba del trazo principal;
+    // su trazo horizontal cae al ~33% de la altura de la imagen contando desde abajo.
+    // Calculamos el offset para que ese trazo quede justo sobre la línea (sigY + 3).
+    const mlStrokeFractionFromBottom = 0.33;
+    const mlOffsetY = 3 + mlStrokeFractionFromBottom * mlHeight;
     doc.addImage(darioDataUrl, 'PNG', 90 - sigWidth / 2, sigY - darioHeight, sigWidth, darioHeight);
     doc.addImage(mariaLuisaDataUrl, 'PNG', 207 - sigWidth / 2, sigY - mlHeight + mlOffsetY, sigWidth, mlHeight);
 
