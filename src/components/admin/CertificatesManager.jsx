@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import {
-  Plus, Edit2, Trash2, Search, Award, Save, ArrowLeft, User, CheckCircle2, XCircle, Copy
+  Plus, Edit2, Trash2, Search, Award, Save, ArrowLeft, User, CheckCircle2, XCircle, Copy, Pencil, Check, X as XIcon
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -48,6 +48,11 @@ const CertificatesManager = () => {
 
   // Ponencias de la persona seleccionada (para autocompletar en tipo "ponente")
   const [personPresentations, setPersonPresentations] = useState([]);
+
+  // Edición inline del nombre en registrations (corrige el dato maestro)
+  const [editingNameId, setEditingNameId] = useState(null);
+  const [editingNameValue, setEditingNameValue] = useState('');
+  const [savingName, setSavingName] = useState(false);
 
   useEffect(() => {
     fetchCertificates();
@@ -148,8 +153,47 @@ const CertificatesManager = () => {
     }
   };
 
-  const handleAutofillPresentation = (rp) => {
-    setFormData(prev => ({
+  const handleStartEditName = (person, e) => {
+    e.stopPropagation();
+    setEditingNameId(person.id);
+    setEditingNameValue(person.full_name || '');
+  };
+
+  const handleCancelEditName = (e) => {
+    e?.stopPropagation();
+    setEditingNameId(null);
+    setEditingNameValue('');
+  };
+
+  const handleSaveEditName = async (person, e) => {
+    e.stopPropagation();
+    const newName = editingNameValue.trim();
+    if (!newName) {
+      toast.error('El nombre no puede quedar vacío');
+      return;
+    }
+    try {
+      setSavingName(true);
+      const { error } = await supabase
+        .from('registrations')
+        .update({ full_name: newName })
+        .eq('id', person.id);
+      if (error) throw error;
+
+      // Refleja el cambio en los resultados de búsqueda visibles
+      setPersonResults(prev => prev.map(p => p.id === person.id ? { ...p, full_name: newName } : p));
+
+      toast.success('Nombre corregido en Inscripciones — se reflejará en todo el sistema');
+      setEditingNameId(null);
+      setEditingNameValue('');
+    } catch (error) {
+      toast.error('Error al corregir el nombre: ' + error.message);
+    } finally {
+      setSavingName(false);
+    }
+  };
+
+  const handleAutofillPresentation = (rp) => {    setFormData(prev => ({
       ...prev,
       presentation_title: rp.presentations?.title || '',
       symposium_title: rp.presentations?.symposiums?.name || '',
@@ -364,18 +408,46 @@ const CertificatesManager = () => {
                   {personResults.length > 0 && (
                     <div className="mt-2 border border-gray-200 rounded-xl overflow-hidden divide-y divide-gray-100 shadow-lg">
                       {personResults.map(p => (
-                        <button
-                          type="button"
-                          key={p.id}
-                          onClick={() => handleSelectPerson(p)}
-                          className="w-full text-left p-3.5 hover:bg-blue-50 transition-colors flex items-center justify-between"
-                        >
-                          <div>
-                            <p className="font-bold text-sm text-gray-800">{p.full_name}</p>
-                            <p className="text-xs text-gray-400">{p.email}</p>
+                        editingNameId === p.id ? (
+                          <div key={p.id} className="p-3.5 flex items-center gap-2 bg-amber-50">
+                            <input
+                              autoFocus
+                              className="flex-1 p-2 rounded-lg border border-amber-300 text-sm font-bold outline-none focus:ring-2 focus:ring-amber-200"
+                              value={editingNameValue}
+                              onChange={e => setEditingNameValue(e.target.value)}
+                              onKeyDown={e => { if (e.key === 'Enter') handleSaveEditName(p, e); if (e.key === 'Escape') handleCancelEditName(e); }}
+                              onClick={e => e.stopPropagation()}
+                            />
+                            <button type="button" disabled={savingName} onClick={(e) => handleSaveEditName(p, e)} className="p-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50">
+                              <Check size={16} />
+                            </button>
+                            <button type="button" onClick={handleCancelEditName} className="p-2 rounded-lg bg-white border border-gray-300 text-gray-500 hover:bg-gray-50 transition-colors">
+                              <XIcon size={16} />
+                            </button>
                           </div>
-                          <span className="text-[10px] font-black uppercase text-gray-400">{p.category}</span>
-                        </button>
+                        ) : (
+                          <div key={p.id} className="w-full flex items-center hover:bg-blue-50 transition-colors group/result">
+                            <button
+                              type="button"
+                              onClick={() => handleSelectPerson(p)}
+                              className="flex-1 text-left p-3.5 flex items-center justify-between"
+                            >
+                              <div>
+                                <p className="font-bold text-sm text-gray-800">{p.full_name}</p>
+                                <p className="text-xs text-gray-400">{p.email}</p>
+                              </div>
+                              <span className="text-[10px] font-black uppercase text-gray-400 mr-2">{p.category}</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => handleStartEditName(p, e)}
+                              title="Corregir nombre (afecta todo el sistema)"
+                              className="p-2 mr-2 rounded-lg text-gray-300 hover:text-blue-600 hover:bg-blue-100 transition-colors opacity-0 group-hover/result:opacity-100 shrink-0"
+                            >
+                              <Pencil size={15} />
+                            </button>
+                          </div>
+                        )
                       ))}
                     </div>
                   )}
