@@ -78,10 +78,10 @@ const Program = () => {
 
   // Filtrado
   useEffect(() => {
-    const term = searchTerm.toLowerCase();
-    const filtered = simposios.filter(s => 
-      s.name.toLowerCase().includes(term) || 
-      s.presentations.some(p => (p.title && p.title.toLowerCase().includes(term)) || (p.authors && p.authors.toLowerCase().includes(term)))
+    const term = normalize(searchTerm.trim());
+    const filtered = simposios.filter(s =>
+      normalize(s.name).includes(term) ||
+      s.presentations.some(p => normalize(p.title).includes(term) || normalize(p.authors).includes(term))
     );
     setFilteredSimposios(filtered);
   }, [searchTerm, simposios]);
@@ -518,10 +518,10 @@ const Program = () => {
                     
                     <div className="grid grid-cols-1 gap-2">
                       {symp.presentations.map((pres) => {
-                        const term = searchTerm.toLowerCase().trim();
+                        const term = normalize(searchTerm.trim());
                         const isMatch = term.length > 2 && (
-                          (pres.title && pres.title.toLowerCase().includes(term)) || 
-                          (pres.authors && pres.authors.toLowerCase().includes(term))
+                          normalize(pres.title).includes(term) ||
+                          normalize(pres.authors).includes(term)
                         );
 
                         return (
