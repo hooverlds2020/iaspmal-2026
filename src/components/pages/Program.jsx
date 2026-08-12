@@ -28,6 +28,7 @@ const Program = () => {
 
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [agendaSearchTerm, setAgendaSearchTerm] = useState('');
   const [openId, setOpenId] = useState(null);
 
   // Reloj en tiempo real para la función "En Vivo"
@@ -96,8 +97,23 @@ const Program = () => {
     }
   }, [selectedDate, scheduleData]);
 
-  const toggleAccordion = (id) => {
-    if (openId === id) setOpenId(null);
+  // Filtro de búsqueda dentro de la pestaña Agenda (por título, simposio, sala o ponencia)
+  const visibleSchedule = React.useMemo(() => {
+    const term = agendaSearchTerm.trim().toLowerCase();
+    if (!term) return filteredSchedule;
+    return filteredSchedule.filter(ev =>
+      (ev.name && ev.name.toLowerCase().includes(term)) ||
+      (ev.symposiums?.name && ev.symposiums.name.toLowerCase().includes(term)) ||
+      (ev.rooms?.name && ev.rooms.name.toLowerCase().includes(term)) ||
+      (ev.rooms?.venues?.name && ev.rooms.venues.name.toLowerCase().includes(term)) ||
+      (ev.presentations || []).some(p =>
+        (p.title && p.title.toLowerCase().includes(term)) ||
+        (p.authors && p.authors.toLowerCase().includes(term))
+      )
+    );
+  }, [filteredSchedule, agendaSearchTerm]);
+
+  const toggleAccordion = (id) => {    if (openId === id) setOpenId(null);
     else {
       setOpenId(id);
       setTimeout(() => {
@@ -500,6 +516,17 @@ const Program = () => {
       {/* --- CONTENIDO: PESTAÑA AGENDA (CON EVENTOS EN VIVO) --- */}
       {activeTab === 'agenda' && (
         <>
+            <div className="relative mb-3">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <input
+                type="text"
+                placeholder="Buscar por título, ponente, simposio o sala..."
+                className="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-200 bg-white outline-none focus:border-[#1e3a5f] text-sm font-bold shadow-sm transition-all"
+                value={agendaSearchTerm}
+                onChange={(e) => setAgendaSearchTerm(e.target.value)}
+              />
+            </div>
+
             <div className="flex gap-2 overflow-x-auto pb-4 mb-2 no-scrollbar">
                 {CONGRESS_DATES.map((date) => (
                     <button
@@ -519,7 +546,7 @@ const Program = () => {
             </div>
 
             <div className="space-y-4 min-h-[300px]">
-            {filteredSchedule.length > 0 ? filteredSchedule.map(ev => {
+            {visibleSchedule.length > 0 ? visibleSchedule.map(ev => {
                 // Evaluamos si esta sesión está ocurriendo AHORA MISMO
                 const isLive = isEventLive(ev.date, ev.start_time, ev.end_time);
 
@@ -586,8 +613,17 @@ const Program = () => {
             )}) : (
                 <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-dashed border-gray-200 text-gray-400">
                     <Calendar size={48} className="mb-4 opacity-20"/>
-                    <p className="text-base font-bold">No hay actividades para este día.</p>
-                    <p className="text-xs mt-1">Selecciona otra fecha en la parte superior.</p>
+                    {agendaSearchTerm.trim() ? (
+                      <>
+                        <p className="text-base font-bold">Sin resultados para "{agendaSearchTerm}".</p>
+                        <p className="text-xs mt-1">Prueba con otro término o revisa otro día.</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-base font-bold">No hay actividades para este día.</p>
+                        <p className="text-xs mt-1">Selecciona otra fecha en la parte superior.</p>
+                      </>
+                    )}
                 </div>
             )}
             </div>
