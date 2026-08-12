@@ -97,21 +97,64 @@ const Program = () => {
     }
   }, [selectedDate, scheduleData]);
 
-  // Filtro de búsqueda dentro de la pestaña Agenda (por título, simposio, sala o ponencia)
-  const visibleSchedule = React.useMemo(() => {
-    const term = agendaSearchTerm.trim().toLowerCase();
-    if (!term) return filteredSchedule;
-    return filteredSchedule.filter(ev =>
-      (ev.name && ev.name.toLowerCase().includes(term)) ||
-      (ev.symposiums?.name && ev.symposiums.name.toLowerCase().includes(term)) ||
-      (ev.rooms?.name && ev.rooms.name.toLowerCase().includes(term)) ||
-      (ev.rooms?.venues?.name && ev.rooms.venues.name.toLowerCase().includes(term)) ||
+  // --- Normaliza texto (sin acentos, minúsculas) para una búsqueda más precisa ---
+  const normalize = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+  const eventMatchesTerm = (ev, normTerm) => {
+    if (!normTerm) return true;
+    return (
+      normalize(ev.name).includes(normTerm) ||
+      normalize(ev.symposiums?.name).includes(normTerm) ||
+      normalize(ev.rooms?.name).includes(normTerm) ||
+      normalize(ev.rooms?.venues?.name).includes(normTerm) ||
       (ev.presentations || []).some(p =>
-        (p.title && p.title.toLowerCase().includes(term)) ||
-        (p.authors && p.authors.toLowerCase().includes(term))
+        normalize(p.title).includes(normTerm) || normalize(p.authors).includes(normTerm)
       )
     );
+  };
+
+  const getEventDateValue = (ev) => {
+    const match = CONGRESS_DATES.find(d => (ev.date && ev.date === d.value) || (ev.start_time && ev.start_time.startsWith(d.value)));
+    return match?.value || null;
+  };
+
+  // Filtro de búsqueda dentro de la pestaña Agenda (por título, simposio, sala o ponencia)
+  const visibleSchedule = React.useMemo(() => {
+    const term = normalize(agendaSearchTerm.trim());
+    if (!term) return filteredSchedule;
+    return filteredSchedule.filter(ev => eventMatchesTerm(ev, term));
   }, [filteredSchedule, agendaSearchTerm]);
+
+  // Conteo de coincidencias por día (para las insignias en los tabs de fecha y la alerta de sugerencia)
+  const matchCountsByDate = React.useMemo(() => {
+    const term = normalize(agendaSearchTerm.trim());
+    if (!term) return {};
+    const counts = {};
+    scheduleData.forEach(ev => {
+      if (!eventMatchesTerm(ev, term)) return;
+      const dateVal = getEventDateValue(ev);
+      if (!dateVal) return;
+      counts[dateVal] = (counts[dateVal] || 0) + 1;
+    });
+    return counts;
+  }, [scheduleData, agendaSearchTerm]);
+
+  // Resalta la porción del texto que coincide con el término buscado
+  const highlightMatch = (text, term) => {
+    if (!text) return text;
+    const normTerm = normalize(term.trim());
+    if (!normTerm) return text;
+    const normText = normalize(text);
+    const idx = normText.indexOf(normTerm);
+    if (idx === -1) return text;
+    return (
+      <>
+        {text.slice(0, idx)}
+        <mark className="bg-orange-100 text-[#1e3a5f] rounded px-0.5">{text.slice(idx, idx + normTerm.length)}</mark>
+        {text.slice(idx + normTerm.length)}
+      </>
+    );
+  };
 
   const toggleAccordion = (id) => {    if (openId === id) setOpenId(null);
     else {
@@ -521,19 +564,31 @@ const Program = () => {
               <input
                 type="text"
                 placeholder="Buscar por título, ponente, simposio o sala..."
-                className="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-200 bg-white outline-none focus:border-[#1e3a5f] text-sm font-bold shadow-sm transition-all"
+                className="w-full pl-9 pr-10 py-3 rounded-xl border border-gray-200 bg-white outline-none focus:border-[#1e3a5f] text-sm font-bold shadow-sm transition-all"
                 value={agendaSearchTerm}
                 onChange={(e) => setAgendaSearchTerm(e.target.value)}
               />
+              {agendaSearchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setAgendaSearchTerm('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 transition-colors"
+                  aria-label="Limpiar búsqueda"
+                >
+                  <X size={16} />
+                </button>
+              )}
             </div>
 
             <div className="flex gap-2 overflow-x-auto pb-4 mb-2 no-scrollbar">
-                {CONGRESS_DATES.map((date) => (
+                {CONGRESS_DATES.map((date) => {
+                    const count = matchCountsByDate[date.value];
+                    return (
                     <button
                         key={date.value}
                         onClick={() => setSelectedDate(date.value)}
                         className={`
-                            shrink-0 px-5 py-2.5 rounded-xl text-xs font-black transition-all border
+                            relative shrink-0 px-5 py-2.5 rounded-xl text-xs font-black transition-all border
                             ${selectedDate === date.value
                                 ? 'bg-[#1e3a5f] text-white border-[#1e3a5f] shadow-lg transform scale-105'
                                 : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:bg-gray-50'
@@ -541,9 +596,43 @@ const Program = () => {
                         `}
                     >
                         {date.label}
+                        {agendaSearchTerm.trim() && (
+                          <span className={`absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full text-[9px] font-black flex items-center justify-center border-2 ${
+                            count > 0
+                              ? (selectedDate === date.value ? 'bg-orange-400 text-white border-white' : 'bg-orange-400 text-white border-white')
+                              : 'bg-gray-200 text-gray-400 border-white'
+                          }`}>
+                            {count || 0}
+                          </span>
+                        )}
                     </button>
-                ))}
+                    );
+                })}
             </div>
+
+            {/* Alerta suave: sin resultados hoy, pero sí en otros días */}
+            {agendaSearchTerm.trim() && visibleSchedule.length === 0 && Object.values(matchCountsByDate).some(c => c > 0) && (
+              <div className="mb-4 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
+                <Search size={16} className="text-amber-500 mt-0.5 shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-amber-800">
+                    No hay resultados para "{agendaSearchTerm}" el {CONGRESS_DATES.find(d => d.value === selectedDate)?.label}.
+                  </p>
+                  <p className="text-xs text-amber-700 mt-0.5 mb-2">Sí encontramos coincidencias en otros días:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {CONGRESS_DATES.filter(d => matchCountsByDate[d.value] > 0).map(d => (
+                      <button
+                        key={d.value}
+                        onClick={() => setSelectedDate(d.value)}
+                        className="text-[11px] font-black px-3 py-1.5 rounded-lg bg-white border border-amber-300 text-amber-700 hover:bg-amber-100 transition-colors"
+                      >
+                        {d.label} · {matchCountsByDate[d.value]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-4 min-h-[300px]">
             {visibleSchedule.length > 0 ? visibleSchedule.map(ev => {
@@ -590,7 +679,7 @@ const Program = () => {
                     <h3 className={`text-base font-bold leading-tight mb-3 line-clamp-2 transition-colors ${
                         isLive ? 'text-orange-900' : 'text-gray-900 group-hover:text-[#1e3a5f]'
                     }`}>
-                        {ev.symposiums?.name || ev.name}
+                        {highlightMatch(ev.symposiums?.name || ev.name, agendaSearchTerm)}
                     </h3>
 
                     <div className="flex flex-wrap items-center gap-2 mt-auto">
