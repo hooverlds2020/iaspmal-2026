@@ -580,7 +580,7 @@ const Program = () => {
               )}
             </div>
 
-            <div className="flex gap-2 overflow-x-auto pb-4 mb-2 no-scrollbar">
+            <div className="flex gap-2 overflow-x-auto pt-2.5 pb-4 mb-2 no-scrollbar">
                 {CONGRESS_DATES.map((date) => {
                     const count = matchCountsByDate[date.value];
                     return (
@@ -597,7 +597,7 @@ const Program = () => {
                     >
                         {date.label}
                         {agendaSearchTerm.trim() && (
-                          <span className={`absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full text-[9px] font-black flex items-center justify-center border-2 ${
+                          <span className={`absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full text-[9px] font-black flex items-center justify-center border-2 ${
                             count > 0
                               ? (selectedDate === date.value ? 'bg-orange-400 text-white border-white' : 'bg-orange-400 text-white border-white')
                               : 'bg-gray-200 text-gray-400 border-white'
