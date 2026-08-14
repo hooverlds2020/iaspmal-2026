@@ -601,12 +601,15 @@ const Program = () => {
           <button onClick={() => setActiveTab('agenda')} className={`flex-1 md:flex-none px-4 py-2 rounded-md text-[10px] font-black border whitespace-nowrap transition-all ${activeTab === 'agenda' ? 'bg-gray-100 text-[#1e3a5f] border-gray-300' : 'bg-white text-gray-400 border-transparent hover:bg-gray-50'}`}>
             <Calendar size={12} className="inline mr-2"/> AGENDA
           </button>
-          {/* Esquema General deshabilitado temporalmente hasta terminar de cargar los eventos no-mesa */}
-          {false && (
-          <button onClick={() => setActiveTab('esquema')} className={`flex-1 md:flex-none px-4 py-2 rounded-md text-[10px] font-black border whitespace-nowrap transition-all ${activeTab === 'esquema' ? 'bg-gray-100 text-[#1e3a5f] border-gray-300' : 'bg-white text-gray-400 border-transparent hover:bg-gray-50'}`}>
+          {/* Esquema General: visible pero deshabilitado (sin acción al click) hasta terminar de cargar los eventos no-mesa */}
+          <button
+            onClick={() => {}}
+            disabled
+            title="Disponible próximamente"
+            className="flex-1 md:flex-none px-4 py-2 rounded-md text-[10px] font-black border whitespace-nowrap bg-gray-50 text-gray-300 border-transparent cursor-not-allowed"
+          >
             <LayoutList size={12} className="inline mr-2"/> ESQUEMA GENERAL
           </button>
-          )}
           <div className="w-px h-6 bg-gray-200 mx-2"></div>
           <button onClick={handlePrint} className="px-4 py-2 bg-[#1e3a5f] text-white rounded-md text-[10px] font-black hover:bg-black shadow-sm flex items-center gap-2 whitespace-nowrap transition-all">
             <Download size={12}/> IMPRIMIR
