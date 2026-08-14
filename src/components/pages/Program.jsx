@@ -1,7 +1,7 @@
 // src/components/pages/Program.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import { Search, Users, ChevronDown, Download, Calendar, List, MapPin, Clock, X, FileText, User, ChevronRight, ArrowLeft, LayoutList, Grid3x3 } from 'lucide-react';
+import { Search, Users, ChevronDown, Download, Calendar, List, MapPin, Clock, X, FileText, User, ChevronRight, ArrowLeft, LayoutList } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 
 // FECHAS DEL CONGRESO
@@ -299,6 +299,7 @@ const Program = () => {
     let html = `
       <html><head><title>Programa. Esquema general - IASPM-AL 2026</title>
       <style>
+        @page { size: landscape; margin: 12mm; }
         body { font-family: 'Helvetica','Arial',sans-serif; padding: 30px; color:#1a1a1a; font-size: 8pt; }
         h1 { font-size: 15pt; text-align:center; margin:0 0 4px; text-transform:uppercase; color:#1e3a5f; }
         .meta { text-align:center; font-size:9pt; margin-bottom:20px; border-bottom:2px solid #1e3a5f; padding-bottom:12px; text-transform:uppercase; font-weight:bold; color:#555; }
@@ -596,7 +597,7 @@ const Program = () => {
             <Calendar size={12} className="inline mr-2"/> AGENDA
           </button>
           <button onClick={() => setActiveTab('esquema')} className={`flex-1 md:flex-none px-4 py-2 rounded-md text-[10px] font-black border whitespace-nowrap transition-all ${activeTab === 'esquema' ? 'bg-gray-100 text-[#1e3a5f] border-gray-300' : 'bg-white text-gray-400 border-transparent hover:bg-gray-50'}`}>
-            <Grid3x3 size={12} className="inline mr-2"/> ESQUEMA GENERAL
+            <LayoutList size={12} className="inline mr-2"/> ESQUEMA GENERAL
           </button>
           <div className="w-px h-6 bg-gray-200 mx-2"></div>
           <button onClick={handlePrint} className="px-4 py-2 bg-[#1e3a5f] text-white rounded-md text-[10px] font-black hover:bg-black shadow-sm flex items-center gap-2 whitespace-nowrap transition-all">
@@ -860,7 +861,7 @@ const Program = () => {
         <div className="overflow-x-auto bg-white rounded-xl border border-gray-100 shadow-sm">
           {scheduleMatrix.bands.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-              <Grid3x3 size={48} className="mb-4 opacity-20"/>
+              <LayoutList size={48} className="mb-4 opacity-20"/>
               <p className="text-base font-bold">Aún no hay actividades cargadas.</p>
               <p className="text-xs mt-1">El esquema se completa automáticamente conforme se capturen sesiones.</p>
             </div>
