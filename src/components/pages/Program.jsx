@@ -1,7 +1,8 @@
 // src/components/pages/Program.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import { Search, Users, ChevronDown, Download, Calendar, List, MapPin, Clock, X, FileText, User, ChevronRight, ArrowLeft, LayoutList } from 'lucide-react';
+import { Search, Users, ChevronDown, Download, Calendar, List, MapPin, Clock, X, FileText, User, ChevronRight, ArrowLeft, LayoutList, Grid3x3 } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
 
 // FECHAS DEL CONGRESO
 const CONGRESS_DATES = [
@@ -21,6 +22,7 @@ const Program = () => {
   const [filteredSimposios, setFilteredSimposios] = useState([]);
   const [scheduleData, setScheduleData] = useState([]);
   const [filteredSchedule, setFilteredSchedule] = useState([]);
+  const [eventTypes, setEventTypes] = useState([]);
 
   // Estados de Vista
   const [selectedSession, setSelectedSession] = useState(null);
@@ -37,6 +39,7 @@ const Program = () => {
   useEffect(() => {
     fetchData();
     fetchScheduleData();
+    fetchEventTypes();
     
     // Actualizamos el reloj interno cada 60 segundos
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
@@ -74,6 +77,90 @@ const Program = () => {
         .select(`*, date, start_time, end_time, rooms(name, venues(name)), symposiums(id, name), presentations(*)`)
         .order('start_time');
       setScheduleData(data || []);
+  };
+
+  const fetchEventTypes = async () => {
+      const { data } = await supabase.from('event_types').select('*');
+      setEventTypes(data || []);
+  };
+
+  const getEventStyle = (typeId) => {
+    const fallback = { id: 'mesa', label: 'Mesa de Simposio', icon_name: 'Users', color_text: 'text-blue-500', color_bg: 'bg-blue-50', color_border: 'border-blue-200' };
+    const evt = eventTypes.find(e => e.id === typeId) || fallback;
+    const IconComponent = LucideIcons[evt.icon_name] || LucideIcons.Calendar;
+    return { ...evt, IconComponent };
+  };
+
+  // --- ESQUEMA GENERAL: agrupa TODAS las sesiones (cualquier event_type) en una
+  // matriz día x franja horaria, calculada dinámicamente a partir de los datos reales.
+  // No hay franjas fijas: si se captura un evento en un horario nuevo, aparece solo.
+  const scheduleMatrix = React.useMemo(() => {
+    if (!scheduleData.length) return { bands: [], cellsByDayBand: {} };
+
+    // 1. Bandas = todos los pares únicos (start_time, end_time) ordenados
+    const bandSet = new Map();
+    scheduleData.forEach(ev => {
+      if (!ev.start_time || !ev.end_time) return;
+      const key = `${ev.start_time}-${ev.end_time}`;
+      if (!bandSet.has(key)) bandSet.set(key, { start: ev.start_time, end: ev.end_time });
+    });
+
+    // 2. Fusiona bandas que se solapan fuertemente (mismo bloque de trabajo) para no duplicar filas casi iguales
+    const rawBands = Array.from(bandSet.values()).sort((a, b) => a.start.localeCompare(b.start));
+    const bands = [];
+    rawBands.forEach(b => {
+      const last = bands[bands.length - 1];
+      if (last && b.start < last.end && b.start >= last.start) {
+        // se solapa con la banda anterior: extiende el fin si hace falta
+        if (b.end > last.end) last.end = b.end;
+      } else {
+        bands.push({ ...b });
+      }
+    });
+
+    // 3. Coloca cada sesión en su día + banda correspondiente
+    const cellsByDayBand = {};
+    scheduleData.forEach(ev => {
+      if (!ev.date || !ev.start_time) return;
+      const band = bands.find(b => ev.start_time >= b.start && ev.start_time < b.end) || bands.find(b => ev.start_time === b.start);
+      if (!band) return;
+      const key = `${ev.date}__${band.start}-${band.end}`;
+      if (!cellsByDayBand[key]) cellsByDayBand[key] = [];
+      cellsByDayBand[key].push(ev);
+    });
+
+    return { bands, cellsByDayBand };
+  }, [scheduleData]);
+
+  const renderCellContent = (day, band) => {
+    const key = `${day.value}__${band.start}-${band.end}`;
+    const events = scheduleMatrix.cellsByDayBand[key] || [];
+    if (events.length === 0) return null;
+
+    // Agrupa mesas de simposio en una sola línea "Mesas de simposios 1, 4, 9"
+    const mesas = events.filter(e => (e.event_type || 'mesa') === 'mesa');
+    const otros = events.filter(e => (e.event_type || 'mesa') !== 'mesa');
+    const sympIds = [...new Set(mesas.map(m => m.symposiums?.id).filter(Boolean))].sort((a, b) => a - b);
+
+    return (
+      <div className="flex flex-col gap-1.5">
+        {sympIds.length > 0 && (
+          <div className="text-[10px] font-black text-blue-700 bg-blue-50 border border-blue-100 rounded-md px-2 py-1">
+            Mesas de simposios {sympIds.join(', ')}
+          </div>
+        )}
+        {otros.map(ev => {
+          const evt = getEventStyle(ev.event_type);
+          const EventIcon = evt.IconComponent;
+          return (
+            <div key={ev.id} className={`text-[10px] font-black rounded-md px-2 py-1 flex items-center gap-1 ${evt.color_text} ${evt.color_bg} border ${evt.color_border}`}>
+              <EventIcon size={11} className="shrink-0" />
+              <span className="truncate">{ev.name || evt.label}</span>
+            </div>
+          );
+        })}
+      </div>
+    );
   };
 
   // Filtrado
@@ -205,7 +292,53 @@ const Program = () => {
     return evDate === todayStr && timeStr >= startTime.slice(0,5) && timeStr <= endTime.slice(0,5);
   };
 
+  const handlePrintEsquema = () => {
+    const printWindow = window.open('', '_blank', 'width=1200,height=800');
+    if (!printWindow) { alert("Permite ventanas emergentes."); return; }
+
+    let html = `
+      <html><head><title>Programa. Esquema general - IASPM-AL 2026</title>
+      <style>
+        body { font-family: 'Helvetica','Arial',sans-serif; padding: 30px; color:#1a1a1a; font-size: 8pt; }
+        h1 { font-size: 15pt; text-align:center; margin:0 0 4px; text-transform:uppercase; color:#1e3a5f; }
+        .meta { text-align:center; font-size:9pt; margin-bottom:20px; border-bottom:2px solid #1e3a5f; padding-bottom:12px; text-transform:uppercase; font-weight:bold; color:#555; }
+        table { width:100%; border-collapse:collapse; }
+        th, td { border:1px solid #dde2e5; padding:6px; vertical-align:top; }
+        th { background:#f0f4f8; color:#1e3a5f; text-transform:uppercase; font-size:7.5pt; }
+        .time { font-weight:bold; color:#1e3a5f; text-align:center; white-space:nowrap; background:#f7f9fb; }
+        .item { display:block; margin-bottom:3px; padding:2px 4px; border-radius:3px; font-size:7.5pt; font-weight:bold; }
+        .mesa { background:#eef4fc; color:#1e3a5f; }
+        .otro { background:#fdf3ea; color:#9a5b16; }
+      </style></head><body>
+      <h1>XVIII Congreso IASPM-AL 2026</h1>
+      <div class="meta">San Cristóbal de las Casas • 28 Sep - 2 Oct 2026<br>Programa. Esquema general</div>
+      <table><thead><tr><th>Horario</th>${CONGRESS_DATES.map(d=>`<th>${d.label}</th>`).join('')}</tr></thead><tbody>`;
+
+    scheduleMatrix.bands.forEach(band => {
+      html += `<tr><td class="time">${band.start.slice(0,5)} - ${band.end.slice(0,5)}</td>`;
+      CONGRESS_DATES.forEach(day => {
+        const key = `${day.value}__${band.start}-${band.end}`;
+        const events = scheduleMatrix.cellsByDayBand[key] || [];
+        const mesas = events.filter(e => (e.event_type || 'mesa') === 'mesa');
+        const otros = events.filter(e => (e.event_type || 'mesa') !== 'mesa');
+        const sympIds = [...new Set(mesas.map(m => m.symposiums?.id).filter(Boolean))].sort((a,b)=>a-b);
+        let cell = '';
+        if (sympIds.length) cell += `<span class="item mesa">Mesas de simposios ${sympIds.join(', ')}</span>`;
+        otros.forEach(ev => {
+          const evt = getEventStyle(ev.event_type);
+          cell += `<span class="item otro">${ev.name || evt.label}</span>`;
+        });
+        html += `<td>${cell || ''}</td>`;
+      });
+      html += `</tr>`;
+    });
+
+    html += `</tbody></table><script>window.onload=function(){window.print();}</script></body></html>`;
+    printWindow.document.write(html); printWindow.document.close();
+  };
+
   const handlePrint = () => {
+    if (activeTab === 'esquema') { handlePrintEsquema(); return; }
     // ... (El código de impresión se mantiene intacto) ...
     const isSymposium = activeTab === 'simposios';
     const dataToPrint = isSymposium ? filteredSimposios : filteredSchedule;
@@ -452,7 +585,7 @@ const Program = () => {
       {/* CABECERA DE CONTROL */}
       <div className="mb-6 flex flex-col md:flex-row justify-end items-center gap-2 bg-white p-2 rounded-lg border border-gray-100 shadow-sm sticky top-0 z-30">
          <div className="mr-auto pl-2 hidden md:block text-xs font-bold text-gray-400 tracking-widest uppercase">
-            {activeTab === 'simposios' ? 'Listado de Simposios' : 'Agenda Diaria'}
+            {activeTab === 'simposios' ? 'Listado de Simposios' : activeTab === 'agenda' ? 'Agenda Diaria' : 'Esquema General del Congreso'}
          </div>
 
         <div className="flex items-center gap-1 w-full md:w-auto overflow-x-auto">
@@ -461,6 +594,9 @@ const Program = () => {
           </button>
           <button onClick={() => setActiveTab('agenda')} className={`flex-1 md:flex-none px-4 py-2 rounded-md text-[10px] font-black border whitespace-nowrap transition-all ${activeTab === 'agenda' ? 'bg-gray-100 text-[#1e3a5f] border-gray-300' : 'bg-white text-gray-400 border-transparent hover:bg-gray-50'}`}>
             <Calendar size={12} className="inline mr-2"/> AGENDA
+          </button>
+          <button onClick={() => setActiveTab('esquema')} className={`flex-1 md:flex-none px-4 py-2 rounded-md text-[10px] font-black border whitespace-nowrap transition-all ${activeTab === 'esquema' ? 'bg-gray-100 text-[#1e3a5f] border-gray-300' : 'bg-white text-gray-400 border-transparent hover:bg-gray-50'}`}>
+            <Grid3x3 size={12} className="inline mr-2"/> ESQUEMA GENERAL
           </button>
           <div className="w-px h-6 bg-gray-200 mx-2"></div>
           <button onClick={handlePrint} className="px-4 py-2 bg-[#1e3a5f] text-white rounded-md text-[10px] font-black hover:bg-black shadow-sm flex items-center gap-2 whitespace-nowrap transition-all">
@@ -717,6 +853,44 @@ const Program = () => {
             )}
             </div>
         </>
+      )}
+
+      {/* --- CONTENIDO: PESTAÑA ESQUEMA GENERAL (matriz día x horario, todos los tipos) --- */}
+      {activeTab === 'esquema' && (
+        <div className="overflow-x-auto bg-white rounded-xl border border-gray-100 shadow-sm">
+          {scheduleMatrix.bands.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+              <Grid3x3 size={48} className="mb-4 opacity-20"/>
+              <p className="text-base font-bold">Aún no hay actividades cargadas.</p>
+              <p className="text-xs mt-1">El esquema se completa automáticamente conforme se capturen sesiones.</p>
+            </div>
+          ) : (
+            <table className="w-full border-collapse min-w-[900px]">
+              <thead>
+                <tr>
+                  <th className="text-[10px] font-black text-gray-400 uppercase p-3 border-b border-r border-gray-100 w-24 text-left bg-gray-50">Horario</th>
+                  {CONGRESS_DATES.map(day => (
+                    <th key={day.value} className="text-[10px] font-black text-[#1e3a5f] uppercase p-3 border-b border-gray-100 bg-gray-50 text-left">{day.label}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {scheduleMatrix.bands.map((band, i) => (
+                  <tr key={i} className="align-top">
+                    <td className="text-[10px] font-black text-[#1e3a5f] p-3 border-r border-b border-gray-100 whitespace-nowrap bg-gray-50/50">
+                      {band.start.slice(0,5)}<br/>-<br/>{band.end.slice(0,5)}
+                    </td>
+                    {CONGRESS_DATES.map(day => (
+                      <td key={day.value} className="p-2 border-b border-gray-100 min-w-[160px]">
+                        {renderCellContent(day, band)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       )}
     </div>
   );
