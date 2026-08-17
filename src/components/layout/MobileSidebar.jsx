@@ -31,7 +31,7 @@ const MobileSidebar = ({ isOpen, onClose, menuItems, currentPage, setCurrentPage
   };
 
   return (
-    <div className="fixed inset-0 z-[60] xl:hidden">
+    <div className="fixed inset-0 z-[60] min-[1080px]:hidden">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose}></div>
       

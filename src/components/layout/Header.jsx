@@ -51,7 +51,7 @@ const Header = ({ lang, setLang, onMobileMenuOpen }) => {
              {/* Menú (tablet y móvil): visible hasta 1280px, coincide con el sidebar colapsable */}
              <button
                onClick={onMobileMenuOpen}
-               className="xl:hidden p-2 text-[#1e3a5f] hover:bg-gray-100 rounded-lg transition-colors border border-gray-100"
+               className="min-[1080px]:hidden p-2 text-[#1e3a5f] hover:bg-gray-100 rounded-lg transition-colors border border-gray-100"
              >
                <Menu className="w-6 h-6" />
              </button>
