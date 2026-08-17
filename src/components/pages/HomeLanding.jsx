@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Calendar, MapPin, Users, Search, CheckCircle, Ticket, AlertCircle, 
   Clock, Flag, FileText, Mic, ChevronLeft, ChevronRight, ArrowRight,
-  UserPlus, Book, Edit3, DollarSign, CreditCard 
+  UserPlus, Book, Edit3, DollarSign, CreditCard, Plane, Footprints, HeartPulse
 } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 
@@ -308,6 +308,53 @@ const HomeLanding = ({ lang, setCurrentPage }) => {
             <p className="text-sm text-gray-500 leading-snug">{lang === 'es' ? item.desc.es : item.desc.pt}</p>
           </button>
         ))}
+      </div>
+
+      {/* 2b. TARJETAS DE INFORMACIÓN DE VIAJE (con vista previa al pasar el mouse en escritorio) */}
+      <div>
+        <h2 className="text-xl font-bold text-gray-800 mb-4">
+          {lang === 'es' ? 'Antes de viajar' : 'Antes de viajar'}
+        </h2>
+        <div className="grid md:grid-cols-3 gap-6">
+          {[
+            {
+              id: 'traslados', icon: Plane,
+              title: { es: 'Traslados del aeropuerto', pt: 'Traslados do aeroporto' },
+              desc: { es: 'Cómo llegar del aeropuerto a San Cristóbal.', pt: 'Como chegar do aeroporto a San Cristóbal.' },
+              preview: { es: 'El traslado toma cerca de 1h30. Taxis directos, compartidos o vans colectivas disponibles a la llegada de los vuelos.', pt: 'O traslado leva cerca de 1h30. Táxis diretos, compartilhados ou vans coletivas disponíveis na chegada dos voos.' }
+            },
+            {
+              id: 'movilidad', icon: Footprints,
+              title: { es: 'Movilidad en San Cristóbal', pt: 'Mobilidade em San Cristóbal' },
+              desc: { es: 'Cómo moverte entre las sedes del congreso.', pt: 'Como se locomover entre as sedes do congresso.' },
+              preview: { es: 'Las sedes están muy próximas: se recomienda caminar. Calzado cómodo por calles empedradas e irregulares.', pt: 'As sedes ficam muito próximas: recomenda-se caminhar. Calçado confortável para ruas de paralelepípedos.' }
+            },
+            {
+              id: 'salud-cuidados', icon: HeartPulse,
+              title: { es: 'Agua, alimentación y salud', pt: 'Água, alimentação e saúde' },
+              desc: { es: 'Recomendaciones y contacto ante una emergencia.', pt: 'Recomendações e contato em caso de emergência.' },
+              preview: { es: 'San Cristóbal tiene problemas de calidad de agua. Consume solo agua embotellada y ten cuidado con alimentos callejeros.', pt: 'San Cristóbal tem problemas de qualidade da água. Consuma apenas água engarrafada.' }
+            },
+          ].map((item) => (
+            <button key={item.id} onClick={() => setCurrentPage(item.id)} className="relative text-left group bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-[#1e3a5f] transition-all duration-300 hover:-translate-y-1">
+              <div className="w-12 h-12 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+                <item.icon className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-800 mb-2 group-hover:text-[#1e3a5f] transition-colors">{lang === 'es' ? item.title.es : item.title.pt}</h3>
+              <p className="text-sm text-gray-500 leading-snug">{lang === 'es' ? item.desc.es : item.desc.pt}</p>
+
+              {/* Popup de vista previa: solo en escritorio (hover), oculto en móvil/táctil */}
+              <div className="hidden md:block absolute left-4 right-4 top-full mt-2 z-20 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none">
+                <div className="bg-[#1e3a5f] text-white text-xs leading-relaxed rounded-xl p-4 shadow-2xl">
+                  {lang === 'es' ? item.preview.es : item.preview.pt}
+                  <span className="block mt-2 text-orange-300 font-bold text-[10px] uppercase tracking-wide">
+                    {lang === 'es' ? 'Clic para ver todo →' : 'Clique para ver tudo →'}
+                  </span>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* 3. LÍNEA DE TIEMPO CON SCROLL MÁGICO */}
