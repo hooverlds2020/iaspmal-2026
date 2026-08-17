@@ -1,6 +1,6 @@
 // src/pages/AdminDashboard.jsx
 import React, { useState } from 'react';
-import { LogOut, Users, Calendar, FileText, Settings, DollarSign, MapPin, LayoutGrid, Image, Building, Award } from 'lucide-react'; // ✅ Añadido Building, Award
+import { LogOut, Users, Calendar, FileText, Settings, DollarSign, MapPin, LayoutGrid, Image, Building, Award, Coffee } from 'lucide-react'; // ✅ Añadido Coffee
 import SymposiumsManager from '../components/admin/SymposiumsManager';
 import SessionsManager from '../components/admin/SessionsManager';
 import PresentationsManager from '../components/admin/PresentationsManager';
@@ -10,6 +10,7 @@ import FinancesDashboard from './FinancesDashboard';
 import SliderManager from '../components/admin/SliderManager';
 import GalleryManager from '../components/admin/GalleryManager';
 import AccommodationManager from '../components/admin/AccommodationManager'; // ✅ Nueva importación
+import RestaurantesManager from '../components/admin/RestaurantesManager';
 import CertificatesManager from '../components/admin/CertificatesManager'; // ✅ Panel de constancias
 import { supabase } from '../lib/supabaseClient';
 
@@ -119,6 +120,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                  <NavButton id="slider" label="Banners / Sliders" icon={Image} />
                  <NavButton id="galeria-admin" label="Galería de Fotos" icon={Image} />
                  <NavButton id="alojamientos" label="Alojamiento" icon={Building} /> {/* ✅ Nuevo Botón */}
+                 <NavButton id="restaurantes" label="Cafés y Restaurantes" icon={Coffee} />
 
               </div>
             </nav>
@@ -142,6 +144,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                   {activeSection === 'slider' && <SliderManager />}
                   {activeSection === 'galeria-admin' && <GalleryManager />}
                   {activeSection === 'alojamientos' && <AccommodationManager />} {/* ✅ Renderizado del nuevo panel */}
+                  {activeSection === 'restaurantes' && <RestaurantesManager />}
               </div>
 
             </div>

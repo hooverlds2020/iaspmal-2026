@@ -30,6 +30,7 @@ import Alojamiento from './components/pages/Alojamiento';
 import Gallery from './components/pages/Gallery';
 import IaspmInfo from './components/pages/IaspmInfo';
 import Conciertos from './components/pages/Conciertos';
+import LugaresComer from './components/pages/LugaresComer';
 
 // Admin Pages
 import Login from './pages/Login';
@@ -398,6 +399,7 @@ const MainLayout = ({ lang, setLang }) => {
       case 'conciertos': return <Conciertos lang={lang} />;
       case 'sedes': return <VenuesPage lang={lang} />;
       case 'alojamiento': return <Alojamiento lang={lang} />;
+      case 'san-cristobal': return <LugaresComer lang={lang} />;
       case 'galeria': return <Gallery lang={lang} />;
       case 'iaspm-al': return <IaspmInfo lang={lang} />;
       case 'instituciones-convocantes': return <div className="text-center"><img src="/images/instituciones.png" alt="Instituciones convocantes" className="max-w-full mx-auto" /></div>;
