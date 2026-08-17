@@ -51,7 +51,7 @@ const Header = ({ lang, setLang, onMobileMenuOpen }) => {
              {/* Menú Móvil */}
              <button
                onClick={onMobileMenuOpen}
-               className="md:hidden p-2 text-[#1e3a5f] hover:bg-gray-100 rounded-lg transition-colors border border-gray-100"
+               className="lg:hidden p-2 text-[#1e3a5f] hover:bg-gray-100 rounded-lg transition-colors border border-gray-100"
              >
                <Menu className="w-6 h-6" />
              </button>

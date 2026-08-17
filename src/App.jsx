@@ -430,7 +430,7 @@ const MainLayout = ({ lang, setLang }) => {
 
       <main className="flex-1 max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 w-full py-6 md:py-8">
 
-        <div className="grid grid-cols-1 md:grid-cols-[280px,1fr] gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-[280px,1fr] gap-8 items-start">
 
           <Sidebar
             menuItems={menuItems}

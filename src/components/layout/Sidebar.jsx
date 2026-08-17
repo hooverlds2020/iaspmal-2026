@@ -34,7 +34,7 @@ const Sidebar = ({ menuItems, currentPage, setCurrentPage, submenuOpen, toggleSu
   };
 
   return (
-    <aside className="hidden md:block relative h-full">
+    <aside className="hidden lg:block relative h-full">
       {/* AJUSTE APLICADO: top-[140px] para librar el nuevo encabezado más alto */}
       <nav className="sticky top-[140px] max-h-[calc(100vh-160px)] overflow-y-auto custom-scrollbar pr-3 pb-10">
         

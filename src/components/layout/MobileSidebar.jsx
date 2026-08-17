@@ -6,6 +6,13 @@ import {
 } from 'lucide-react';
 
 const MobileSidebar = ({ isOpen, onClose, menuItems, currentPage, setCurrentPage, submenuOpen, toggleSubmenu, lang }) => {
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const getIcon = (id) => {
@@ -24,7 +31,7 @@ const MobileSidebar = ({ isOpen, onClose, menuItems, currentPage, setCurrentPage
   };
 
   return (
-    <div className="fixed inset-0 z-[60] md:hidden">
+    <div className="fixed inset-0 z-[60] lg:hidden">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose}></div>
       
