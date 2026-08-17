@@ -1,6 +1,6 @@
 // src/components/layout/Header.jsx
 import React from 'react';
-import { Globe, User, Menu } from 'lucide-react';
+import { Globe, User } from 'lucide-react';
 
 const Header = ({ lang, setLang, onMobileMenuOpen }) => {
   return (
@@ -47,14 +47,6 @@ const Header = ({ lang, setLang, onMobileMenuOpen }) => {
                 <User className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
                 <span>Admin</span>
              </a>
-
-             {/* Menú Móvil */}
-             <button
-               onClick={onMobileMenuOpen}
-               className="lg:hidden p-2 text-[#1e3a5f] hover:bg-gray-100 rounded-lg transition-colors border border-gray-100"
-             >
-               <Menu className="w-6 h-6" />
-             </button>
 
           </div>
         </div>

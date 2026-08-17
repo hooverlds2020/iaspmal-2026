@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
-import { Ticket, ArrowLeft, Clock, Library, Info } from 'lucide-react';
+import { Ticket, ArrowLeft, Clock, Library, Info, Menu } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
 import UploadPhoto from './components/UploadPhoto';
 
@@ -430,7 +430,16 @@ const MainLayout = ({ lang, setLang }) => {
 
       <main className="flex-1 max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 w-full py-6 md:py-8">
 
-        <div className="grid grid-cols-1 lg:grid-cols-[280px,1fr] gap-8 items-start">
+        <div className="grid grid-cols-1 xl:grid-cols-[280px,1fr] gap-8 items-start">
+
+          {/* Botón hamburguesa: ocupa el lugar del sidebar en pantallas < 1280px */}
+          <button
+            onClick={() => setIsMobileOpen(true)}
+            className="xl:hidden flex items-center gap-2 w-full px-4 py-3 bg-white rounded-xl border border-gray-200 shadow-sm text-[#1e3a5f] font-black text-xs uppercase tracking-widest hover:bg-gray-50 transition-colors"
+          >
+            <Menu className="w-5 h-5" />
+            Menú
+          </button>
 
           <Sidebar
             menuItems={menuItems}
