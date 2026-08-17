@@ -29,6 +29,7 @@ import VenuesPage from './components/pages/VenuesPage';
 import Alojamiento from './components/pages/Alojamiento';
 import Gallery from './components/pages/Gallery';
 import IaspmInfo from './components/pages/IaspmInfo';
+import Conciertos from './components/pages/Conciertos';
 
 // Admin Pages
 import Login from './pages/Login';
@@ -394,6 +395,7 @@ const MainLayout = ({ lang, setLang }) => {
     case 'comite-organizador': return <div className="space-y-6"><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">María Luisa de la Garza Chávez</p><p className="text-sm text-gray-600">CESMECA-UNICACH, coordinadora</p></div><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">Roberto Campos Velázquez</p><p className="text-sm text-gray-600">FaM-UNICACH, coordinador</p></div><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">Emmanuel Nájera de León</p><p className="text-sm text-gray-600">CESMECA-UNICACH</p></div><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">Alain Basail Rodríguez</p><p className="text-sm text-gray-600">CESMECA-UNICACH</p></div><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">Yoimí Castañeda Ceijas</p><p className="text-sm text-gray-600">UNICH</p></div><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">Mónica Bayuelo García</p><p className="text-sm text-gray-600">CIMSUR-UNAM</p></div></div><div className="mt-4"><p className="font-semibold text-gray-700 mb-3">Comisión de logística</p><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">Gabriela Fragoso Samaniego</p><p className="text-sm text-gray-600">CESMECA-UNICACH</p></div></div></div><div className="mt-4"><p className="font-semibold text-gray-700 mb-3">Página web</p><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"><p className="font-semibold text-gray-900">Roberto Carlos Hoover Silvano</p><p className="text-sm text-gray-600">CESMECA-UNICACH</p></div></div></div></div>;
 
       case 'programa': return <Program lang={lang} />;
+      case 'conciertos': return <Conciertos lang={lang} />;
       case 'sedes': return <VenuesPage lang={lang} />;
       case 'alojamiento': return <Alojamiento lang={lang} />;
       case 'galeria': return <Gallery lang={lang} />;
