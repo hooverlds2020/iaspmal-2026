@@ -432,15 +432,6 @@ const MainLayout = ({ lang, setLang }) => {
 
         <div className="grid grid-cols-1 xl:grid-cols-[280px,1fr] gap-8 items-start">
 
-          {/* Botón hamburguesa: ocupa el lugar del sidebar en pantallas < 1280px */}
-          <button
-            onClick={() => setIsMobileOpen(true)}
-            className="xl:hidden flex items-center gap-2 w-full px-4 py-3 bg-white rounded-xl border border-gray-200 shadow-sm text-[#1e3a5f] font-black text-xs uppercase tracking-widest hover:bg-gray-50 transition-colors"
-          >
-            <Menu className="w-5 h-5" />
-            Menú
-          </button>
-
           <Sidebar
             menuItems={menuItems}
             currentPage={currentPage}
