@@ -31,6 +31,9 @@ import Gallery from './components/pages/Gallery';
 import IaspmInfo from './components/pages/IaspmInfo';
 import Conciertos from './components/pages/Conciertos';
 import LugaresComer from './components/pages/LugaresComer';
+import Traslados from './components/pages/Traslados';
+import Movilidad from './components/pages/Movilidad';
+import SaludCuidados from './components/pages/SaludCuidados';
 
 // Admin Pages
 import Login from './pages/Login';
@@ -100,6 +103,9 @@ const MainLayout = ({ lang, setLang }) => {
         { id: 'organizaciones', label: 'Entidades colaboradoras', label_pt: 'Entidades colaboradoras' },
         { id: 'alojamiento', label: 'Alojamiento', label_pt: 'Hospedagem' },
         { id: 'san-cristobal', label: 'Lugares para comer', label_pt: 'Lugares para comer' },
+        { id: 'traslados', label: 'Traslados del aeropuerto', label_pt: 'Traslados do aeroporto' },
+        { id: 'movilidad', label: 'Movilidad en San Cristóbal', label_pt: 'Mobilidade em San Cristóbal' },
+        { id: 'salud-cuidados', label: 'Cuidados: agua, alimentación y salud', label_pt: 'Cuidados: água, alimentação e saúde' },
         { id: 'musica-vivo', label: 'Música en vivo', label_pt: 'Música ao vivo' },
         { id: 'cartel', label: 'Cartel del congreso', label_pt: 'Pôster do congresso' }
       ]
@@ -132,6 +138,9 @@ const MainLayout = ({ lang, setLang }) => {
       'organizaciones': { es: 'Entidades colaboradoras', pt: 'Entidades colaboradoras' },
       'alojamiento': { es: 'Alojamiento', pt: 'Hospedagem' },
       'san-cristobal': { es: 'San Cristóbal de Las Casas', pt: 'San Cristóbal de Las Casas' },
+      'traslados': { es: 'Traslados del aeropuerto', pt: 'Traslados do aeroporto' },
+      'movilidad': { es: 'Movilidad en San Cristóbal', pt: 'Mobilidade em San Cristóbal' },
+      'salud-cuidados': { es: 'Cuidados: agua, alimentación y salud', pt: 'Cuidados: água, alimentação e saúde' },
       'cartel': { es: 'Cartel Oficial', pt: 'Cartaz Oficial' },
       'galeria': { es: 'Galería', pt: 'Galeria' },
       'iaspm-al': { es: 'La IASPM-AL', pt: 'A IASPM-AL' }
@@ -400,6 +409,9 @@ const MainLayout = ({ lang, setLang }) => {
       case 'sedes': return <VenuesPage lang={lang} />;
       case 'alojamiento': return <Alojamiento lang={lang} />;
       case 'san-cristobal': return <LugaresComer lang={lang} />;
+      case 'traslados': return <Traslados />;
+      case 'movilidad': return <Movilidad />;
+      case 'salud-cuidados': return <SaludCuidados />;
       case 'galeria': return <Gallery lang={lang} />;
       case 'iaspm-al': return <IaspmInfo lang={lang} />;
       case 'instituciones-convocantes': return <div className="text-center"><img src="/images/instituciones.png" alt="Instituciones convocantes" className="max-w-full mx-auto" /></div>;
