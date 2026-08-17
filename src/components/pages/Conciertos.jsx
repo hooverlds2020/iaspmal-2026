@@ -56,6 +56,16 @@ const CONCIERTOS = [
 
 const Carrusel = ({ fotos, nombre }) => {
   const [idx, setIdx] = useState(0);
+  const [pausado, setPausado] = useState(false);
+
+  React.useEffect(() => {
+    if (!fotos || fotos.length <= 1 || pausado) return;
+    const timer = setInterval(() => {
+      setIdx(i => (i + 1) % fotos.length);
+    }, 3500);
+    return () => clearInterval(timer);
+  }, [fotos, pausado]);
+
   if (!fotos || fotos.length === 0) {
     return (
       <div className="w-full aspect-[4/5] bg-gray-100 rounded-xl flex flex-col items-center justify-center text-gray-300 border border-dashed border-gray-200">
@@ -65,8 +75,12 @@ const Carrusel = ({ fotos, nombre }) => {
     );
   }
   return (
-    <div className="relative w-full aspect-[4/5] rounded-xl overflow-hidden bg-gray-100 group">
-      <img src={fotos[idx]} alt={nombre} className="w-full h-full object-cover" />
+    <div
+      className="relative w-full aspect-[4/5] rounded-xl overflow-hidden bg-gray-100 group"
+      onMouseEnter={() => setPausado(true)}
+      onMouseLeave={() => setPausado(false)}
+    >
+      <img src={fotos[idx]} alt={nombre} className="w-full h-full object-cover transition-opacity duration-500" />
       {fotos.length > 1 && (
         <>
           <button
