@@ -13,7 +13,6 @@ import CertificateDownload from './pages/CertificateDownload';
 
 // Layout Components
 import Header from './components/layout/Header';
-import Sidebar from './components/layout/Sidebar';
 import MobileSidebar from './components/layout/MobileSidebar';
 import Footer from './components/layout/Footer';
 import WelcomeModal from './components/layout/WelcomeModal';
@@ -430,16 +429,16 @@ const MainLayout = ({ lang, setLang }) => {
 
       <main className="flex-1 max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 w-full py-6 md:py-8">
 
-        <div className="grid grid-cols-1 min-[1080px]:grid-cols-[280px,1fr] gap-8 items-start">
+        <div className="flex flex-col gap-6">
 
-          <Sidebar
-            menuItems={menuItems}
-            currentPage={currentPage}
-            setCurrentPage={setCurrentPage}
-            submenuOpen={submenuOpen}
-            toggleSubmenu={toggleSubmenu}
-            lang={lang}
-          />
+          {/* Barra de menú (1080px en adelante): overlay siempre, nunca sidebar fijo */}
+          <button
+            onClick={() => setIsMobileOpen(true)}
+            className="hidden min-[1080px]:flex items-center gap-2 w-full px-4 py-3 bg-white rounded-xl border border-gray-200 shadow-sm text-[#1e3a5f] font-black text-xs uppercase tracking-widest hover:bg-gray-50 transition-colors"
+          >
+            <Menu className="w-5 h-5" />
+            Menú
+          </button>
 
           <MobileSidebar
             isOpen={isMobileOpen}
