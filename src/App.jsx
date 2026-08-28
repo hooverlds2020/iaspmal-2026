@@ -332,6 +332,22 @@ const MainLayout = ({ lang, setLang }) => {
                   ? 'El XVII Congreso invita a exponer la producción bibliográfica de los socios de IASPM-AL y a presentar las obras que hayan sido publicadas de 2023 a la fecha.'
                   : 'O XVII Congresso convida a expor a produção bibliográfica dos sócios da IASPM-AL e a apresentar as obras que tenham sido publicadas de 2023 até a presente data.'}
               </p>
+
+              <div className="flex items-start gap-4 p-5 bg-emerald-50/50 rounded-xl border border-emerald-100">
+                <div className="bg-emerald-600 text-white p-3 rounded-lg shrink-0">
+                  <Library size={24} />
+                </div>
+                <div>
+                  <h4 className="font-black text-emerald-800 uppercase tracking-wide text-sm mb-1.5">
+                    {lang === 'es' ? 'Venta y Donación' : 'Venda e Doação'}
+                  </h4>
+                  <p className="text-gray-600 text-sm">
+                    {lang === 'es'
+                      ? 'Se podrán vender los libros, a cambio de la donación de un ejemplar para consulta pública en biblioteca.'
+                      : 'Os livros poderão ser vendidos, em troca da doação de um exemplar para consulta pública na biblioteca.'}
+                  </p>
+                </div>
+              </div>
             </div>
 
             {bookBlocks.length > 0 && (
