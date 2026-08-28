@@ -332,65 +332,6 @@ const MainLayout = ({ lang, setLang }) => {
                   ? 'El XVII Congreso invita a exponer la producción bibliográfica de los socios de IASPM-AL y a presentar las obras que hayan sido publicadas de 2023 a la fecha.'
                   : 'O XVII Congresso convida a expor a produção bibliográfica dos sócios da IASPM-AL e a apresentar as obras que tenham sido publicadas de 2023 até a presente data.'}
               </p>
-
-              <div className="mb-8 p-5 md:p-6 bg-blue-50/80 rounded-xl border-l-4 border-[#1e3a5f] shadow-sm flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-                <div>
-                  <h4 className="font-black text-[#1e3a5f] uppercase tracking-wide text-sm mb-1.5">
-                    {lang === 'es' ? 'Envío de propuestas' : 'Envio de propostas'}
-                  </h4>
-                  <p className="text-[#1e3a5f] font-medium text-sm md:text-base">
-                    {lang === 'es'
-                      ? 'Fecha límite: 15 de junio de 2026'
-                      : 'Prazo final: 15 de junho de 2026'}
-                  </p>
-                </div>
-                <a href="mailto:iaspm.al.2026@gmail.com" className="shrink-0 bg-[#1e3a5f] text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-iaspm-orange transition-all shadow-md">
-                  iaspm.al.2026@gmail.com
-                </a>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="flex items-start gap-4 p-5 bg-blue-50/50 rounded-xl border border-blue-100">
-                  <div className="bg-[#1e3a5f] text-white p-3 rounded-lg shrink-0">
-                    <Clock size={24} />
-                  </div>
-                  <div>
-                    <h4 className="font-black text-[#1e3a5f] uppercase tracking-wide text-sm mb-1.5">
-                      {lang === 'es' ? 'Duración y Formato' : 'Duração e Formato'}
-                    </h4>
-                    <p className="text-gray-600 text-sm">
-                      {lang === 'es'
-                        ? 'Las presentaciones de libros durarán hasta 30 minutos, con un máximo de tres presentadores.'
-                        : 'As apresentações de livros durarão até 30 minutos, com um máximo de três apresentadores.'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4 p-5 bg-emerald-50/50 rounded-xl border border-emerald-100">
-                  <div className="bg-emerald-600 text-white p-3 rounded-lg shrink-0">
-                    <Library size={24} />
-                  </div>
-                  <div>
-                    <h4 className="font-black text-emerald-800 uppercase tracking-wide text-sm mb-1.5">
-                      {lang === 'es' ? 'Venta y Donación' : 'Venda e Doação'}
-                    </h4>
-                    <p className="text-gray-600 text-sm">
-                      {lang === 'es'
-                        ? 'Se podrán vender los libros, a cambio de la donación de un ejemplar para consulta pública en biblioteca.'
-                        : 'Os livros poderão ser vendidos, em troca da doação de um exemplar para consulta pública na biblioteca.'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-8 flex items-start gap-4 p-5 md:p-6 bg-amber-50 rounded-xl border border-amber-200">
-                <Info className="text-amber-500 shrink-0 mt-0.5" size={24} />
-                <p className="text-sm md:text-base text-amber-900 leading-relaxed font-medium">
-                  {lang === 'es'
-                    ? 'Se agradecerá la organización de presentaciones de más de un libro, ya que se vislumbra una demanda alta de estos espacios. No hay preferencias sobre el eje de vinculación de las publicaciones (tema, país, grupo de investigación, editorial...).'
-                    : 'Agradece-se a organização de apresentações de mais de um livro, uma vez que se vislumbra uma alta demanda por esses espaços. Não há preferências sobre o eixo de vinculação das publicações (tema, país, grupo de pesquisa, editora...).'}
-                </p>
-              </div>
             </div>
 
             {bookBlocks.length > 0 && (
