@@ -472,6 +472,12 @@ const Program = () => {
                   {selectedPaper.author_affiliation}
                 </div>
               )}
+              {selectedPaper.presenter && (
+                <div className="mt-3 pt-3 border-t border-slate-200">
+                  <p className="text-[10px] font-black uppercase text-emerald-600 tracking-wider mb-1">Presenta</p>
+                  <p className="font-bold text-emerald-800 text-base">{selectedPaper.presenter}</p>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-4 bg-[#1e3a5f] text-white p-4 rounded-xl shadow-lg shadow-blue-900/20">
@@ -539,9 +545,28 @@ const Program = () => {
                 </div>
             </div>
 
+            {selectedSession.event_type === 'libro' && (selectedSession.book_authors || selectedSession.book_presenter) && (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-6 space-y-2">
+                {selectedSession.book_authors && (
+                  <div>
+                    <p className="text-[9px] font-black text-emerald-700 uppercase tracking-widest mb-0.5">Autor(es) del Libro</p>
+                    <p className="text-sm font-bold text-gray-800">{selectedSession.book_authors}</p>
+                  </div>
+                )}
+                {selectedSession.book_presenter && (
+                  <div>
+                    <p className="text-[9px] font-black text-emerald-700 uppercase tracking-widest mb-0.5 flex items-center gap-1">
+                      <User size={11}/> Presentado por
+                    </p>
+                    <p className="text-sm font-bold text-gray-800">{selectedSession.book_presenter}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="flex items-center justify-between mb-4 mt-2 px-2">
               <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">
-                Agenda de Ponencias
+                {selectedSession.event_type === 'libro' ? 'Agenda de Publicaciones' : 'Agenda de Ponencias'}
               </h3>
             </div>
 
@@ -818,17 +843,24 @@ const Program = () => {
                     <div className="flex items-center gap-2 mb-1.5">
                         {ev.symposiums ? (
                         <span className="bg-[#1e3a5f] text-white text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wide">Simposio {ev.symposiums.id}</span>
+                        ) : ev.event_type === 'libro' ? (
+                        <span className="bg-emerald-600 text-white text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wide">📖 Presentación de Publicaciones</span>
                         ) : (
                         <span className="bg-gray-200 text-gray-600 text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wide">GENERAL</span>
                         )}
                         <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest truncate">{ev.name}</span>      
                     </div>
 
-                    <h3 className={`text-base font-bold leading-tight mb-3 line-clamp-2 transition-colors ${
+                    <h3 className={`text-base font-bold leading-tight mb-1 line-clamp-2 transition-colors ${
                         isLive ? 'text-orange-900' : 'text-gray-900 group-hover:text-[#1e3a5f]'
                     }`}>
                         {highlightMatch(ev.symposiums?.name || ev.name, agendaSearchTerm)}
                     </h3>
+                    {ev.event_type === 'libro' && ev.book_presenter && (
+                      <p className="text-[10px] font-bold text-emerald-600 uppercase mb-2 flex items-center gap-1">
+                        <User size={10}/> Presenta: {ev.book_presenter}
+                      </p>
+                    )}
 
                     <div className="flex flex-wrap items-center gap-2 mt-auto">
                         <div className="flex items-center gap-1.5 text-gray-600 bg-gray-50 px-2.5 py-1 rounded-md border border-gray-100">   
