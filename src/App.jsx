@@ -55,6 +55,27 @@ const MainLayout = ({ lang, setLang }) => {
     'info-complementaria': false
   });
 
+  const [bookBlocks, setBookBlocks] = useState([]);
+
+  useEffect(() => {
+    const fetchBookBlocks = async () => {
+      const { data } = await supabase
+        .from('sessions')
+        .select('id, name, date, start_time, end_time, rooms(name, venues(name)), presentations(id, title, authors, presenter, start_time, end_time)')
+        .eq('event_type', 'libro');
+
+      const sorted = (data || []).slice().sort((a, b) => {
+        const numA = parseInt((a.name || '').match(/\d+/)?.[0] || '9999', 10);
+        const numB = parseInt((b.name || '').match(/\d+/)?.[0] || '9999', 10);
+        if (numA !== numB) return numA - numB;
+        return (a.name || '').localeCompare(b.name || '');
+      });
+
+      setBookBlocks(sorted);
+    };
+    fetchBookBlocks();
+  }, []);
+
   useEffect(() => {
     window.location.hash = currentPage;
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -371,6 +392,65 @@ const MainLayout = ({ lang, setLang }) => {
                 </p>
               </div>
             </div>
+
+            {bookBlocks.length > 0 && (
+              <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-100">
+                <h3 className="text-lg md:text-xl font-black text-[#1e3a5f] uppercase italic tracking-tight mb-6 flex items-center gap-2">
+                  <Library size={22} className="text-emerald-600" />
+                  {lang === 'es' ? 'Presentaciones Programadas' : 'Apresentações Programadas'}
+                </h3>
+                <div className="space-y-6">
+                  {bookBlocks.map((block) => (
+                    <div key={block.id} className="border border-gray-100 rounded-xl overflow-hidden">
+                      <div className="bg-[#1e3a5f] px-5 py-3 flex flex-wrap items-center justify-between gap-2">
+                        <h4 className="font-black text-white text-sm uppercase tracking-wide">
+                          {block.name}
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                          {block.date && (
+                            <span className="text-[10px] font-black bg-white/15 text-white px-2.5 py-1 rounded-md">
+                              {block.date} · {block.start_time?.slice(0,5)}-{block.end_time?.slice(0,5)}
+                            </span>
+                          )}
+                          {block.rooms?.name && (
+                            <span className="text-[10px] font-black bg-white/15 text-white px-2.5 py-1 rounded-md">
+                              {block.rooms.venues?.name} · {block.rooms.name}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-5 bg-emerald-50/30">
+                        {(block.presentations || [])
+                          .sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''))
+                          .map((book) => (
+                          <div key={book.id} className="bg-white border border-emerald-100 rounded-xl p-4 hover:shadow-md transition-all">
+                            {book.start_time && (
+                              <span className="inline-block text-[9px] font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded mb-2">
+                                {book.start_time.slice(0,5)} - {book.end_time?.slice(0,5)}
+                              </span>
+                            )}
+                            <h5 className="font-black text-gray-900 text-sm leading-tight mb-2">
+                              {book.title}
+                            </h5>
+                            {book.authors && (
+                              <p className="text-xs text-gray-600 mb-1">
+                                <span className="font-black text-gray-400 uppercase tracking-wide">{lang === 'es' ? 'Autor(es): ' : 'Autor(es): '}</span>
+                                {book.authors}
+                              </p>
+                            )}
+                            {book.presenter && (
+                              <p className="text-xs text-emerald-700 font-bold">
+                                {lang === 'es' ? 'Presenta: ' : 'Apresenta: '}{book.presenter}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         );
 
