@@ -38,6 +38,16 @@ import SaludCuidados from './components/pages/SaludCuidados';
 import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
 
+const formatBookDate = (dateStr, lang) => {
+  if (!dateStr) return '';
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  const monthsEs = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const monthsPt = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  const months = lang === 'pt' ? monthsPt : monthsEs;
+  return `${date.getDate()} de ${months[date.getMonth()]} de ${date.getFullYear()}`;
+};
+
 const MainLayout = ({ lang, setLang }) => {
   const getInitialPage = () => {
     if (typeof window !== 'undefined') {
@@ -366,7 +376,7 @@ const MainLayout = ({ lang, setLang }) => {
                         <div className="flex flex-wrap gap-2">
                           {block.date && (
                             <span className="text-[10px] font-black bg-white/15 text-white px-2.5 py-1 rounded-md">
-                              {block.date} · {block.start_time?.slice(0,5)}-{block.end_time?.slice(0,5)}
+                              {formatBookDate(block.date, lang)} · {block.start_time?.slice(0,5)}-{block.end_time?.slice(0,5)}
                             </span>
                           )}
                           {block.rooms?.name && (
