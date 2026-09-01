@@ -25,6 +25,8 @@ const CONCIERTOS = [
   {
     id: 'zeiba-kuicani',
     nombre: 'Zeiba Kuicani Trío',
+    estelar: true,
+    repertorio: 'El Zanate y La Flecha',
     fecha: 'Miércoles 30 de septiembre',
     hora: '7:00 PM',
     sede: 'Teatro Zebadúa',
@@ -113,7 +115,15 @@ const ConciertoCard = ({ c }) => (
       <Carrusel fotos={c.fotos} nombre={c.nombre} />
     </div>
     <div className="px-5 pb-5">
-      <h3 className="text-lg font-black text-[#1e3a5f] leading-tight mb-2">{c.nombre}</h3>
+      {c.estelar && (
+        <span className="inline-block bg-orange-500 text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md mb-2">
+          Concierto Estelar
+        </span>
+      )}
+      <h3 className="text-lg font-black text-[#1e3a5f] leading-tight mb-1">{c.nombre}</h3>
+      {c.repertorio && (
+        <p className="text-sm text-gray-500 italic mb-2">{c.repertorio}</p>
+      )}
       <div className="flex flex-col gap-1 text-sm text-gray-600 mb-3">
         <span className="flex items-center gap-1.5"><Calendar size={14} className="text-orange-500" /> {c.fecha}</span>
         {c.hora && <span className="flex items-center gap-1.5"><Clock size={14} className="text-orange-500" /> {c.hora}</span>}
