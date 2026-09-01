@@ -24,7 +24,7 @@ const CONCIERTOS = [
   },
   {
     id: 'zeiba-kuicani',
-    nombre: 'Zeiba Kuicani',
+    nombre: 'Zeiba Kuicani Trío',
     fecha: 'Miércoles 30 de septiembre',
     hora: '7:00 PM',
     sede: 'Teatro Zebadúa',
@@ -36,12 +36,7 @@ const CONCIERTOS = [
       '/images/conciertos/zeiba-kuicani/foto-5.jpg',
       '/images/conciertos/zeiba-kuicani/foto-6.jpg',
     ],
-    redes: {
-      facebook: 'Zeiba Kuicani -Tejedora de rimas-',
-      instagram: '@zeiba_kuicani',
-      instagram2: '@trío_zanate',
-      youtube: 'Zeiba Kuicani',
-    },
+    redes: {},
   },
   {
     id: 'canon-sonidero',
