@@ -376,7 +376,7 @@ const SessionsManager = () => {
     }
 
     try {
-      const isConcierto = formData.event_type === 'musica' || formData.event_type === 'concierto_estelar';
+      const isConcierto = formData.event_type === 'musica' || formData.event_type === 'concierto_estelar' || formData.event_type === 'inauguracion';
       let finalConcertFotos = formData.concierto_fotos || [];
       if (isConcierto && newConcertPhotoFiles.length > 0) {
         for (const item of newConcertPhotoFiles) {
@@ -781,7 +781,7 @@ const SessionsManager = () => {
             </div>
           )}
 
-          {(formData.event_type === 'musica' || formData.event_type === 'concierto_estelar') && (
+          {(formData.event_type === 'musica' || formData.event_type === 'concierto_estelar' || formData.event_type === 'inauguracion') && (
             <div className="bg-white min-h-[300px]">
               <div className="p-4 border-b flex justify-between items-center bg-gray-50/80">
                 <h4 className="text-sm font-black text-[#1e3a5f] uppercase tracking-widest flex items-center gap-2">
