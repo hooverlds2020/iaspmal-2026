@@ -94,6 +94,9 @@ const ConciertoCard = ({ c }) => (
         {c.hora && <span className="flex items-center gap-1.5"><Clock size={14} className="text-orange-500" /> {c.hora}</span>}
         {c.sede && <span className="flex items-center gap-1.5"><MapPin size={14} className="text-orange-500" /> {c.sede}</span>}
       </div>
+      {c.descripcion && (
+        <p className="text-sm text-gray-600 leading-relaxed pt-3 mt-1 border-t border-gray-100">{c.descripcion}</p>
+      )}
     </div>
   </div>
 );
@@ -107,7 +110,7 @@ const Conciertos = ({ lang }) => {
       try {
         const { data, error } = await supabase
           .from('sessions')
-          .select('id, date, start_time, event_type, concierto_grupo, concierto_titulo, concierto_fotos, rooms(name, venues(name))')
+          .select('id, date, start_time, event_type, concierto_grupo, concierto_titulo, concierto_fotos, concierto_descripcion, rooms(name, venues(name))')
           .in('event_type', ['musica', 'concierto_estelar', 'inauguracion'])
           .not('concierto_grupo', 'is', null)
           .order('date');
@@ -122,6 +125,7 @@ const Conciertos = ({ lang }) => {
           fecha: formatFecha(s.date),
           hora: formatHora(s.start_time),
           sede: s.rooms?.venues?.name ? `${s.rooms.venues.name}${s.rooms.name ? ' · ' + s.rooms.name : ''}` : '',
+          descripcion: s.concierto_descripcion || '',
           fotos: s.concierto_fotos || [],
         }));
 

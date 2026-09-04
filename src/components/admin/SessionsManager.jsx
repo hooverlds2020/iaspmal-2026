@@ -43,7 +43,7 @@ const SessionsManager = () => {
 
   const [formData, setFormData] = useState({
     name: '', symposium_id: '', room_id: '', date: '', start_time: '', end_time: '', event_type: 'mesa',
-    concierto_grupo: '', concierto_titulo: '', concierto_fotos: []
+    concierto_grupo: '', concierto_titulo: '', concierto_fotos: [], concierto_descripcion: ''
   });
 
   const [occupiedSlots, setOccupiedSlots] = useState([]); 
@@ -286,7 +286,7 @@ const SessionsManager = () => {
       date: session.date || '', start_time: session.start_time || '', end_time: session.end_time || '',
       event_type: session.event_type || 'mesa',
       concierto_grupo: session.concierto_grupo || '', concierto_titulo: session.concierto_titulo || '',
-      concierto_fotos: session.concierto_fotos || []
+      concierto_fotos: session.concierto_fotos || [], concierto_descripcion: session.concierto_descripcion || ''
     });
     
     if (session.event_type === 'mesa' || !session.event_type) {
@@ -390,7 +390,8 @@ const SessionsManager = () => {
         symposium_id: formData.event_type === 'mesa' ? formData.symposium_id : null,
         concierto_grupo: isConcierto ? (formData.concierto_grupo || null) : null,
         concierto_titulo: isConcierto ? (formData.concierto_titulo || null) : null,
-        concierto_fotos: isConcierto ? finalConcertFotos : null
+        concierto_fotos: isConcierto ? finalConcertFotos : null,
+        concierto_descripcion: isConcierto ? (formData.concierto_descripcion || null) : null
       };
       let sessionId = editingId;
       const { data, error } = editingId
@@ -811,6 +812,16 @@ const SessionsManager = () => {
                 </div>
 
                 <div>
+                  <Label>Descripción (Opcional)</Label>
+                  <textarea
+                    className={`${InputClasses} min-h-[80px]`}
+                    value={formData.concierto_descripcion || ''}
+                    onChange={e => setFormData({...formData, concierto_descripcion: e.target.value})}
+                    placeholder="Ej: Concierto a cargo de profesores del área de Marimba y Percusiones..."
+                  />
+                </div>
+
+                <div>
                   <Label><ImageIcon size={12}/> Fotos del Concierto</Label>
                   <div className="flex flex-wrap gap-3 mb-3">
                     {(formData.concierto_fotos || []).map((url, idx) => (
@@ -900,7 +911,7 @@ const SessionsManager = () => {
 
         <button onClick={() => { 
             setEditingId(null); 
-            setFormData({name:'', symposium_id:'', room_id:'', date:'', start_time:'', end_time:'', event_type: 'mesa', concierto_grupo:'', concierto_titulo:'', concierto_fotos: []}); 
+            setFormData({name:'', symposium_id:'', room_id:'', date:'', start_time:'', end_time:'', event_type: 'mesa', concierto_grupo:'', concierto_titulo:'', concierto_fotos: [], concierto_descripcion: ''}); 
             setOccupiedSlots([]); setAvailableGaps([]); setSelectedWithTimes([]); setBookItems([]); setDeletedBookIds([]); setNewConcertPhotoFiles([]);
             setIsEditorOpen(true); 
             window.scrollTo({ top: 0, behavior: 'smooth' });
