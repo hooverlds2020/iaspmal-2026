@@ -43,7 +43,8 @@ const SessionsManager = () => {
 
   const [formData, setFormData] = useState({
     name: '', symposium_id: '', room_id: '', date: '', start_time: '', end_time: '', event_type: 'mesa',
-    concierto_grupo: '', concierto_titulo: '', concierto_fotos: [], concierto_descripcion: ''
+    concierto_grupo: '', concierto_titulo: '', concierto_fotos: [], concierto_descripcion: '',
+    conversatorio_participantes: '', conversatorio_descripcion: ''
   });
 
   const [occupiedSlots, setOccupiedSlots] = useState([]); 
@@ -286,7 +287,8 @@ const SessionsManager = () => {
       date: session.date || '', start_time: session.start_time || '', end_time: session.end_time || '',
       event_type: session.event_type || 'mesa',
       concierto_grupo: session.concierto_grupo || '', concierto_titulo: session.concierto_titulo || '',
-      concierto_fotos: session.concierto_fotos || [], concierto_descripcion: session.concierto_descripcion || ''
+      concierto_fotos: session.concierto_fotos || [], concierto_descripcion: session.concierto_descripcion || '',
+      conversatorio_participantes: session.conversatorio_participantes || '', conversatorio_descripcion: session.conversatorio_descripcion || ''
     });
     
     if (session.event_type === 'mesa' || !session.event_type) {
@@ -391,7 +393,9 @@ const SessionsManager = () => {
         concierto_grupo: isConcierto ? (formData.concierto_grupo || null) : null,
         concierto_titulo: isConcierto ? (formData.concierto_titulo || null) : null,
         concierto_fotos: isConcierto ? finalConcertFotos : null,
-        concierto_descripcion: isConcierto ? (formData.concierto_descripcion || null) : null
+        concierto_descripcion: isConcierto ? (formData.concierto_descripcion || null) : null,
+        conversatorio_participantes: formData.event_type === 'conversatorio' ? (formData.conversatorio_participantes || null) : null,
+        conversatorio_descripcion: formData.event_type === 'conversatorio' ? (formData.conversatorio_descripcion || null) : null
       };
       let sessionId = editingId;
       const { data, error } = editingId
@@ -781,6 +785,36 @@ const SessionsManager = () => {
             </div>
           )}
 
+          {formData.event_type === 'conversatorio' && (
+            <div className="bg-white min-h-[200px]">
+              <div className="p-4 border-b flex justify-between items-center bg-gray-50/80">
+                <h4 className="text-sm font-black text-[#1e3a5f] uppercase tracking-widest flex items-center gap-2">
+                  Datos del Conversatorio
+                </h4>
+              </div>
+              <div className="p-4 space-y-4">
+                <div>
+                  <Label>Participantes</Label>
+                  <input
+                    className={InputClasses}
+                    value={formData.conversatorio_participantes || ''}
+                    onChange={e => setFormData({...formData, conversatorio_participantes: e.target.value})}
+                    placeholder="Ej: María López, Juan Pérez, Ana Gómez"
+                  />
+                </div>
+                <div>
+                  <Label>Descripción del Tema</Label>
+                  <textarea
+                    className={`${InputClasses} min-h-[80px]`}
+                    value={formData.conversatorio_descripcion || ''}
+                    onChange={e => setFormData({...formData, conversatorio_descripcion: e.target.value})}
+                    placeholder="Ej: Un espacio de diálogo sobre..."
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
           {(formData.event_type === 'musica' || formData.event_type === 'concierto_estelar' || formData.event_type === 'inauguracion') && (
             <div className="bg-white min-h-[300px]">
               <div className="p-4 border-b flex justify-between items-center bg-gray-50/80">
@@ -911,7 +945,7 @@ const SessionsManager = () => {
 
         <button onClick={() => { 
             setEditingId(null); 
-            setFormData({name:'', symposium_id:'', room_id:'', date:'', start_time:'', end_time:'', event_type: 'mesa', concierto_grupo:'', concierto_titulo:'', concierto_fotos: [], concierto_descripcion: ''}); 
+            setFormData({name:'', symposium_id:'', room_id:'', date:'', start_time:'', end_time:'', event_type: 'mesa', concierto_grupo:'', concierto_titulo:'', concierto_fotos: [], concierto_descripcion: '', conversatorio_participantes: '', conversatorio_descripcion: ''}); 
             setOccupiedSlots([]); setAvailableGaps([]); setSelectedWithTimes([]); setBookItems([]); setDeletedBookIds([]); setNewConcertPhotoFiles([]);
             setIsEditorOpen(true); 
             window.scrollTo({ top: 0, behavior: 'smooth' });
