@@ -3,9 +3,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import * as LucideIcons from 'lucide-react'; 
 import { toast } from 'sonner';
+import { optimizeImage } from '../../lib/imageOptimizer';
 import AgendaCalendario from '../pages/AgendaCalendario';
 
-const { Plus, Edit2, Trash2, X, Clock, MapPin, CheckCircle2, AlertCircle, Timer, LayoutGrid, ArrowRight, Ban, Lock, AlertTriangle, Save, User, ArrowLeft, Calendar, Filter, RefreshCw, Star, Users, BookOpen } = LucideIcons;
+const { Plus, Edit2, Trash2, X, Clock, MapPin, CheckCircle2, AlertCircle, Timer, LayoutGrid, ArrowRight, Ban, Lock, AlertTriangle, Save, User, ArrowLeft, Calendar, Filter, RefreshCw, Star, Users, BookOpen, Music, UploadCloud, Image: ImageIcon } = LucideIcons;
 
 const getVenueStyle = (venueName) => {
   if (!venueName) return { bg: 'bg-gray-50', text: 'text-gray-400', border: 'border-gray-200', icon: 'text-gray-300' };
@@ -33,6 +34,7 @@ const SessionsManager = () => {
   const [selectedWithTimes, setSelectedWithTimes] = useState([]);
   const [bookItems, setBookItems] = useState([]);
   const [deletedBookIds, setDeletedBookIds] = useState([]);
+  const [newConcertPhotoFiles, setNewConcertPhotoFiles] = useState([]);
   const [totalSymposiumPapers, setTotalSymposiumPapers] = useState(0);
 
   const [filterDate, setFilterDate] = useState('');
@@ -40,7 +42,8 @@ const SessionsManager = () => {
   const [filterVenue, setFilterVenue] = useState('');
 
   const [formData, setFormData] = useState({
-    name: '', symposium_id: '', room_id: '', date: '', start_time: '', end_time: '', event_type: 'mesa'
+    name: '', symposium_id: '', room_id: '', date: '', start_time: '', end_time: '', event_type: 'mesa',
+    concierto_grupo: '', concierto_titulo: '', concierto_fotos: []
   });
 
   const [occupiedSlots, setOccupiedSlots] = useState([]); 
@@ -250,12 +253,40 @@ const SessionsManager = () => {
     setBookItems(prev => prev.filter(b => b.id !== id));
   };
 
+  // --- Manejo de fotos de concierto ---
+  const handleAddConcertPhotos = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    setNewConcertPhotoFiles(prev => [...prev, ...files.map(file => ({ file, preview: URL.createObjectURL(file) }))]);
+    e.target.value = '';
+  };
+
+  const removeExistingConcertPhoto = (index) => {
+    setFormData(prev => ({ ...prev, concierto_fotos: (prev.concierto_fotos || []).filter((_, i) => i !== index) }));
+  };
+
+  const removeNewConcertPhoto = (index) => {
+    setNewConcertPhotoFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const uploadConcertPhoto = async (file) => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `concierto-${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+    const optimizedFile = await optimizeImage(file);
+    const { error: uploadError } = await supabase.storage.from('sliders').upload(fileName, optimizedFile);
+    if (uploadError) throw uploadError;
+    const { data } = supabase.storage.from('sliders').getPublicUrl(fileName);
+    return data.publicUrl;
+  };
+
   const handleEdit = async (session) => {
     setEditingId(session.id);
     setFormData({
       name: session.name || '', symposium_id: session.symposium_id || '', room_id: session.room_id || '',
       date: session.date || '', start_time: session.start_time || '', end_time: session.end_time || '',
-      event_type: session.event_type || 'mesa'
+      event_type: session.event_type || 'mesa',
+      concierto_grupo: session.concierto_grupo || '', concierto_titulo: session.concierto_titulo || '',
+      concierto_fotos: session.concierto_fotos || []
     });
     
     if (session.event_type === 'mesa' || !session.event_type) {
@@ -271,6 +302,7 @@ const SessionsManager = () => {
       setBookItems([]);
     }
     setDeletedBookIds([]);
+    setNewConcertPhotoFiles([]);
     setIsEditorOpen(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -317,6 +349,9 @@ const SessionsManager = () => {
       const incompletos = bookItems.filter(b => !b.title || !b.authors);
       if (incompletos.length > 0) return toast.error("Cada libro necesita al menos Título y Autor(es).");
     }
+    if ((formData.event_type === 'musica' || formData.event_type === 'concierto_estelar') && (!formData.concierto_grupo || !formData.concierto_titulo)) {
+      return toast.error("Ingresa el nombre del grupo y el nombre del concierto.");
+    }
 
     if (formData.start_time >= formData.end_time) {
       return toast.error("La hora de inicio debe ser menor a la hora de fin.");
@@ -341,9 +376,21 @@ const SessionsManager = () => {
     }
 
     try {
+      const isConcierto = formData.event_type === 'musica' || formData.event_type === 'concierto_estelar';
+      let finalConcertFotos = formData.concierto_fotos || [];
+      if (isConcierto && newConcertPhotoFiles.length > 0) {
+        for (const item of newConcertPhotoFiles) {
+          const url = await uploadConcertPhoto(item.file);
+          finalConcertFotos = [...finalConcertFotos, url];
+        }
+      }
+
       const payload = { 
         ...formData, 
-        symposium_id: formData.event_type === 'mesa' ? formData.symposium_id : null
+        symposium_id: formData.event_type === 'mesa' ? formData.symposium_id : null,
+        concierto_grupo: isConcierto ? (formData.concierto_grupo || null) : null,
+        concierto_titulo: isConcierto ? (formData.concierto_titulo || null) : null,
+        concierto_fotos: isConcierto ? finalConcertFotos : null
       };
       let sessionId = editingId;
       const { data, error } = editingId
@@ -733,6 +780,74 @@ const SessionsManager = () => {
             </div>
           )}
 
+          {(formData.event_type === 'musica' || formData.event_type === 'concierto_estelar') && (
+            <div className="bg-white min-h-[300px]">
+              <div className="p-4 border-b flex justify-between items-center bg-gray-50/80">
+                <h4 className="text-sm font-black text-[#1e3a5f] uppercase tracking-widest flex items-center gap-2">
+                  <Music size={16}/> Datos del Concierto
+                </h4>
+              </div>
+
+              <div className="p-4 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <Label>Nombre del Grupo / Equipo</Label>
+                    <input
+                      className={InputClasses}
+                      value={formData.concierto_grupo || ''}
+                      onChange={e => setFormData({...formData, concierto_grupo: e.target.value})}
+                      placeholder="Ej: Zeiba Kuicani Trío"
+                    />
+                  </div>
+                  <div>
+                    <Label>Nombre del Concierto</Label>
+                    <input
+                      className={InputClasses}
+                      value={formData.concierto_titulo || ''}
+                      onChange={e => setFormData({...formData, concierto_titulo: e.target.value})}
+                      placeholder="Ej: El Zanate y La Flecha"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label><ImageIcon size={12}/> Fotos del Concierto</Label>
+                  <div className="flex flex-wrap gap-3 mb-3">
+                    {(formData.concierto_fotos || []).map((url, idx) => (
+                      <div key={`existing-${idx}`} className="relative w-24 h-24 rounded-xl overflow-hidden border border-gray-200 group">
+                        <img src={url} alt="" className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => removeExistingConcertPhoto(idx)}
+                          className="absolute top-1 right-1 bg-white/90 hover:bg-red-50 text-red-500 rounded-full p-1 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X size={12}/>
+                        </button>
+                      </div>
+                    ))}
+                    {newConcertPhotoFiles.map((item, idx) => (
+                      <div key={`new-${idx}`} className="relative w-24 h-24 rounded-xl overflow-hidden border border-purple-200 group">
+                        <img src={item.preview} alt="" className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => removeNewConcertPhoto(idx)}
+                          className="absolute top-1 right-1 bg-white/90 hover:bg-red-50 text-red-500 rounded-full p-1 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X size={12}/>
+                        </button>
+                      </div>
+                    ))}
+                    <label className="w-24 h-24 rounded-xl border-2 border-dashed border-gray-300 hover:border-purple-400 flex flex-col items-center justify-center cursor-pointer text-gray-400 hover:text-purple-500 transition-colors">
+                      <UploadCloud size={20}/>
+                      <span className="text-[9px] font-bold mt-1 text-center px-1">Agregar Foto</span>
+                      <input type="file" accept="image/*" multiple onChange={handleAddConcertPhotos} className="hidden" />
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="p-5 sm:p-6 border-t border-gray-200 bg-white flex justify-end gap-4 shrink-0">
             <button onClick={() => setIsEditorOpen(false)} className="px-6 py-3 rounded-xl font-bold text-sm text-gray-600 bg-gray-50 border border-gray-200 hover:bg-gray-100 uppercase tracking-wide transition-colors">Cancelar</button>
             <button 
@@ -785,8 +900,8 @@ const SessionsManager = () => {
 
         <button onClick={() => { 
             setEditingId(null); 
-            setFormData({name:'', symposium_id:'', room_id:'', date:'', start_time:'', end_time:'', event_type: 'mesa'}); 
-            setOccupiedSlots([]); setAvailableGaps([]); setSelectedWithTimes([]); setBookItems([]); setDeletedBookIds([]);
+            setFormData({name:'', symposium_id:'', room_id:'', date:'', start_time:'', end_time:'', event_type: 'mesa', concierto_grupo:'', concierto_titulo:'', concierto_fotos: []}); 
+            setOccupiedSlots([]); setAvailableGaps([]); setSelectedWithTimes([]); setBookItems([]); setDeletedBookIds([]); setNewConcertPhotoFiles([]);
             setIsEditorOpen(true); 
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }} className="bg-[#1e3a5f] text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-black transition-all flex gap-2 items-center shadow-lg active:scale-95 w-full xl:w-auto justify-center">

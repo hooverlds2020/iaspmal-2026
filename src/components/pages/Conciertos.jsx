@@ -1,55 +1,26 @@
-import React, { useState } from 'react';
-import { Calendar, MapPin, Clock, Facebook, Instagram, Youtube, ChevronLeft, ChevronRight, Music } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Calendar, MapPin, Clock, ChevronLeft, ChevronRight, Music } from 'lucide-react';
+import { supabase } from '../../lib/supabaseClient';
 
-// Estructura de datos de conciertos. Las imágenes van en /public/images/conciertos/
-// Reemplazar los placeholders por los archivos reales que envíe la coordinación.
-const CONCIERTOS = [
-  {
-    id: 'inauguracion',
-    nombre: 'Gala de marimbas — Concierto inaugural',
-    fecha: 'Lunes 28 de septiembre',
-    hora: '',
-    sede: '',
-    fotos: [],
-    redes: {},
-  },
-  {
-    id: 'zak-tzebul',
-    nombre: 'Zak Tzebul',
-    fecha: 'Martes 29 de septiembre',
-    hora: '',
-    sede: '',
-    fotos: [],
-    redes: {},
-  },
-  {
-    id: 'zeiba-kuicani',
-    nombre: 'Zeiba Kuicani Trío',
-    estelar: true,
-    repertorio: 'El Zanate y La Flecha',
-    fecha: 'Miércoles 30 de septiembre',
-    hora: '7:00 PM',
-    sede: 'Teatro Zebadúa',
-    fotos: [
-      '/images/conciertos/zeiba-kuicani/foto-1.jpg',
-      '/images/conciertos/zeiba-kuicani/foto-2.jpg',
-      '/images/conciertos/zeiba-kuicani/foto-3.jpg',
-      '/images/conciertos/zeiba-kuicani/foto-4.jpg',
-      '/images/conciertos/zeiba-kuicani/foto-5.jpg',
-      '/images/conciertos/zeiba-kuicani/foto-6.jpg',
-    ],
-    redes: {},
-  },
-  {
-    id: 'canon-sonidero',
-    nombre: 'Cañón del Sonidero — Concierto de cierre',
-    fecha: 'Viernes 2 de octubre',
-    hora: '',
-    sede: '',
-    fotos: [],
-    redes: {},
-  },
-];
+const DIAS = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+const formatFecha = (dateStr) => {
+  if (!dateStr) return '';
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  const dia = DIAS[date.getDay()];
+  const diaCap = dia.charAt(0).toUpperCase() + dia.slice(1);
+  return `${diaCap} ${date.getDate()} de ${MESES[date.getMonth()]}`;
+};
+
+const formatHora = (timeStr) => {
+  if (!timeStr) return '';
+  const [h, m] = timeStr.split(':').map(Number);
+  const suffix = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m).padStart(2, '0')} ${suffix}`;
+};
 
 const Carrusel = ({ fotos, nombre }) => {
   const [idx, setIdx] = useState(0);
@@ -103,12 +74,6 @@ const Carrusel = ({ fotos, nombre }) => {
   );
 };
 
-const RedSocial = ({ Icon, label }) => (
-  <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-600 bg-gray-50 border border-gray-200 rounded-full px-3 py-1">
-    <Icon size={13} /> {label}
-  </span>
-);
-
 const ConciertoCard = ({ c }) => (
   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
     <div className="p-4">
@@ -129,23 +94,70 @@ const ConciertoCard = ({ c }) => (
         {c.hora && <span className="flex items-center gap-1.5"><Clock size={14} className="text-orange-500" /> {c.hora}</span>}
         {c.sede && <span className="flex items-center gap-1.5"><MapPin size={14} className="text-orange-500" /> {c.sede}</span>}
       </div>
-      {(c.redes.facebook || c.redes.instagram || c.redes.youtube) && (
-        <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
-          {c.redes.facebook && <RedSocial Icon={Facebook} label={c.redes.facebook} />}
-          {c.redes.instagram && <RedSocial Icon={Instagram} label={c.redes.instagram} />}
-          {c.redes.instagram2 && <RedSocial Icon={Instagram} label={c.redes.instagram2} />}
-          {c.redes.youtube && <RedSocial Icon={Youtube} label={c.redes.youtube} />}
-        </div>
-      )}
     </div>
   </div>
 );
 
 const Conciertos = ({ lang }) => {
+  const [conciertos, setConciertos] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchConciertos = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('sessions')
+          .select('id, date, start_time, event_type, concierto_grupo, concierto_titulo, concierto_fotos, rooms(name, venues(name))')
+          .in('event_type', ['musica', 'concierto_estelar', 'inauguracion'])
+          .not('concierto_grupo', 'is', null)
+          .order('date');
+
+        if (error) throw error;
+
+        const mapped = (data || []).map(s => ({
+          id: s.id,
+          nombre: s.concierto_grupo,
+          repertorio: s.concierto_titulo && s.concierto_titulo !== s.concierto_grupo ? s.concierto_titulo : '',
+          estelar: s.event_type === 'concierto_estelar',
+          fecha: formatFecha(s.date),
+          hora: formatHora(s.start_time),
+          sede: s.rooms?.venues?.name ? `${s.rooms.venues.name}${s.rooms.name ? ' · ' + s.rooms.name : ''}` : '',
+          fotos: s.concierto_fotos || [],
+        }));
+
+        setConciertos(mapped);
+      } catch (err) {
+        console.error('Error cargando conciertos:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchConciertos();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
+        {[1, 2].map(i => (
+          <div key={i} className="w-full aspect-[4/5] bg-gray-100 rounded-2xl animate-pulse" />
+        ))}
+      </div>
+    );
+  }
+
+  if (conciertos.length === 0) {
+    return (
+      <div className="text-center py-16 text-gray-400">
+        <Music size={40} className="mx-auto mb-3 opacity-40" />
+        <p className="font-bold">Próximamente anunciaremos los conciertos del congreso.</p>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
-        {CONCIERTOS.map(c => <ConciertoCard key={c.id} c={c} />)}
+        {conciertos.map(c => <ConciertoCard key={c.id} c={c} />)}
       </div>
     </div>
   );
