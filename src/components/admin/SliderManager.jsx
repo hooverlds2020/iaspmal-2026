@@ -1,11 +1,11 @@
 // src/components/admin/SliderManager.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import { optimizeImage } from '../../lib/imageOptimizer'; // ✅ AJUSTE: Importación del optimizador
-import * as LucideIcons from 'lucide-react'; 
+import { optimizeImage } from '../../lib/imageOptimizer';
+import * as LucideIcons from 'lucide-react';
 import { toast } from 'sonner';
 
-const { Plus, Edit2, Trash2, Image: ImageIcon, Link: LinkIcon, Calendar, CheckCircle2, XCircle, ArrowLeft, Save, UploadCloud, AlertTriangle, Eye, EyeOff } = LucideIcons;
+const { Plus, Edit2, Trash2, Image: ImageIcon, Link: LinkIcon, Calendar, CheckCircle2, XCircle, ArrowLeft, Save, UploadCloud, AlertTriangle, Eye, EyeOff, Maximize2, X: XIcon } = LucideIcons;
 
 const SliderManager = () => {
   const [sliders, setSliders] = useState([]);
@@ -16,12 +16,16 @@ const SliderManager = () => {
   const [editingId, setEditingId] = useState(null);
 
   const initialForm = {
-    image_url: '', titulo: '', descripcion: '', enlace_url: '', 
-    abrir_nueva_pestana: false, activo: true, fecha_inicio: '', fecha_fin: '', orden: 0
+    image_url: '', titulo: '', descripcion: '', enlace_url: '',
+    abrir_nueva_pestana: false, activo: true, fecha_inicio: '', fecha_fin: '', orden: 0,
+    popup_image_url: ''
   };
   const [formData, setFormData] = useState(initialForm);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
+
+  const [popupImageFile, setPopupImageFile] = useState(null);
+  const [popupImagePreview, setPopupImagePreview] = useState('');
 
   useEffect(() => { fetchData(); }, []);
 
@@ -52,10 +56,13 @@ const SliderManager = () => {
       activo: slider.activo,
       fecha_inicio: slider.fecha_inicio ? slider.fecha_inicio.slice(0, 16) : '',
       fecha_fin: slider.fecha_fin ? slider.fecha_fin.slice(0, 16) : '',
-      orden: slider.orden || 0
+      orden: slider.orden || 0,
+      popup_image_url: slider.popup_image_url || ''
     });
     setImagePreview(slider.image_url);
     setImageFile(null);
+    setPopupImagePreview(slider.popup_image_url || '');
+    setPopupImageFile(null);
     setIsEditorOpen(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -68,16 +75,30 @@ const SliderManager = () => {
     }
   };
 
+  const handlePopupImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setPopupImageFile(file);
+      setPopupImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const clearPopupImage = () => {
+    setPopupImageFile(null);
+    setPopupImagePreview('');
+    setFormData({ ...formData, popup_image_url: '' });
+  };
+
   const executeDelete = async () => {
     if (!deleteId) return;
     try {
       await supabase.from('slider_home').delete().eq('id', deleteId);
       toast.success('Slider eliminado correctamente');
       fetchData();
-    } catch (error) { 
-      toast.error('Error al eliminar'); 
-    } finally { 
-      setDeleteId(null); 
+    } catch (error) {
+      toast.error('Error al eliminar');
+    } finally {
+      setDeleteId(null);
     }
   };
 
@@ -96,7 +117,6 @@ const SliderManager = () => {
     const fileName = `${Math.random()}.${fileExt}`;
     const filePath = `${fileName}`;
 
-    // ✅ AJUSTE: Optimización del archivo antes de la subida
     const optimizedFile = await optimizeImage(file);
 
     const { error: uploadError } = await supabase.storage.from('sliders').upload(filePath, optimizedFile);
@@ -109,18 +129,24 @@ const SliderManager = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!imageFile && !formData.image_url) return toast.error("Debes subir una imagen para el slider.");
-    
+
     setUploading(true);
     try {
       let finalImageUrl = formData.image_url;
-      
+      let finalPopupUrl = formData.popup_image_url;
+
       if (imageFile) {
         finalImageUrl = await uploadImage(imageFile);
+      }
+
+      if (popupImageFile) {
+        finalPopupUrl = await uploadImage(popupImageFile);
       }
 
       const payload = {
         ...formData,
         image_url: finalImageUrl,
+        popup_image_url: finalPopupUrl || null,
         fecha_inicio: formData.fecha_inicio || null,
         fecha_fin: formData.fecha_fin || null,
       };
@@ -135,17 +161,16 @@ const SliderManager = () => {
 
       setIsEditorOpen(false);
       fetchData();
-    } catch (err) { 
-      toast.error('Error al guardar: ' + err.message); 
-    } finally { 
-      setUploading(false); 
+    } catch (err) {
+      toast.error('Error al guardar: ' + err.message);
+    } finally {
+      setUploading(false);
     }
   };
 
   const InputClasses = "w-full p-3 rounded-xl border border-gray-200 focus:border-[#1e3a5f] focus:ring-4 focus:ring-blue-50 outline-none text-sm font-bold text-gray-700 transition-all bg-white";
   const Label = ({ children }) => <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-1 mb-1.5">{children}</label>;
 
-  // --- VISTA 2: EDITOR ---
   if (isEditorOpen) {
     return (
       <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full mx-auto pb-10 p-4 md:p-6">
@@ -162,7 +187,6 @@ const SliderManager = () => {
           </div>
 
           <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8 bg-gray-50/50">
-            {/* Columna Izquierda: Imagen */}
             <div className="space-y-4">
               <h4 className="text-sm font-black text-[#1e3a5f] uppercase tracking-widest border-b pb-2">1. Imagen Principal</h4>
               <div className="relative border-2 border-dashed border-gray-300 rounded-2xl bg-white hover:border-[#1e3a5f] transition-colors group overflow-hidden h-[250px] flex items-center justify-center">
@@ -192,17 +216,46 @@ const SliderManager = () => {
                     <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${formData.activo ? 'translate-x-6' : 'translate-x-1'}`} />
                  </button>
               </div>
+
+              <div className="p-4 bg-purple-50/50 rounded-xl border border-purple-100 space-y-3">
+                <Label><Maximize2 size={12}/> Ventana Emergente (Opcional)</Label>
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  Si subes una imagen aquí (por ejemplo, el esquema general del programa), al hacer clic en este slider se abrirá esa imagen en grande, en lugar de ir al enlace.
+                </p>
+
+                <div className="relative border-2 border-dashed border-purple-200 rounded-xl bg-white hover:border-purple-400 transition-colors group overflow-hidden h-[140px] flex items-center justify-center">
+                  {popupImagePreview ? (
+                    <>
+                      <img src={popupImagePreview} alt="Preview ventana emergente" className="w-full h-full object-contain" />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <span className="text-white font-bold flex items-center gap-2 text-xs"><UploadCloud size={16}/> Cambiar Imagen</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center p-4">
+                      <div className="bg-purple-50 text-purple-500 p-3 rounded-full inline-block mb-2"><Maximize2 size={20}/></div>
+                      <p className="text-xs font-bold text-gray-500">Subir imagen ampliada (opcional)</p>
+                    </div>
+                  )}
+                  <input type="file" accept="image/*" onChange={handlePopupImageChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                </div>
+
+                {popupImagePreview && (
+                  <button type="button" onClick={clearPopupImage} className="text-xs font-bold text-red-500 hover:text-red-700 flex items-center gap-1">
+                    <XIcon size={12}/> Quitar imagen de ventana emergente
+                  </button>
+                )}
+              </div>
             </div>
 
-            {/* Columna Derecha: Datos */}
             <div className="space-y-4">
               <h4 className="text-sm font-black text-[#1e3a5f] uppercase tracking-widest border-b pb-2">2. Contenido Opcional</h4>
-              
+
               <div>
                 <Label>Título (Opcional)</Label>
                 <input className={InputClasses} value={formData.titulo} onChange={e => setFormData({...formData, titulo: e.target.value})} placeholder="Ej: Convocatoria Abierta" />
               </div>
-              
+
               <div>
                 <Label>Descripción Breve (Opcional)</Label>
                 <textarea className={`${InputClasses} min-h-[80px]`} value={formData.descripcion} onChange={e => setFormData({...formData, descripcion: e.target.value})} placeholder="Ej: Participa en el XVII Congreso..." />
@@ -211,12 +264,18 @@ const SliderManager = () => {
               <div className="p-4 bg-blue-50/50 rounded-xl border border-blue-100">
                 <Label><LinkIcon size={12}/> Enlace / URL (Opcional)</Label>
                 <input type="url" className={InputClasses} value={formData.enlace_url} onChange={e => setFormData({...formData, enlace_url: e.target.value})} placeholder="https://..." />
-                
+
                 {formData.enlace_url && (
                   <label className="flex items-center gap-2 mt-3 cursor-pointer">
                     <input type="checkbox" checked={formData.abrir_nueva_pestana} onChange={e => setFormData({...formData, abrir_nueva_pestana: e.target.checked})} className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"/>
                     <span className="text-xs font-bold text-gray-600">Abrir enlace en una nueva pestaña</span>
                   </label>
+                )}
+
+                {popupImagePreview && (
+                  <p className="text-[10px] text-purple-600 font-bold mt-3 flex items-center gap-1">
+                    <Maximize2 size={10}/> Este slider tiene ventana emergente activa — el enlace se ignorará al hacer clic.
+                  </p>
                 )}
               </div>
 
@@ -246,16 +305,16 @@ const SliderManager = () => {
     );
   }
 
-  // --- VISTA 1: GRID PRINCIPAL ---
   return (
     <div className="space-y-6 p-4 md:p-6 animate-in fade-in pb-20 md:pb-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 rounded-2xl border border-gray-100 shadow-sm gap-4">      
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 rounded-2xl border border-gray-100 shadow-sm gap-4">
         <div>
           <h2 className="text-xl font-black text-[#1e3a5f] uppercase italic pl-2">Sliders Home</h2>
           <p className="text-xs font-bold text-gray-400 pl-2 mt-1">Administra el carrusel principal</p>
         </div>
-        <button onClick={() => { 
-            setEditingId(null); setFormData(initialForm); setImagePreview(''); setImageFile(null); setIsEditorOpen(true); 
+        <button onClick={() => {
+            setEditingId(null); setFormData(initialForm); setImagePreview(''); setImageFile(null);
+            setPopupImagePreview(''); setPopupImageFile(null); setIsEditorOpen(true);
           }} className="bg-[#1e3a5f] w-full sm:w-auto text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-black transition-all flex justify-center gap-2 items-center shadow-lg active:scale-95">
           <Plus size={16} /> Nuevo Slider
         </button>
@@ -271,34 +330,36 @@ const SliderManager = () => {
 
         {sliders.map(s => {
           const isScheduled = s.fecha_inicio || s.fecha_fin;
-          
+
           return (
             <div key={s.id} className={`bg-white rounded-3xl border border-gray-100 shadow-sm relative group hover:shadow-xl transition-all flex flex-col overflow-hidden ${!s.activo ? 'opacity-70 grayscale-[30%]' : ''}`}>
-              {/* Imagen Banner */}
               <div className="h-48 w-full relative bg-gray-100">
                 <img src={s.image_url} alt={s.titulo} className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
-                
-                {/* Badges */}
+
                 <div className="absolute top-4 left-4 flex gap-2">
                    <button onClick={() => toggleStatus(s.id, s.activo)} className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm flex items-center gap-1.5 transition-colors ${s.activo ? 'bg-emerald-500 text-white hover:bg-emerald-600' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}>
                       {s.activo ? <><Eye size={12}/> Visible</> : <><EyeOff size={12}/> Oculto</>}
                    </button>
+                   {s.popup_image_url && (
+                     <span className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm flex items-center gap-1.5 bg-purple-500 text-white">
+                        <Maximize2 size={12}/> Pop-up
+                     </span>
+                   )}
                 </div>
 
                 <div className="absolute bottom-4 left-4 right-4">
                    <h3 className="font-black text-white text-lg leading-tight line-clamp-1">{s.titulo || 'Sin Título (Solo Imagen)'}</h3>
-                   {s.enlace_url && <p className="text-[10px] text-blue-300 mt-1 flex items-center gap-1 uppercase font-bold"><LinkIcon size={10}/> Con enlace</p>}
+                   {s.enlace_url && !s.popup_image_url && <p className="text-[10px] text-blue-300 mt-1 flex items-center gap-1 uppercase font-bold"><LinkIcon size={10}/> Con enlace</p>}
+                   {s.popup_image_url && <p className="text-[10px] text-purple-300 mt-1 flex items-center gap-1 uppercase font-bold"><Maximize2 size={10}/> Con ventana emergente</p>}
                 </div>
 
-                {/* Botones Flotantes Editar/Borrar */}
                 <div className="absolute top-4 right-4 flex gap-1.5 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button onClick={() => handleEdit(s)} className="p-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors shadow-lg"><Edit2 size={16}/></button>
                   <button onClick={() => setDeleteId(s.id)} className="p-2 bg-white text-red-600 rounded-lg hover:bg-red-50 transition-colors shadow-lg"><Trash2 size={16}/></button>
                 </div>
               </div>
 
-              {/* Info Inferior */}
               {isScheduled && (
                  <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center gap-3">
                     <div className="p-2 bg-amber-100 text-amber-600 rounded-lg"><Calendar size={16}/></div>
@@ -315,7 +376,6 @@ const SliderManager = () => {
         })}
       </div>
 
-      {/* Modal Borrar */}
       {deleteId && (
         <div className="fixed inset-0 bg-[#1e3a5f]/60 backdrop-blur-sm z-[80] flex items-center justify-center p-4 animate-in fade-in">
           <div className="bg-white rounded-[2rem] p-8 max-w-sm w-full shadow-2xl text-center animate-in zoom-in-95 border border-red-100">

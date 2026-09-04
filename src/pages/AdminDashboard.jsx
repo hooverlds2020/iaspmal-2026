@@ -88,7 +88,7 @@ const AdminDashboard = ({ user, onLogout }) => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
           {/* SIDEBAR DE NAVEGACIÓN */}
-          <aside className="lg:col-span-3 sticky top-24 z-10">
+          <aside className="lg:col-span-3 sticky top-24 z-10 max-h-[calc(100vh-7rem)] overflow-y-auto pr-1 admin-sidebar-scroll">
             <nav className="bg-gray-100/50 p-1 rounded-2xl border border-gray-200/60">
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 space-y-1">
 
@@ -152,6 +152,13 @@ const AdminDashboard = ({ user, onLogout }) => {
 
         </div>
       </div>
+
+      <style>{`
+        .admin-sidebar-scroll::-webkit-scrollbar { width: 5px; }
+        .admin-sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+        .admin-sidebar-scroll::-webkit-scrollbar-thumb { background-color: #e2e8f0; border-radius: 20px; }
+        .admin-sidebar-scroll::-webkit-scrollbar-thumb:hover { background-color: #cbd5e1; }
+      `}</style>
     </div>
   );
 };

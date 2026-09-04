@@ -5,7 +5,7 @@ import * as LucideIcons from 'lucide-react';
 import { toast } from 'sonner';
 import AgendaCalendario from '../pages/AgendaCalendario';
 
-const { Plus, Edit2, Trash2, X, Clock, MapPin, CheckCircle2, AlertCircle, Timer, LayoutGrid, ArrowRight, Ban, Lock, AlertTriangle, Save, User, ArrowLeft, Calendar, Filter, RefreshCw, Star, Users } = LucideIcons;
+const { Plus, Edit2, Trash2, X, Clock, MapPin, CheckCircle2, AlertCircle, Timer, LayoutGrid, ArrowRight, Ban, Lock, AlertTriangle, Save, User, ArrowLeft, Calendar, Filter, RefreshCw, Star, Users, BookOpen } = LucideIcons;
 
 const getVenueStyle = (venueName) => {
   if (!venueName) return { bg: 'bg-gray-50', text: 'text-gray-400', border: 'border-gray-200', icon: 'text-gray-300' };
@@ -31,9 +31,10 @@ const SessionsManager = () => {
   const [editingId, setEditingId] = useState(null);
   const [availablePresentations, setAvailablePresentations] = useState([]);
   const [selectedWithTimes, setSelectedWithTimes] = useState([]);
+  const [bookItems, setBookItems] = useState([]);
+  const [deletedBookIds, setDeletedBookIds] = useState([]);
   const [totalSymposiumPapers, setTotalSymposiumPapers] = useState(0);
 
-  // ESTADOS PARA LOS FILTROS
   const [filterDate, setFilterDate] = useState('');
   const [filterSymp, setFilterSymp] = useState('');
   const [filterVenue, setFilterVenue] = useState('');
@@ -83,7 +84,6 @@ const SessionsManager = () => {
     return grouped;
   }, [rooms]);
 
-  // LÓGICA DE FILTRADO MAESTRO
   const filteredSessions = useMemo(() => {
     return sessions.filter(s => {
       const matchDate = !filterDate || s.date === filterDate;
@@ -93,7 +93,6 @@ const SessionsManager = () => {
     });
   }, [sessions, filterDate, filterSymp, filterVenue]);
 
-  // EXTRACCIÓN DE OPCIONES PARA LOS SELECTS DE FILTROS
   const uniqueDates = useMemo(() => [...new Set(sessions.map(s => s.date).filter(Boolean))].sort(), [sessions]);
   const uniqueVenues = useMemo(() => [...new Set(sessions.map(s => s.rooms?.venues?.name).filter(Boolean))].sort(), [sessions]);
 
@@ -234,6 +233,23 @@ const SessionsManager = () => {
 
   const updatePresTime = (id, field, value) => setSelectedWithTimes(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
 
+  // --- Manejo de libros dentro de un bloque (event_type = 'libro') ---
+  const addBookItem = () => {
+    const tempId = `new-${Date.now()}`;
+    setBookItems(prev => [...prev, { id: tempId, isNew: true, title: '', authors: '', presenter: '', start_time: formData.start_time || '', end_time: formData.end_time || '' }]);
+  };
+
+  const updateBookItem = (id, field, value) => {
+    setBookItems(prev => prev.map(b => b.id === id ? { ...b, [field]: value } : b));
+  };
+
+  const removeBookItem = (id) => {
+    if (typeof id === 'number') {
+      setDeletedBookIds(prev => [...prev, id]);
+    }
+    setBookItems(prev => prev.filter(b => b.id !== id));
+  };
+
   const handleEdit = async (session) => {
     setEditingId(session.id);
     setFormData({
@@ -245,9 +261,16 @@ const SessionsManager = () => {
     if (session.event_type === 'mesa' || !session.event_type) {
       const { data } = await supabase.from('presentations').select('id, title, authors, start_time, end_time').eq('session_id', session.id);
       setSelectedWithTimes(data || []);
+      setBookItems([]);
+    } else if (session.event_type === 'libro') {
+      const { data } = await supabase.from('presentations').select('id, title, authors, presenter, start_time, end_time').eq('session_id', session.id).order('start_time');
+      setBookItems(data || []);
+      setSelectedWithTimes([]);
     } else {
       setSelectedWithTimes([]);
+      setBookItems([]);
     }
+    setDeletedBookIds([]);
     setIsEditorOpen(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -290,6 +313,10 @@ const SessionsManager = () => {
     if (formData.event_type === 'mesa' && internalTimeConflicts.length > 0) return toast.error("Corrige los conflictos de tiempo internos.");
     if (!formData.room_id || !formData.date || !formData.start_time || !formData.end_time) return toast.error("Por favor completa todos los campos de horario y sala.");  
     if (formData.event_type !== 'mesa' && !formData.name) return toast.error("Por favor ingresa un título para la actividad.");
+    if (formData.event_type === 'libro') {
+      const incompletos = bookItems.filter(b => !b.title || !b.authors);
+      if (incompletos.length > 0) return toast.error("Cada libro necesita al menos Título y Autor(es).");
+    }
 
     if (formData.start_time >= formData.end_time) {
       return toast.error("La hora de inicio debe ser menor a la hora de fin.");
@@ -314,7 +341,10 @@ const SessionsManager = () => {
     }
 
     try {
-      const payload = { ...formData, symposium_id: formData.event_type === 'mesa' ? formData.symposium_id : null };
+      const payload = { 
+        ...formData, 
+        symposium_id: formData.event_type === 'mesa' ? formData.symposium_id : null
+      };
       let sessionId = editingId;
       const { data, error } = editingId
         ? await supabase.from('sessions').update(payload).eq('id', editingId).select()
@@ -327,6 +357,33 @@ const SessionsManager = () => {
         await supabase.from('presentations').update({ session_id: null, start_time: null, end_time: null }).eq('session_id', sessionId);
         for (const pres of selectedWithTimes) {
           await supabase.from('presentations').update({ session_id: sessionId, start_time: pres.start_time, end_time: pres.end_time }).eq('id', pres.id);
+        }
+      }
+
+      if (formData.event_type === 'libro') {
+        for (const delId of deletedBookIds) {
+          await supabase.from('presentations').delete().eq('id', delId);
+        }
+        for (const book of bookItems) {
+          if (!book.title || !book.authors) continue;
+          if (book.isNew) {
+            await supabase.from('presentations').insert([{
+              session_id: sessionId,
+              title: book.title,
+              authors: book.authors,
+              presenter: book.presenter || null,
+              start_time: book.start_time || null,
+              end_time: book.end_time || null
+            }]);
+          } else {
+            await supabase.from('presentations').update({
+              title: book.title,
+              authors: book.authors,
+              presenter: book.presenter || null,
+              start_time: book.start_time || null,
+              end_time: book.end_time || null
+            }).eq('id', book.id);
+          }
         }
       }
       
@@ -348,7 +405,6 @@ const SessionsManager = () => {
     return { ...evt, IconComponent };
   };
 
-  // --- VISTA 2: EDITOR DE AGENDA INLINE ---
   if (isEditorOpen) {
     return (
       <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full mx-auto pb-10">
@@ -444,8 +500,8 @@ const SessionsManager = () => {
                 )}
 
                 <div>
-                  <Label>{formData.event_type === 'mesa' ? 'Nombre de la Mesa' : 'Título del Evento'}</Label>
-                  <input className={InputClasses} value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder={formData.event_type === 'mesa' ? "Ej: Mesa 1 - Título" : "Ej: Concierto..."} />
+                  <Label>{formData.event_type === 'mesa' ? 'Nombre de la Mesa' : formData.event_type === 'libro' ? 'Nombre del Bloque' : 'Título del Evento'}</Label>
+                  <input className={InputClasses} value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder={formData.event_type === 'mesa' ? "Ej: Mesa 1 - Título" : formData.event_type === 'libro' ? "Ej: Bloque 1 – Libros" : "Ej: Concierto..."} />
                 </div>
                 
                 {formData.event_type === 'mesa' && (
@@ -585,6 +641,98 @@ const SessionsManager = () => {
             </div>
           )}
 
+          {formData.event_type === 'libro' && (
+            <div className="bg-white min-h-[300px]">
+              <div className="p-4 border-b flex justify-between items-center bg-gray-50/80">
+                <h4 className="text-sm font-black text-[#1e3a5f] uppercase tracking-widest flex items-center gap-2">
+                  <BookOpen size={16}/> Libros en este Bloque
+                  {bookItems.length > 0 && (
+                    <span className="bg-emerald-100 border border-emerald-200 text-emerald-800 px-2.5 py-1 rounded-md text-[10px] font-black shadow-sm ml-2">
+                      {bookItems.length} {bookItems.length === 1 ? 'libro' : 'libros'}
+                    </span>
+                  )}
+                </h4>
+                <button
+                  type="button"
+                  onClick={addBookItem}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all active:scale-95 shadow-sm"
+                >
+                  <Plus size={16}/> Agregar Libro
+                </button>
+              </div>
+
+              <div className="p-4 space-y-4">
+                {bookItems.length === 0 && (
+                  <div className="p-10 text-center text-gray-400 text-sm italic border-2 border-dashed rounded-2xl">
+                    Aún no hay libros en este bloque. Click en "Agregar Libro" para comenzar.
+                  </div>
+                )}
+
+                {bookItems.map((book, index) => (
+                  <div key={book.id} className="bg-emerald-50/40 border border-emerald-100 rounded-xl p-4 relative">
+                    <button
+                      type="button"
+                      onClick={() => removeBookItem(book.id)}
+                      className="absolute top-3 right-3 text-gray-400 hover:text-red-500 bg-white hover:bg-red-50 rounded-full p-1.5 transition-colors shadow-sm"
+                    >
+                      <X size={14}/>
+                    </button>
+
+                    <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-3 block">
+                      Libro #{index + 1}
+                    </span>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                      <div className="md:col-span-2">
+                        <Label>Título del Libro</Label>
+                        <input
+                          className={InputClasses}
+                          value={book.title}
+                          onChange={e => updateBookItem(book.id, 'title', e.target.value)}
+                          placeholder="Ej: Resistencias musicales..."
+                        />
+                      </div>
+                      <div>
+                        <Label>Autor(es)</Label>
+                        <input
+                          className={InputClasses}
+                          value={book.authors}
+                          onChange={e => updateBookItem(book.id, 'authors', e.target.value)}
+                          placeholder="Ej: María López-Castilla"
+                        />
+                      </div>
+                      <div>
+                        <Label><User size={12}/> Presentado por</Label>
+                        <input
+                          className={`${InputClasses} border-emerald-200 focus:border-emerald-500`}
+                          value={book.presenter || ''}
+                          onChange={e => updateBookItem(book.id, 'presenter', e.target.value)}
+                          placeholder="Ej: Dra. María Luisa de la Garza"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 p-2 bg-white rounded-xl border border-gray-200 w-fit">
+                      <input
+                        type="time"
+                        className="rounded-lg p-2.5 text-sm font-black text-center outline-none bg-gray-50 focus:ring-2 focus:ring-emerald-100"
+                        value={book.start_time || ''}
+                        onChange={e => updateBookItem(book.id, 'start_time', e.target.value)}
+                      />
+                      <ArrowRight size={14} className="text-gray-400 shrink-0"/>
+                      <input
+                        type="time"
+                        className="rounded-lg p-2.5 text-sm font-black text-center outline-none bg-gray-50 focus:ring-2 focus:ring-emerald-100"
+                        value={book.end_time || ''}
+                        onChange={e => updateBookItem(book.id, 'end_time', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="p-5 sm:p-6 border-t border-gray-200 bg-white flex justify-end gap-4 shrink-0">
             <button onClick={() => setIsEditorOpen(false)} className="px-6 py-3 rounded-xl font-bold text-sm text-gray-600 bg-gray-50 border border-gray-200 hover:bg-gray-100 uppercase tracking-wide transition-colors">Cancelar</button>
             <button 
@@ -600,7 +748,6 @@ const SessionsManager = () => {
     );
   }
 
-  // --- VISTA 1: GRID PRINCIPAL Y PESTAÑAS ---
   return (
     <div className="space-y-6 p-4 md:p-6 animate-in fade-in pb-20 md:pb-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -639,7 +786,7 @@ const SessionsManager = () => {
         <button onClick={() => { 
             setEditingId(null); 
             setFormData({name:'', symposium_id:'', room_id:'', date:'', start_time:'', end_time:'', event_type: 'mesa'}); 
-            setOccupiedSlots([]); setAvailableGaps([]); setSelectedWithTimes([]); 
+            setOccupiedSlots([]); setAvailableGaps([]); setSelectedWithTimes([]); setBookItems([]); setDeletedBookIds([]);
             setIsEditorOpen(true); 
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }} className="bg-[#1e3a5f] text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-black transition-all flex gap-2 items-center shadow-lg active:scale-95 w-full xl:w-auto justify-center">
@@ -708,6 +855,11 @@ const SessionsManager = () => {
                          </div>
                       </div>
                       <h3 className="font-black text-[#1e3a5f] text-lg leading-tight line-clamp-2">{s.name || evt.label}</h3>
+                      {s.event_type === 'libro' && paperCount > 0 && (
+                        <p className="text-[11px] font-bold text-emerald-600 uppercase mt-1 flex items-center gap-1">
+                          <BookOpen size={12}/> {paperCount} {paperCount === 1 ? 'libro' : 'libros'}
+                        </p>
+                      )}
                     </div>
                     
                     <div className="absolute top-4 right-4 flex gap-1.5 z-10 opacity-0 group-hover:opacity-100 transition-opacity">

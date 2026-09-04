@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import {
-  Search, Plus, Edit2, X,
-  MapPin, BookOpen, AlertCircle, Users
+  Search, Plus, Edit2, X, Trash2,
+  MapPin, BookOpen, AlertCircle, Users, AlertTriangle
 } from 'lucide-react';
-import { toast } from 'sonner'; // Importamos la librería de alertas
+import { toast } from 'sonner';
 
 const SymposiumsManager = () => {
   const [symposiums, setSymposiums] = useState([]);
@@ -12,6 +12,9 @@ const SymposiumsManager = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
+
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -31,7 +34,6 @@ const SymposiumsManager = () => {
 
       if (error) throw error;
 
-      // --- AJUSTE: ORDENAMIENTO POR ID (1-18) ---
       const sortedData = (data || []).sort((a, b) => a.id - b.id);
 
       setSymposiums(sortedData);
@@ -53,7 +55,6 @@ const SymposiumsManager = () => {
       const { error } = await query;
       if (error) throw error;
 
-      // --- AQUÍ ESTÁ LA ALERTA DE CONFIRMACIÓN ---
       toast.success(editingId ? 'Simposio actualizado correctamente' : 'Simposio creado correctamente');
 
       setIsModalOpen(false);
@@ -62,7 +63,6 @@ const SymposiumsManager = () => {
       fetchData();
     } catch (error) {
       console.error(error);
-      // Reemplazamos el alert() nativo por el toast rojo
       toast.error('Error al guardar: ' + error.message);
     }
   };
@@ -74,6 +74,40 @@ const SymposiumsManager = () => {
       coordinators: symposium.coordinators || ''
     });
     setIsModalOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      setDeleting(true);
+      const { error, count } = await supabase
+        .from('symposiums')
+        .delete({ count: 'exact' })
+        .eq('id', deleteTarget.id);
+
+      if (error) {
+        if (error.code === '23503') {
+          toast.error('No se puede eliminar: este simposio tiene sesiones o ponencias asociadas.');
+        } else {
+          toast.error('Error al eliminar: ' + error.message);
+        }
+        return;
+      }
+
+      if (!count) {
+        toast.error('No se eliminó ningún registro. Verifica los permisos (RLS) de la tabla symposiums.');
+        return;
+      }
+
+      toast.success('Simposio eliminado correctamente');
+      setDeleteTarget(null);
+      fetchData();
+    } catch (error) {
+      console.error(error);
+      toast.error('Error al eliminar: ' + error.message);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const filtered = symposiums.filter(s =>
@@ -143,7 +177,13 @@ const SymposiumsManager = () => {
                   <p className="text-xs text-orange-400 italic flex items-center gap-1"><AlertCircle size={12}/> Sin coordinadores asignados</p>
                 )}
               </div>
-              <div className="flex justify-end pt-2 border-t border-gray-50">
+              <div className="flex justify-end gap-2 pt-2 border-t border-gray-50">
+                <button
+                  onClick={() => setDeleteTarget(symposium)}
+                  className="flex items-center gap-2 px-3 py-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors font-bold text-sm"
+                >
+                  <Trash2 size={16} /> Eliminar
+                </button>
                 <button
                   onClick={() => handleEdit(symposium)}
                   className="flex items-center gap-2 px-3 py-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors font-bold text-sm"
@@ -158,10 +198,10 @@ const SymposiumsManager = () => {
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">        
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-4 border-b flex justify-between items-center bg-blue-600 text-white">
               <h3 className="font-bold text-lg">{editingId ? 'Editar Simposio' : 'Nuevo Simposio'}</h3>
-              <button onClick={() => setIsModalOpen(false)} className="hover:bg-blue-700 rounded-full p-1"><X size={20} /></button>   
+              <button onClick={() => setIsModalOpen(false)} className="hover:bg-blue-700 rounded-full p-1"><X size={20} /></button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div className="space-y-1">
@@ -171,7 +211,7 @@ const SymposiumsManager = () => {
               <div className="space-y-1">
                 <label className="text-xs font-bold text-gray-500 uppercase">Coordinación (Nombres)</label>
                 <textarea
-                  className="w-full p-3 rounded-lg border border-gray-200 focus:border-blue-600 outline-none text-sm min-h-[80px]"    
+                  className="w-full p-3 rounded-lg border border-gray-200 focus:border-blue-600 outline-none text-sm min-h-[80px]"
                   placeholder="Ej: Adalberto Paranhos, Julio Mendívil..."
                   value={formData.coordinators}
                   onChange={e => setFormData({...formData, coordinators: e.target.value})}
@@ -182,6 +222,47 @@ const SymposiumsManager = () => {
                 <button type="submit" className="flex-[2] py-3 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-lg transition-colors">Guardar Cambios</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="text-red-600" size={20} />
+                </div>
+                <h3 className="font-bold text-lg text-gray-800">Eliminar simposio</h3>
+              </div>
+
+              <p className="text-sm text-gray-600">
+                ¿Seguro que deseas eliminar el simposio <span className="font-bold text-gray-800">"{deleteTarget.name}"</span> (ID: {deleteTarget.id})? Esta acción no se puede deshacer.
+              </p>
+              <p className="text-xs text-orange-500 bg-orange-50 border border-orange-100 rounded-lg p-3">
+                Si este simposio tiene sesiones o ponencias asociadas, la eliminación puede fallar. Elimínalas primero desde "Agenda / Mesas" y "Ponencias".
+              </p>
+
+              <div className="pt-2 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setDeleteTarget(null)}
+                  disabled={deleting}
+                  className="flex-1 py-3 rounded-xl font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="flex-[2] py-3 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 shadow-lg transition-colors disabled:opacity-50"
+                >
+                  {deleting ? 'Eliminando...' : 'Sí, eliminar'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

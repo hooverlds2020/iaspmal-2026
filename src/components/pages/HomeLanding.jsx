@@ -1,9 +1,10 @@
 // src/components/pages/HomeLanding.jsx
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Calendar, MapPin, Users, Search, CheckCircle, Ticket, AlertCircle, 
+import { createPortal } from 'react-dom';
+import {
+  Calendar, MapPin, Users, Search, CheckCircle, Ticket, AlertCircle,
   Clock, Flag, FileText, Mic, ChevronLeft, ChevronRight, ArrowRight,
-  UserPlus, Book, Edit3, DollarSign, CreditCard, Plane, Footprints, HeartPulse
+  UserPlus, Book, Edit3, DollarSign, CreditCard, Plane, Footprints, HeartPulse, X
 } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 
@@ -18,6 +19,9 @@ const MainHeroSlider = ({ lang, setCurrentPage }) => {
   const [slides, setSlides] = useState([]);
   const [loading, setLoading] = useState(true);
   const autoPlayRef = useRef();
+
+  // --- Estado para la imagen ampliada (ventana emergente) ---
+  const [selectedPopup, setSelectedPopup] = useState(null);
 
   useEffect(() => {
     const fetchSliders = async () => {
@@ -35,7 +39,7 @@ const MainHeroSlider = ({ lang, setCurrentPage }) => {
         const activeSlides = data.filter(slide => {
           const startDate = slide.fecha_inicio ? new Date(slide.fecha_inicio) : null;
           const endDate = slide.fecha_fin ? new Date(slide.fecha_fin) : null;
-          
+
           if (startDate && now < startDate) return false;
           if (endDate && now > endDate) return false;
           return true;
@@ -94,75 +98,109 @@ const MainHeroSlider = ({ lang, setCurrentPage }) => {
     }
   };
 
+  // --- Maneja el clic en un slide: prioriza la ventana emergente sobre el enlace ---
+  const handleSlideClick = (slide) => {
+    if (slide.popup_image_url) {
+      setSelectedPopup(slide.popup_image_url);
+    } else if (slide.enlace_url) {
+      handleLinkClick(slide.enlace_url, slide.abrir_nueva_pestana);
+    }
+  };
+
   if (loading) {
     return <div className="w-full h-[450px] md:h-[550px] bg-gray-900 rounded-2xl animate-pulse flex items-center justify-center"><Calendar className="text-gray-700 w-12 h-12" /></div>;
   }
 
   return (
-    <div 
-      className="relative w-full h-[450px] md:h-[550px] overflow-hidden rounded-2xl group shadow-xl bg-gray-900 select-none"
-      onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
-    >
-      {slides.map((slide, index) => {
-        const hasText = slide.titulo || slide.descripcion;
-        const isClickableImage = !hasText && slide.enlace_url;
+    <>
+      <div
+        className="relative w-full h-[450px] md:h-[550px] overflow-hidden rounded-2xl group shadow-xl bg-gray-900 select-none"
+        onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
+      >
+        {slides.map((slide, index) => {
+          const hasText = slide.titulo || slide.descripcion;
+          const hasPopup = !!slide.popup_image_url;
+          const isClickableImage = !hasText && (slide.enlace_url || hasPopup);
 
-        return (
-          <div key={slide.id} className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out ${index === current ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
-            <div 
-               className={`absolute inset-0 w-full h-full transform transition-transform duration-[8000ms] ease-linear ${index === current ? 'scale-110' : 'scale-100'} ${isClickableImage ? 'cursor-pointer' : ''}`}
-               onClick={() => isClickableImage && handleLinkClick(slide.enlace_url, slide.abrir_nueva_pestana)}
-            >
-               <img src={slide.image_url} alt={slide.titulo || 'Slider IASPM-AL'} className="w-full h-full object-cover" />
-            </div>
-            
-            {hasText && (
-              <>
-                <div className="absolute inset-0 bg-gradient-to-t from-[#1e3a5f]/95 via-[#1e3a5f]/50 to-transparent pointer-events-none"></div>
-                <div className="absolute inset-0 z-20 flex items-end md:items-center justify-start px-6 md:px-16 pb-16 md:pb-0 pointer-events-none">
-                  <div className="max-w-2xl space-y-3 md:space-y-5 pointer-events-auto">
-                    {slide.titulo && (
-                       <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-white leading-tight drop-shadow-lg animate-in slide-in-from-bottom-4 duration-700 fade-in delay-200">
-                         {slide.titulo}
-                       </h1>
-                    )}
-                    {slide.descripcion && (
-                       <p className="text-gray-200 text-sm md:text-lg font-medium leading-relaxed max-w-lg drop-shadow-md line-clamp-3 md:line-clamp-none animate-in slide-in-from-bottom-4 duration-700 fade-in delay-300">
-                         {slide.descripcion}
-                       </p>
-                    )}
-                    {slide.enlace_url && (
-                      <div className="pt-2 animate-in slide-in-from-bottom-4 duration-700 fade-in delay-500">
-                        <button onClick={() => handleLinkClick(slide.enlace_url, slide.abrir_nueva_pestana)} className="bg-[#f97316] hover:bg-orange-600 text-white px-6 md:px-8 py-3 rounded-xl font-bold uppercase text-xs tracking-widest transition-all shadow-lg hover:shadow-orange-500/30 flex items-center gap-2 hover:-translate-y-1 active:scale-95">
-                          <span>{lang === 'es' ? 'Saber Más' : 'Saiba Mais'}</span> <ArrowRight size={16} />
-                        </button>
-                      </div>
-                    )}
+          return (
+            <div key={slide.id} className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out ${index === current ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
+              <div
+                 className={`absolute inset-0 w-full h-full transform transition-transform duration-[8000ms] ease-linear ${index === current ? 'scale-110' : 'scale-100'} ${isClickableImage ? 'cursor-pointer' : ''}`}
+                 onClick={() => isClickableImage && handleSlideClick(slide)}
+              >
+                 <img src={slide.image_url} alt={slide.titulo || 'Slider IASPM-AL'} className="w-full h-full object-cover" />
+              </div>
+
+              {hasText && (
+                <>
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#1e3a5f]/95 via-[#1e3a5f]/50 to-transparent pointer-events-none"></div>
+                  <div className="absolute inset-0 z-20 flex items-end md:items-center justify-start px-6 md:px-16 pb-16 md:pb-0 pointer-events-none">
+                    <div className="max-w-2xl space-y-3 md:space-y-5 pointer-events-auto">
+                      {slide.titulo && (
+                         <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-white leading-tight drop-shadow-lg animate-in slide-in-from-bottom-4 duration-700 fade-in delay-200">
+                           {slide.titulo}
+                         </h1>
+                      )}
+                      {slide.descripcion && (
+                         <p className="text-gray-200 text-sm md:text-lg font-medium leading-relaxed max-w-lg drop-shadow-md line-clamp-3 md:line-clamp-none animate-in slide-in-from-bottom-4 duration-700 fade-in delay-300">
+                           {slide.descripcion}
+                         </p>
+                      )}
+                      {(slide.enlace_url || slide.popup_image_url) && (
+                        <div className="pt-2 animate-in slide-in-from-bottom-4 duration-700 fade-in delay-500">
+                          <button onClick={() => handleSlideClick(slide)} className="bg-[#f97316] hover:bg-orange-600 text-white px-6 md:px-8 py-3 rounded-xl font-bold uppercase text-xs tracking-widest transition-all shadow-lg hover:shadow-orange-500/30 flex items-center gap-2 hover:-translate-y-1 active:scale-95">
+                            <span>{lang === 'es' ? 'Saber Más' : 'Saiba Mais'}</span> <ArrowRight size={16} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </>
-            )}
-          </div>
-        );
-      })}
+                </>
+              )}
+            </div>
+          );
+        })}
 
-      {slides.length > 1 && (
-        <>
-          <button onClick={prevSlide} className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/10 transition-all hover:scale-110 z-30 group">
-            <ChevronLeft size={24} className="group-hover:-translate-x-0.5 transition-transform" />
-          </button>
-          <button onClick={nextSlide} className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/10 transition-all hover:scale-110 z-30 group">
-            <ChevronRight size={24} className="group-hover:translate-x-0.5 transition-transform" />
-          </button>
+        {slides.length > 1 && (
+          <>
+            <button onClick={prevSlide} className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/10 transition-all hover:scale-110 z-30 group">
+              <ChevronLeft size={24} className="group-hover:-translate-x-0.5 transition-transform" />
+            </button>
+            <button onClick={nextSlide} className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/10 transition-all hover:scale-110 z-30 group">
+              <ChevronRight size={24} className="group-hover:translate-x-0.5 transition-transform" />
+            </button>
 
-          <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-2 z-30">
-            {slides.map((_, idx) => (
-              <button key={idx} onClick={() => goToSlide(idx)} className={`h-1.5 rounded-full transition-all duration-500 shadow-sm ${idx === current ? 'w-8 bg-[#f97316]' : 'w-2 bg-white/40 hover:bg-white/80'}`} />
-            ))}
-          </div>
-        </>
+            <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-2 z-30">
+              {slides.map((_, idx) => (
+                <button key={idx} onClick={() => goToSlide(idx)} className={`h-1.5 rounded-full transition-all duration-500 shadow-sm ${idx === current ? 'w-8 bg-[#f97316]' : 'w-2 bg-white/40 hover:bg-white/80'}`} />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* --- Modal / Ventana Emergente con la imagen ampliada (via Portal, fuera del stacking context) --- */}
+      {selectedPopup && createPortal(
+        <div
+          className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setSelectedPopup(null)}
+        >
+          <button
+            onClick={() => setSelectedPopup(null)}
+            className="absolute top-4 right-4 md:top-6 md:right-6 z-10 p-2.5 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-sm transition-colors"
+          >
+            <X size={24} />
+          </button>
+          <img
+            src={selectedPopup}
+            alt="Vista ampliada"
+            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl animate-in zoom-in-95 duration-300"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   );
 };
 
@@ -226,7 +264,7 @@ const HomeLanding = ({ lang, setCurrentPage }) => {
   const [emailCheck, setEmailCheck] = useState('');
   const [statusResult, setStatusResult] = useState(null);
   const [loadingCheck, setLoadingCheck] = useState(false);
-  
+
   const [lineProgress, setLineProgress] = useState(0);
   const timelineRef = useRef(null);
 
@@ -241,7 +279,7 @@ const HomeLanding = ({ lang, setCurrentPage }) => {
     };
 
     window.addEventListener('scroll', handleScroll);
-    handleScroll(); 
+    handleScroll();
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -275,7 +313,7 @@ const HomeLanding = ({ lang, setCurrentPage }) => {
   };
 
   const timelineEvents = [
-    { date: lang === 'es' ? '8 de Febrero 2026' : '8 de Fevereiro 2026', title: lang === 'es' ? 'Ponencias Aceptadas' : 'Trabalhos Aceitos', desc: lang === 'es' ? 'Publicación de resultados de trabajos aceptados.' : 'Publicação dos resultados dos trabajos aceitos.', icon: CheckCircle, status: 'done' },
+    { date: lang === 'es' ? '8 de Febrero 2026' : '8 de Fevereiro 2026', title: lang === 'es' ? 'Ponencias Aceptadas' : 'Trabalhos Aceitos', desc: lang === 'es' ? 'Publicación de resultados de trabajos aceptados.' : 'Publicação dos resultados dos trabalhos aceitos.', icon: CheckCircle, status: 'done' },
     { date: lang === 'es' ? 'Abril 2026' : 'Abril 2026', title: lang === 'es' ? 'Inicio de Inscripciones' : 'Início das Inscrições', desc: lang === 'es' ? 'Registro disponible para asistentes y ponentes.' : 'Registro disponível para participantes e palestrantes.', icon: UserPlus, status: 'active' },
     { date: '31 Mayo 2026', title: lang === 'es' ? 'Concluye 1er plazo de pago' : 'Encerra 1º prazo de pagamento', desc: lang === 'es' ? 'Último día para aprovechar el mayor descuento.' : 'Último dia para aproveitar o maior desconto.', icon: DollarSign, status: 'future' },
     { date: '15 de Junio 2026', title: lang === 'es' ? 'Presentaciones de libros' : 'Apresentações de livros', desc: lang === 'es' ? 'Finaliza el plazo para enviar propuestas.' : 'Encerra o prazo para envio de propostas.', icon: Book, status: 'future' },
@@ -343,7 +381,6 @@ const HomeLanding = ({ lang, setCurrentPage }) => {
               <h3 className="text-lg font-bold text-gray-800 mb-2 group-hover:text-[#1e3a5f] transition-colors">{lang === 'es' ? item.title.es : item.title.pt}</h3>
               <p className="text-sm text-gray-500 leading-snug">{lang === 'es' ? item.desc.es : item.desc.pt}</p>
 
-              {/* Popup de vista previa: solo en escritorio (hover), oculto en móvil/táctil */}
               <div className="hidden md:block absolute left-4 right-4 top-full mt-2 z-20 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none">
                 <div className="bg-[#1e3a5f] text-white text-xs leading-relaxed rounded-xl p-4 shadow-2xl">
                   {lang === 'es' ? item.preview.es : item.preview.pt}
@@ -368,10 +405,10 @@ const HomeLanding = ({ lang, setCurrentPage }) => {
              {lang === 'es' ? 'Fechas clave para tu participación' : 'Datas-chave para sua participação'}
            </p>
         </div>
-        
+
         <div className="relative" ref={timelineRef}>
            <div className="absolute left-4 md:left-1/2 top-0 bottom-0 w-0.5 bg-gray-200 -translate-x-1/2 rounded-full"></div>
-           <div 
+           <div
              className="absolute left-4 md:left-1/2 top-0 w-1 bg-[#1e3a5f] -translate-x-1/2 rounded-b-full shadow-[0_0_10px_rgba(30,58,95,0.4)] transition-all duration-150 ease-out z-0"
              style={{ height: `${lineProgress}%` }}
            ></div>
@@ -395,7 +432,7 @@ const HomeLanding = ({ lang, setCurrentPage }) => {
             {lang === 'es' ? 'Si ya realizaste tu pago, ingresa tu correo para verificar tu estatus.' : 'Se você ya realizó su pago, insira seu e-mail para verificar seu status.'}
           </p>
         </div>
-        <div className="flex-1 w-full max-w-md bg-white p-6 rounded-xl shadow-lg border border-gray-100 ring-1 ring-gray-100">        
+        <div className="flex-1 w-full max-w-md bg-white p-6 rounded-xl shadow-lg border border-gray-100 ring-1 ring-gray-100">
           <form onSubmit={checkStatus} className="space-y-4">
             <div>
               <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5 block">{lang === 'es' ? 'Correo Electrónico' : 'Endereço de E-mail'}</label>
