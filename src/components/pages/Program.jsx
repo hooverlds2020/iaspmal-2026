@@ -615,6 +615,8 @@ const Program = () => {
                 )}
               </div>
             )}
+            {!['libro', 'musica', 'concierto_estelar', 'inauguracion', 'conversatorio', 'plenaria'].includes(selectedSession.event_type) || selectedSession.event_type === 'libro' ? (
+              <>
 
             <div className="flex items-center justify-between mb-4 mt-2 px-2">
               <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">
@@ -653,6 +655,8 @@ const Program = () => {
                  </div>
               )}
             </div>
+              </>
+            ) : null}
             <div className="h-20"></div>
         </div>
       </div>
