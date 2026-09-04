@@ -35,7 +35,7 @@ const FloatingAudioPlayer = () => {
       </button>
       {playing && (
         <span className="fixed bottom-8 right-24 z-[150] bg-[#1e3a5f] text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full shadow-lg hidden sm:block">
-          🎵 La tortuga del arenal
+          🎵 Na'rimbo — La tortuga del arenal
         </span>
       )}
     </>
