@@ -16,6 +16,7 @@ import Header from './components/layout/Header';
 import MobileSidebar from './components/layout/MobileSidebar';
 import Footer from './components/layout/Footer';
 import WelcomeModal from './components/layout/WelcomeModal';
+import FloatingAudioPlayer from './components/layout/FloatingAudioPlayer';
 
 // Page Components
 import HomeLanding from './components/pages/HomeLanding';
@@ -611,6 +612,7 @@ const App = () => {
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      <FloatingAudioPlayer />
     </Router>
   );
 };
