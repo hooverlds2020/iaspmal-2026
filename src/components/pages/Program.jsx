@@ -564,6 +564,58 @@ const Program = () => {
               </div>
             )}
 
+            {(selectedSession.event_type === 'musica' || selectedSession.event_type === 'concierto_estelar' || selectedSession.event_type === 'inauguracion') && (selectedSession.concierto_grupo || selectedSession.concierto_titulo || selectedSession.concierto_descripcion) && (
+              <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-6 space-y-2">
+                {selectedSession.concierto_grupo && (
+                  <div>
+                    <p className="text-[9px] font-black text-indigo-700 uppercase tracking-widest mb-0.5">Grupo / Equipo</p>
+                    <p className="text-sm font-bold text-gray-800">{selectedSession.concierto_grupo}</p>
+                  </div>
+                )}
+                {selectedSession.concierto_titulo && (
+                  <div>
+                    <p className="text-[9px] font-black text-indigo-700 uppercase tracking-widest mb-0.5">Concierto</p>
+                    <p className="text-sm font-bold text-gray-800">{selectedSession.concierto_titulo}</p>
+                  </div>
+                )}
+                {selectedSession.concierto_descripcion && (
+                  <p className="text-sm text-gray-600 leading-relaxed">{selectedSession.concierto_descripcion}</p>
+                )}
+              </div>
+            )}
+
+            {selectedSession.event_type === 'conversatorio' && (selectedSession.conversatorio_participantes || selectedSession.conversatorio_descripcion) && (
+              <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-6 space-y-2">
+                {selectedSession.conversatorio_participantes && (
+                  <div>
+                    <p className="text-[9px] font-black text-orange-700 uppercase tracking-widest mb-0.5 flex items-center gap-1">
+                      <User size={11}/> Participantes
+                    </p>
+                    <p className="text-sm font-bold text-gray-800">{selectedSession.conversatorio_participantes}</p>
+                  </div>
+                )}
+                {selectedSession.conversatorio_descripcion && (
+                  <p className="text-sm text-gray-600 leading-relaxed">{selectedSession.conversatorio_descripcion}</p>
+                )}
+              </div>
+            )}
+
+            {selectedSession.event_type === 'plenaria' && (selectedSession.plenaria_ponentes || selectedSession.plenaria_descripcion) && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 space-y-2">
+                {selectedSession.plenaria_ponentes && (
+                  <div>
+                    <p className="text-[9px] font-black text-amber-700 uppercase tracking-widest mb-0.5 flex items-center gap-1">
+                      <User size={11}/> Ponentes
+                    </p>
+                    <p className="text-sm font-bold text-gray-800">{selectedSession.plenaria_ponentes}</p>
+                  </div>
+                )}
+                {selectedSession.plenaria_descripcion && (
+                  <p className="text-sm text-gray-600 leading-relaxed">{selectedSession.plenaria_descripcion}</p>
+                )}
+              </div>
+            )}
+
             <div className="flex items-center justify-between mb-4 mt-2 px-2">
               <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">
                 {selectedSession.event_type === 'libro' ? 'Agenda de Publicaciones' : 'Agenda de Ponencias'}
