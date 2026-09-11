@@ -1,10 +1,32 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
+function SponsorLogo({ sponsor }) {
+  return (
+    <a
+      href={sponsor.website_url || undefined}
+      target={sponsor.website_url ? '_blank' : undefined}
+      rel={sponsor.website_url ? 'noopener noreferrer' : undefined}
+      className="flex-shrink-0 grayscale hover:grayscale-0 transition-all duration-300 opacity-80 hover:opacity-100"
+      title={sponsor.name}
+    >
+      <img
+        src={sponsor.logo_url}
+        alt={sponsor.name}
+        className="h-16 md:h-20 w-auto object-contain"
+        loading="lazy"
+      />
+    </a>
+  );
+}
+
+const MIN_ITEMS_FOR_MARQUEE = 5;
+
 function LogoRow({ items, label, speed = 30 }) {
   if (!items.length) return null;
 
-  const track = [...items, ...items];
+  const shouldAnimate = items.length >= MIN_ITEMS_FOR_MARQUEE;
+  const track = shouldAnimate ? [...items, ...items] : items;
 
   return (
     <div className="mb-10">
@@ -14,28 +36,22 @@ function LogoRow({ items, label, speed = 30 }) {
         </h3>
       )}
       <div className="relative overflow-hidden w-full">
-        <div
-          className="flex items-center gap-12 w-max animate-marquee"
-          style={{ animationDuration: `${speed}s` }}
-        >
-          {track.map((sponsor, i) => (
-            <a
-              key={`${sponsor.id}-${i}`}
-              href={sponsor.website_url || undefined}
-              target={sponsor.website_url ? '_blank' : undefined}
-              rel={sponsor.website_url ? 'noopener noreferrer' : undefined}
-              className="flex-shrink-0 grayscale hover:grayscale-0 transition-all duration-300 opacity-80 hover:opacity-100"
-              title={sponsor.name}
-            >
-              <img
-                src={sponsor.logo_url}
-                alt={sponsor.name}
-                className="h-16 md:h-20 w-auto object-contain"
-                loading="lazy"
-              />
-            </a>
-          ))}
-        </div>
+        {shouldAnimate ? (
+          <div
+            className="flex items-center gap-12 w-max animate-marquee"
+            style={{ animationDuration: `${speed}s` }}
+          >
+            {track.map((sponsor, i) => (
+              <SponsorLogo key={`${sponsor.id}-${i}`} sponsor={sponsor} />
+            ))}
+          </div>
+        ) : (
+          <div className="flex items-center justify-center flex-wrap gap-12">
+            {track.map((sponsor) => (
+              <SponsorLogo key={sponsor.id} sponsor={sponsor} />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
