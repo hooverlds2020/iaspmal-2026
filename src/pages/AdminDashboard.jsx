@@ -1,6 +1,6 @@
 // src/pages/AdminDashboard.jsx
 import React, { useState } from 'react';
-import { LogOut, Users, Calendar, FileText, Settings, DollarSign, MapPin, LayoutGrid, Image, Building, Award, Coffee } from 'lucide-react'; // ✅ Añadido Coffee
+import { LogOut, Users, Calendar, FileText, Settings, DollarSign, MapPin, LayoutGrid, Image, HeartHandshake, Building, Award, Coffee } from 'lucide-react'; // ✅ Añadido Coffee
 import SymposiumsManager from '../components/admin/SymposiumsManager';
 import SessionsManager from '../components/admin/SessionsManager';
 import PresentationsManager from '../components/admin/PresentationsManager';
@@ -13,6 +13,7 @@ import AccommodationManager from '../components/admin/AccommodationManager'; // 
 import RestaurantesManager from '../components/admin/RestaurantesManager';
 import CertificatesManager from '../components/admin/CertificatesManager'; // ✅ Panel de constancias
 import { supabase } from '../lib/supabaseClient';
+import SponsorsManager from '../components/admin/SponsorsManager';
 
 const AdminDashboard = ({ user, onLogout }) => {
   // Persistencia de la sección activa
@@ -118,6 +119,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                  </div>
                  
                  <NavButton id="slider" label="Banners / Sliders" icon={Image} />
+                 <NavButton id="patrocinios" label="Patrocinios y colaboraciones" icon={HeartHandshake} />
                  <NavButton id="galeria-admin" label="Galería de Fotos" icon={Image} />
                  <NavButton id="alojamientos" label="Alojamiento" icon={Building} /> {/* ✅ Nuevo Botón */}
                  <NavButton id="restaurantes" label="Cafés y Restaurantes" icon={Coffee} />
@@ -142,6 +144,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                   {activeSection === 'finanzas' && <FinancesDashboard />}
                   {activeSection === 'constancias' && <CertificatesManager />}
                   {activeSection === 'slider' && <SliderManager />}
+                  {activeSection === 'patrocinios' && <SponsorsManager />}
                   {activeSection === 'galeria-admin' && <GalleryManager />}
                   {activeSection === 'alojamientos' && <AccommodationManager />} {/* ✅ Renderizado del nuevo panel */}
                   {activeSection === 'restaurantes' && <RestaurantesManager />}

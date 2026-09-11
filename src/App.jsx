@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Toaster } from 'sonner';
 import { Ticket, ArrowLeft, Clock, Library, Info, Menu } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
+import SponsorsCarousel from './components/SponsorsCarousel';
 import UploadPhoto from './components/UploadPhoto';
 
 // Pages - Tools
@@ -116,6 +117,7 @@ const MainLayout = ({ lang, setLang }) => {
     { id: 'conciertos', label: 'Conciertos', label_pt: 'Concertos' },
     { id: 'presentaciones-libros', label: 'Presentaciones de libros', label_pt: 'Apresentações de livros' },
     { id: 'instituciones-convocantes', label: 'Instituciones convocantes', label_pt: 'Instituições convocantes' },
+    { id: 'patrocinios', label: 'Patrocinios y colaboraciones', label_pt: 'Patrocínios e colaborações' },
     {
       id: 'actividades-congreso',
       label: 'Actividades previas y posteriores',
@@ -166,6 +168,7 @@ const MainLayout = ({ lang, setLang }) => {
       'actividad2': { es: 'Actividad 2', pt: 'Atividade 2' },
       'sedes': { es: 'Sedes del Congreso', pt: 'Locais do Congresso' },
       'instituciones-convocantes': { es: 'Instituciones convocantes', pt: 'Instituições convocantes' },
+      'patrocinios': { es: 'Patrocinios y colaboraciones', pt: 'Patrocínios e colaborações' },
       'organizaciones': { es: 'Entidades colaboradoras', pt: 'Entidades colaboradoras' },
       'alojamiento': { es: 'Alojamiento', pt: 'Hospedagem' },
       'san-cristobal': { es: 'San Cristóbal de Las Casas', pt: 'San Cristóbal de Las Casas' },
@@ -462,6 +465,7 @@ const MainLayout = ({ lang, setLang }) => {
       case 'galeria': return <Gallery lang={lang} />;
       case 'iaspm-al': return <IaspmInfo lang={lang} />;
       case 'instituciones-convocantes': return <div className="text-center"><img src="/images/instituciones.png" alt="Instituciones convocantes" className="max-w-full mx-auto" /></div>;
+      case 'patrocinios': return <SponsorsCarousel />;
 
       // --- NUEVO CASO: CARTEL ---
       case 'cartel':
