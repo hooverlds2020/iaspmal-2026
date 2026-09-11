@@ -47,7 +47,7 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     allowedHosts: [
-      'iaspm-al-2026.clickwebhoover.online',
+      'iaspmal2026.com',
       'localhost'
     ],
     hmr: {
