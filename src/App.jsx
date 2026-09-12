@@ -25,6 +25,7 @@ import CallForParticipation from './components/pages/CallForParticipation';
 import ScientificCommittee from './components/pages/ScientificCommittee';
 import AcceptedFormats from './components/pages/AcceptedFormats';
 import Program from './components/pages/Program';
+import AgendaDia from './components/pages/AgendaDia';
 import RegistrationForm from './components/pages/RegistrationForm';
 import VenuesPage from './components/pages/VenuesPage';
 import Alojamiento from './components/pages/Alojamiento';
@@ -602,6 +603,7 @@ const App = () => {
       <Routes>
         <Route path="/" element={<MainLayout lang={lang} setLang={setLang} />} />
         <Route path="/asistencia" element={<AttendanceCheck />} />
+        <Route path="/agenda/:dia" element={<AgendaDia />} />
         <Route path="/constancias" element={<CertificateDownload />} />
         <Route path="/staff/attendance" element={<StaffAttendance />} />
         <Route

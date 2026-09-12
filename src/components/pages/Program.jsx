@@ -343,6 +343,21 @@ const Program = () => {
     printWindow.document.write(html); printWindow.document.close();
   };
 
+  // Mismo criterio que el badge en pantalla, reutilizado al imprimir
+  const getPrintBadgeHtml = (ev) => {
+    if (ev.symposiums) return `<span class="badge">Simposio ${ev.symposiums.id}</span>`;
+    const badgeByType = {
+      libro: 'Presentacion de Publicaciones',
+      plenaria: 'Conferencia Plenaria',
+      conversatorio: 'Conversatorio',
+      musica: 'Concierto',
+      concierto_estelar: 'Concierto',
+      inauguracion: 'Inauguracion',
+    };
+    const label = badgeByType[ev.event_type];
+    return label ? `<span class="badge">${label}</span>` : '<span class="badge-gray">GENERAL</span>';
+  };
+
   const handlePrint = () => {
     if (activeTab === 'esquema') { handlePrintEsquema(); return; }
     // ... (El código de impresión se mantiene intacto) ...
@@ -401,7 +416,7 @@ const Program = () => {
           htmlContent += `<tr>
             <td class="col-time">${ev.start_time?.slice(0,5)}<br>a<br>${ev.end_time?.slice(0,5)}</td>
             <td>
-              ${ev.symposiums ? `<span class="badge">Simposio ${ev.symposiums.id}</span>` : '<span class="badge-gray">GENERAL</span>'}
+              ${getPrintBadgeHtml(ev)}
               <div style="font-size:10pt; font-weight:bold; margin-top:4px;">${ev.symposiums?.name || ev.name}</div>
               <span class="mesa-info">MESA: ${ev.name}</span>
               ${ev.presentations?.length > 0 ? `<div style="margin-top:8px;">
