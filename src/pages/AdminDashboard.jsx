@@ -1,6 +1,6 @@
 // src/pages/AdminDashboard.jsx
 import React, { useState } from 'react';
-import { LogOut, Users, Calendar, FileText, Settings, DollarSign, MapPin, LayoutGrid, Image, HeartHandshake, Building, Award, Coffee } from 'lucide-react'; // ✅ Añadido Coffee
+import { LogOut, Users, Calendar, FileText, Settings, DollarSign, MapPin, LayoutGrid, Image, HeartHandshake, Building, Award, Coffee, Plane } from 'lucide-react'; // ✅ Añadido Coffee
 import SymposiumsManager from '../components/admin/SymposiumsManager';
 import SessionsManager from '../components/admin/SessionsManager';
 import PresentationsManager from '../components/admin/PresentationsManager';
@@ -11,6 +11,7 @@ import SliderManager from '../components/admin/SliderManager';
 import GalleryManager from '../components/admin/GalleryManager';
 import AccommodationManager from '../components/admin/AccommodationManager'; // ✅ Nueva importación
 import RestaurantesManager from '../components/admin/RestaurantesManager';
+import TrasladosManager from '../components/admin/TrasladosManager';
 import CertificatesManager from '../components/admin/CertificatesManager'; // ✅ Panel de constancias
 import { supabase } from '../lib/supabaseClient';
 import SponsorsManager from '../components/admin/SponsorsManager';
@@ -123,6 +124,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                  <NavButton id="galeria-admin" label="Galería de Fotos" icon={Image} />
                  <NavButton id="alojamientos" label="Alojamiento" icon={Building} /> {/* ✅ Nuevo Botón */}
                  <NavButton id="restaurantes" label="Cafés y Restaurantes" icon={Coffee} />
+                   <NavButton id="traslados" label="Traslados aeropuerto" icon={Plane} />
 
               </div>
             </nav>
@@ -148,6 +150,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                   {activeSection === 'galeria-admin' && <GalleryManager />}
                   {activeSection === 'alojamientos' && <AccommodationManager />} {/* ✅ Renderizado del nuevo panel */}
                   {activeSection === 'restaurantes' && <RestaurantesManager />}
+                    {activeSection === 'traslados' && <TrasladosManager />}
               </div>
 
             </div>
