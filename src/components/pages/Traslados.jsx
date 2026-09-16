@@ -1,5 +1,6 @@
 import React from 'react';
 import InfoViajePage from './InfoViajePage';
+import TrasladosAeropuerto from './TrasladosAeropuerto';
 
 const Traslados = () => (
   <InfoViajePage
@@ -17,7 +18,9 @@ const Traslados = () => (
         highlight: 'Ninguna de estas contrataciones se hace por adelantado. Son transportes que están disponibles a la llegada de los vuelos. De todos modos, desde la organización del congreso veremos la posibilidad de que haya unas Vans privadas en los horarios en que lleguen más personas, con costo más o menos equivalente al transporte colectivo habitual, pero sólo para la comunidad IASPM-AL.',
       },
     ]}
-  />
+  >
+    <TrasladosAeropuerto />
+  </InfoViajePage>
 );
 
 export default Traslados;

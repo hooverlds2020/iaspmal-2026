@@ -2,7 +2,7 @@
 // Plantilla reutilizable para páginas de contenido estático largo (traslados, movilidad, salud)
 import React from 'react';
 
-const InfoViajePage = ({ intro, blocks = [] }) => {
+const InfoViajePage = ({ intro, blocks = [], children }) => {
   return (
     <div className="space-y-6 text-gray-700 leading-relaxed">
       {intro && <p>{intro}</p>}
@@ -22,6 +22,7 @@ const InfoViajePage = ({ intro, blocks = [] }) => {
           )}
         </div>
       ))}
+      {children}
     </div>
   );
 };
