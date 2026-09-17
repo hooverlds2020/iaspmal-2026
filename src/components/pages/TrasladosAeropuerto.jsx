@@ -2,6 +2,7 @@
 // Tabla administrada (Supabase) para que los congresistas se apunten a un transporte
 // según su horario de llegada. Reemplaza el sistema hardcodeado.
 import { useState, useEffect } from 'react';
+import { Check } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 
 const DIAS = [
@@ -17,9 +18,12 @@ export default function TrasladosAeropuerto() {
   const [form, setForm] = useState({ horario: '', nombre: '', vuelo: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [confirmacion, setConfirmacion] = useState('');
 
   useEffect(() => {
     cargarRegistros();
+    setForm({ horario: '', nombre: '', vuelo: '' });
+    setConfirmacion('');
   }, [diaActivo]);
 
   async function cargarRegistros() {
@@ -31,10 +35,20 @@ export default function TrasladosAeropuerto() {
     if (!err) setRegistros(data || []);
   }
 
+  function elegirHorario(hora) {
+    setForm((f) => ({ ...f, horario: hora }));
+    setConfirmacion('');
+    setError('');
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
-    if (!form.horario || !form.nombre) return;
+    setConfirmacion('');
+    if (!form.horario || !form.nombre) {
+      setError('Elige un horario y escribe tu nombre.');
+      return;
+    }
     setLoading(true);
     const { error: err } = await supabase.from('traslados_aeropuerto').insert({
       dia: diaActivo,
@@ -47,6 +61,7 @@ export default function TrasladosAeropuerto() {
       setError('No se pudo guardar tu registro, intenta de nuevo.');
       return;
     }
+    setConfirmacion(`✅ Listo, ${form.nombre}, quedaste registrado(a) en el horario de ${form.horario}.`);
     setForm({ horario: form.horario, nombre: '', vuelo: '' });
     cargarRegistros();
   }
@@ -83,9 +98,22 @@ export default function TrasladosAeropuerto() {
       <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 mb-6">
         {diaInfo.horarios.map((hora) => {
           const personas = registros.filter((r) => r.horario === hora);
+          const seleccionado = form.horario === hora;
           return (
-            <div key={hora} className="border border-gray-200 rounded-xl p-3 bg-white">
-              <div className="font-bold text-[#1e3a5f] mb-1.5">{hora}</div>
+            <button
+              key={hora}
+              type="button"
+              onClick={() => elegirHorario(hora)}
+              className={`text-left border rounded-xl p-3 bg-white transition ${
+                seleccionado
+                  ? 'border-orange-400 ring-2 ring-orange-200'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="font-bold text-[#1e3a5f]">{hora}</span>
+                {seleccionado && <Check size={16} className="text-orange-500" />}
+              </div>
               {personas.length === 0 ? (
                 <p className="text-xs text-gray-400 italic">Nadie registrado aún</p>
               ) : (
@@ -98,55 +126,48 @@ export default function TrasladosAeropuerto() {
                   ))}
                 </ul>
               )}
-            </div>
+            </button>
           );
         })}
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-wrap gap-3 items-end bg-amber-50 border border-amber-100 rounded-xl p-4">
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">Horario</label>
-          <select
-            className="border border-gray-300 rounded px-3 py-2 text-sm"
-            value={form.horario}
-            onChange={(e) => setForm({ ...form, horario: e.target.value })}
-            required
+      <form onSubmit={handleSubmit} className="bg-amber-50 border border-amber-100 rounded-xl p-4">
+        <p className="text-xs text-gray-500 mb-3">
+          Horario elegido:{' '}
+          <span className="font-bold text-[#1e3a5f]">
+            {form.horario || 'ninguno — toca una tarjeta de arriba'}
+          </span>
+        </p>
+        <div className="flex flex-wrap gap-3 items-end">
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Nombre</label>
+            <input
+              className="border border-gray-300 rounded px-3 py-2 text-sm"
+              value={form.nombre}
+              onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Vuelo</label>
+            <input
+              className="border border-gray-300 rounded px-3 py-2 text-sm"
+              value={form.vuelo}
+              onChange={(e) => setForm({ ...form, vuelo: e.target.value })}
+              placeholder="ej. AM123"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="bg-orange-500 text-white px-4 py-2 rounded text-sm font-medium hover:bg-orange-600 disabled:opacity-50"
           >
-            <option value="">Selecciona...</option>
-            {diaInfo.horarios.map((h) => (
-              <option key={h} value={h}>
-                {h}
-              </option>
-            ))}
-          </select>
+            {loading ? 'Guardando...' : 'Apuntarme'}
+          </button>
         </div>
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">Nombre</label>
-          <input
-            className="border border-gray-300 rounded px-3 py-2 text-sm"
-            value={form.nombre}
-            onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-            required
-          />
-        </div>
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">Vuelo</label>
-          <input
-            className="border border-gray-300 rounded px-3 py-2 text-sm"
-            value={form.vuelo}
-            onChange={(e) => setForm({ ...form, vuelo: e.target.value })}
-            placeholder="ej. AM123"
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-orange-500 text-white px-4 py-2 rounded text-sm font-medium hover:bg-orange-600 disabled:opacity-50"
-        >
-          {loading ? 'Guardando...' : 'Apuntarme'}
-        </button>
+        {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
+        {confirmacion && <p className="text-sm text-green-700 font-medium mt-2">{confirmacion}</p>}
       </form>
-      {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
     </div>
   );
 }
