@@ -36,6 +36,7 @@ import LugaresComer from './components/pages/LugaresComer';
 import Traslados from './components/pages/Traslados';
 import Movilidad from './components/pages/Movilidad';
 import SaludCuidados from './components/pages/SaludCuidados';
+import ActividadesExtra from './components/pages/ActividadesExtra';
 
 // Admin Pages
 import Login from './pages/Login';
@@ -463,6 +464,8 @@ const MainLayout = ({ lang, setLang }) => {
       case 'traslados': return <Traslados />;
       case 'movilidad': return <Movilidad />;
       case 'salud-cuidados': return <SaludCuidados />;
+      case 'actividad1': return <ActividadesExtra lang={lang} tipo="previa" />;
+      case 'actividad2': return <ActividadesExtra lang={lang} tipo="posterior" />;
       case 'galeria': return <Gallery lang={lang} />;
       case 'iaspm-al': return <IaspmInfo lang={lang} />;
       case 'instituciones-convocantes': return <div className="text-center"><img src="/images/instituciones.png" alt="Instituciones convocantes" className="max-w-full mx-auto" /></div>;
