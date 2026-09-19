@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 export default function ActividadesExtra({ lang, tipo }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [lightboxUrl, setLightboxUrl] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -34,41 +35,68 @@ export default function ActividadesExtra({ lang, tipo }) {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      {items.map((a) => (
-        <div key={a.id} className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition">
-          {a.cartel_url && (
-            <img
-              src={a.cartel_url}
-              alt={a.titulo}
-              className="w-full h-auto max-w-md mx-auto rounded-lg mb-4 border border-gray-200"
-            />
-          )}
-          <div className="text-sm text-orange-500 font-black uppercase tracking-wide">
-            {a.fecha}{a.hora ? ` · ${a.hora}` : ''}
+    <>
+      <div className="space-y-6 animate-in fade-in duration-500">
+        {items.map((a) => (
+          <div key={a.id} className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition">
+            <div className="flex flex-col sm:flex-row gap-4">
+              {a.cartel_url && (
+                <img
+                  src={a.cartel_url}
+                  alt={a.titulo}
+                  onClick={() => setLightboxUrl(a.cartel_url)}
+                  className="w-28 h-auto flex-shrink-0 rounded-lg border border-gray-200 cursor-zoom-in hover:opacity-80 transition self-start"
+                />
+              )}
+              <div className="flex-1">
+                <div className="text-sm text-orange-500 font-black uppercase tracking-wide">
+                  {a.fecha}{a.hora ? ` · ${a.hora}` : ''}
+                </div>
+                <h3 className="text-lg font-black text-blue-900 mt-1">{a.titulo}</h3>
+                {a.ubicacion && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    {a.link_mapa ? (
+                      <a href={a.link_mapa} target="_blank" rel="noreferrer" className="underline hover:text-orange-500">
+                        {a.ubicacion}
+                      </a>
+                    ) : a.ubicacion}
+                  </p>
+                )}
+                {a.descripcion && (
+                  <p className="mt-3 whitespace-pre-line text-gray-800 text-sm leading-relaxed">
+                    {a.descripcion}
+                  </p>
+                )}
+                {a.contacto && (
+                  <p className="mt-3 text-sm italic text-gray-500">
+                    {lang === 'es' ? 'Contacto: ' : 'Contato: '}{a.contacto}
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
-          <h3 className="text-lg font-black text-blue-900 mt-1">{a.titulo}</h3>
-          {a.ubicacion && (
-            <p className="text-sm text-gray-600 mt-1">
-              {a.link_mapa ? (
-                <a href={a.link_mapa} target="_blank" rel="noreferrer" className="underline hover:text-orange-500">
-                  {a.ubicacion}
-                </a>
-              ) : a.ubicacion}
-            </p>
-          )}
-          {a.descripcion && (
-            <p className="mt-3 whitespace-pre-line text-gray-800 text-sm leading-relaxed">
-              {a.descripcion}
-            </p>
-          )}
-          {a.contacto && (
-            <p className="mt-3 text-sm italic text-gray-500">
-              {lang === 'es' ? 'Contacto: ' : 'Contato: '}{a.contacto}
-            </p>
-          )}
+        ))}
+      </div>
+
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 cursor-zoom-out animate-in fade-in duration-200"
+          onClick={() => setLightboxUrl(null)}
+        >
+          <img
+            src={lightboxUrl}
+            alt=""
+            className="max-w-full max-h-full rounded-lg shadow-2xl"
+          />
+          <button
+            onClick={() => setLightboxUrl(null)}
+            className="absolute top-4 right-4 text-white text-3xl leading-none w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition"
+            aria-label="Cerrar"
+          >
+            ×
+          </button>
         </div>
-      ))}
-    </div>
+      )}
+    </>
   );
 }
