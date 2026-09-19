@@ -125,8 +125,8 @@ const MainLayout = ({ lang, setLang }) => {
       label: 'Actividades previas y posteriores',
       label_pt: 'Atividades pré e pós-Congresso',
       submenu: [
-        { id: 'actividad1', label: 'Actividad 1', label_pt: 'Atividade 1' },
-        { id: 'actividad2', label: 'Actividad 2', label_pt: 'Atividade 2' }
+        { id: 'actividad1', label: 'Actividades previas', label_pt: 'Atividades anteriores' },
+        { id: 'actividad2', label: 'Actividad posterior al congreso', label_pt: 'Atividade posterior ao congresso' }
       ]
     },
     {
@@ -166,8 +166,8 @@ const MainLayout = ({ lang, setLang }) => {
       'inscripcion': { es: 'Inscripción', pt: 'Inscrição' },
       'talleres': { es: 'Talleres', pt: 'Oficinas' },
       'presentaciones-libros': { es: 'Presentaciones de libros', pt: 'Apresentações de livros' },
-      'actividad1': { es: 'Actividad 1', pt: 'Atividade 1' },
-      'actividad2': { es: 'Actividad 2', pt: 'Atividade 2' },
+      'actividad1': { es: 'Actividades previas', pt: 'Atividades anteriores' },
+      'actividad2': { es: 'Actividad posterior al congreso', pt: 'Atividade posterior ao congresso' },
       'sedes': { es: 'Sedes del Congreso', pt: 'Locais do Congresso' },
       'instituciones-convocantes': { es: 'Instituciones convocantes', pt: 'Instituições convocantes' },
       'patrocinios': { es: 'Patrocinios y colaboraciones', pt: 'Patrocínios e colaborações' },
