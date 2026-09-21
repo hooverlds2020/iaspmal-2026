@@ -455,7 +455,7 @@ const CertificatesManager = () => {
     setFormData(prev => ({ ...prev, registration_id: null, participant_name: '', participant_email: '' }));
   };
 
-  const handleEdit = (cert) => {
+  const handleEdit = async (cert) => {
     setEditingId(cert.id);
     setFormData({
       registration_id: cert.registration_id || '',
@@ -471,6 +471,26 @@ const CertificatesManager = () => {
     setPersonPresentations([]);
     setIsEditorOpen(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // Si es ponente vinculado a una persona real y le falta la fecha, intenta rellenarla
+    // automáticamente buscando la sesión de su ponencia (sin sobrescribir si ya tiene una).
+    if (cert.registration_id && cert.certificate_type === 'ponente' && !cert.fecha_participacion) {
+      try {
+        const { data, error } = await supabase
+          .from('registration_presentations')
+          .select('presentations(title, sessions(date))')
+          .eq('registration_id', cert.registration_id);
+        if (!error && data) {
+          const match = data.find(rp => rp.presentations?.title === cert.presentation_title);
+          const fecha = match?.presentations?.sessions?.date;
+          if (fecha) {
+            setFormData(prev => ({ ...prev, fecha_participacion: fecha }));
+          }
+        }
+      } catch (e) {
+        console.error('No se pudo recuperar la fecha de sesión al editar:', e);
+      }
+    }
   };
 
   const handleDelete = async (id) => {
