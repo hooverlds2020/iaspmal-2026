@@ -209,6 +209,7 @@ const emptyForm = {
   participant_email: '',
   presentation_title: '',
   symposium_title: '',
+  fecha_participacion: '',
 };
 
 const CertificatesManager = () => {
@@ -400,9 +401,10 @@ const CertificatesManager = () => {
       }
 
       if (editingId) {
+        const updatePayload = { ...formData, fecha_participacion: formData.fecha_participacion || null };
         const { error } = await supabase
           .from('certificates')
-          .update(formData)
+          .update(updatePayload)
           .eq('id', editingId);
         if (error) throw error;
         toast.success('Constancia actualizada correctamente');
@@ -411,6 +413,7 @@ const CertificatesManager = () => {
         const payload = {
           ...formData,
           registration_id: formData.registration_id || null,
+          fecha_participacion: formData.fecha_participacion || null,
           folio,
           qr_data: `${formData.registration_id || folio}|${formData.certificate_type}`,
           generated_date: new Date().toISOString(),
@@ -458,6 +461,7 @@ const CertificatesManager = () => {
       participant_email: cert.participant_email || '',
       presentation_title: cert.presentation_title || '',
       symposium_title: cert.symposium_title || '',
+      fecha_participacion: cert.fecha_participacion || '',
     });
     setSelectedPerson({ id: cert.registration_id, full_name: cert.participant_name, email: cert.participant_email });
     setManualMode(!cert.registration_id);
@@ -739,6 +743,21 @@ const CertificatesManager = () => {
                   <input className={InputClasses} value={formData.symposium_title} onChange={e => setFormData({ ...formData, symposium_title: e.target.value })} placeholder="Ej: Concierto de clausura" />
                 </div>
               )}
+
+              <div>
+                <Label>Fecha de participación (opcional)</Label>
+                <input
+                  type="date"
+                  className={InputClasses}
+                  value={formData.fecha_participacion}
+                  onChange={e => setFormData({ ...formData, fecha_participacion: e.target.value })}
+                  min="2026-09-28"
+                  max="2026-10-02"
+                />
+                <p className="text-[10px] text-gray-400 font-bold mt-1.5 uppercase tracking-wide">
+                  Si se define, la persona podrá descargar su constancia públicamente a partir del día siguiente. Si se deja vacía, estará disponible desde el cierre del congreso (3 de octubre).
+                </p>
+              </div>
             </div>
 
             <div className="flex justify-end gap-4 pt-4">
