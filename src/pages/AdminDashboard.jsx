@@ -86,7 +86,7 @@ const AdminDashboard = ({ user, onLogout }) => {
       </header>
 
       {/* --- CONTENIDO PRINCIPAL --- */}
-      <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-8 flex-1">
+      <div className="max-w-[1600px] mx-auto w-full px-4 sm:px-6 py-8 flex-1">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
           {/* SIDEBAR DE NAVEGACIÓN */}
