@@ -12,13 +12,23 @@ const CERT_TYPES = [
   { value: 'coordinador', label: 'Coordinador/a de Simposio' },
   { value: 'moderador', label: 'Moderador/a de Mesa' },
   { value: 'estelar', label: 'Actuación Estelar' },
+  { value: 'conversatorio', label: 'Participante en Conversatorio' },
+  { value: 'concierto', label: 'Participante en Concierto' },
+  { value: 'publicacion', label: 'Presentación de Publicación' },
+  { value: 'logistica', label: 'Apoyo Logístico' },
+  { value: 'coordinacion_congreso', label: 'Coordinación del Congreso' },
+  { value: 'comite_organizador', label: 'Comité Organizador' },
 ];
 
 const certTypeLabel = (value) => CERT_TYPES.find(t => t.value === value)?.label || value;
 
 // Genera un folio legible: IASP-2026-PON-A1B2C3
 const generateFolio = (certType) => {
-  const prefix = { ponente: 'PON', coordinador: 'COO', moderador: 'MOD', estelar: 'EST' }[certType] || 'GEN';
+  const prefix = {
+    ponente: 'PON', coordinador: 'COO', moderador: 'MOD', estelar: 'EST',
+    conversatorio: 'CNV', concierto: 'CNC', publicacion: 'PUB',
+    logistica: 'LOG', coordinacion_congreso: 'CGE', comite_organizador: 'CMO',
+  }[certType] || 'GEN';
   const rand = Math.random().toString(36).substring(2, 8).toUpperCase();
   return `IASP-2026-${prefix}-${rand}`;
 };
@@ -44,6 +54,24 @@ const buildCertificateText = (cert) => {
       break;
     case 'estelar':
       body = `por haber participado en el ${cert.symposium_title || '[título del concierto/conversatorio]'}, ${fechasChis}, ${temaGeneral}.`;
+      break;
+    case 'conversatorio':
+      body = `por haber participado en el conversatorio "${cert.symposium_title || '[título del conversatorio]'}", ${fechasChis}, ${temaGeneral}.`;
+      break;
+    case 'concierto':
+      body = `por haber participado en el concierto "${cert.symposium_title || '[título del concierto]'}", ${fechasChis}, ${temaGeneral}.`;
+      break;
+    case 'publicacion':
+      body = `por haber presentado la publicación "${cert.presentation_title || '[título de la publicación]'}", ${fechasChis}, ${temaGeneral}.`;
+      break;
+    case 'logistica':
+      body = `[BORRADOR — pendiente de confirmar] por su valioso apoyo logístico durante ${fechasChis}, ${temaGeneral}.`;
+      break;
+    case 'coordinacion_congreso':
+      body = `[BORRADOR — pendiente de confirmar] por su labor de coordinación general del XVII Congreso, ${fechasChis}, ${temaGeneral}.`;
+      break;
+    case 'comite_organizador':
+      body = `[BORRADOR — pendiente de confirmar] por su participación como integrante del Comité Organizador del XVII Congreso, ${fechasChis}, ${temaGeneral}.`;
       break;
     default:
       body = '.';
