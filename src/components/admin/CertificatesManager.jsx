@@ -215,6 +215,7 @@ const CertificatesManager = () => {
   const [certificates, setCertificates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('todas');
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState(emptyForm);
@@ -482,11 +483,16 @@ const CertificatesManager = () => {
     toast.success('Folio copiado');
   };
 
-  const filtered = certificates.filter(c =>
-    c.participant_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.participant_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.folio?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filtered = certificates.filter(c => {
+    const matchesSearch =
+      c.participant_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.participant_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.folio?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = categoryFilter === 'todas' || c.certificate_type === categoryFilter;
+    return matchesSearch && matchesCategory;
+  });
+
+  const countByType = (typeValue) => certificates.filter(c => c.certificate_type === typeValue).length;
 
   // Estilos auxiliares (mismos patrones que PresentationsManager)
   const Label = ({ children }) => (
@@ -784,6 +790,24 @@ const CertificatesManager = () => {
             <Plus size={18} /> Nueva
           </button>
         </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2 bg-white p-3 rounded-2xl border border-gray-100 shadow-sm">
+        <button
+          onClick={() => setCategoryFilter('todas')}
+          className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${categoryFilter === 'todas' ? 'bg-[#1e3a5f] text-white' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
+        >
+          Todas ({certificates.length})
+        </button>
+        {CERT_TYPES.map(t => (
+          <button
+            key={t.value}
+            onClick={() => setCategoryFilter(t.value)}
+            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${categoryFilter === t.value ? 'bg-[#1e3a5f] text-white' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
+          >
+            {t.label} ({countByType(t.value)})
+          </button>
+        ))}
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
