@@ -374,15 +374,15 @@ const HomeLanding = ({ lang, setCurrentPage }) => {
               preview: { es: 'San Cristóbal tiene problemas de calidad de agua. Consume solo agua embotellada y ten cuidado con alimentos callejeros.', pt: 'San Cristóbal tem problemas de qualidade da água. Consuma apenas água engarrafada.' }
             },
           ].map((item) => (
-            <button key={item.id} onClick={() => setCurrentPage(item.id)} className="relative text-left group bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-[#1e3a5f] transition-all duration-300 hover:-translate-y-1">
-              <div className="w-12 h-12 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+            <button key={item.id} onClick={() => setCurrentPage(item.id)} className={`relative text-left group bg-white p-6 rounded-2xl shadow-sm transition-all duration-300 hover:-translate-y-1 ${item.id === 'traslados' ? 'border-2 border-red-500 animate-pulse-alert hover:shadow-xl' : 'border border-gray-100 hover:shadow-xl hover:border-[#1e3a5f]'}`}>
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 ${item.id === 'traslados' ? 'bg-red-50 text-red-600' : 'bg-orange-50 text-orange-600'}`}>
                 <item.icon className="w-6 h-6" />
               </div>
               <h3 className="text-lg font-bold text-gray-800 mb-2 group-hover:text-[#1e3a5f] transition-colors">{lang === 'es' ? item.title.es : item.title.pt}</h3>
               <p className="text-sm text-gray-500 leading-snug">{lang === 'es' ? item.desc.es : item.desc.pt}</p>
 
               <div className="hidden md:block absolute left-4 right-4 top-full mt-2 z-20 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none">
-                <div className="bg-[#1e3a5f] text-white text-xs leading-relaxed rounded-xl p-4 shadow-2xl">
+                <div className={`text-white text-xs leading-relaxed rounded-xl p-4 shadow-2xl ${item.id === 'traslados' ? 'bg-red-600' : 'bg-[#1e3a5f]'}`}>
                   {lang === 'es' ? item.preview.es : item.preview.pt}
                   <span className="block mt-2 text-orange-300 font-bold text-[10px] uppercase tracking-wide">
                     {lang === 'es' ? 'Clic para ver todo →' : 'Clique para ver tudo →'}
