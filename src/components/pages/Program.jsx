@@ -14,7 +14,7 @@ const CONGRESS_DATES = [
 ];
 
 const Program = () => {
-  const [activeTab, setActiveTab] = useState('simposios');
+  const [activeTab, setActiveTab] = useState('agenda');
   const [selectedDate, setSelectedDate] = useState('2026-09-28');
 
   // Datos
