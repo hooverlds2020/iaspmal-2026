@@ -325,7 +325,7 @@ const CertificatesManager = () => {
     try {
       const { data, error } = await supabase
         .from('registration_presentations')
-        .select('presentation_id, presentations(title, symposium_id, symposiums(name))')
+        .select('presentation_id, presentations(title, symposium_id, symposiums(name), sessions(date))')
         .eq('registration_id', person.id);
       if (error) throw error;
       setPersonPresentations(data || []);
@@ -380,12 +380,15 @@ const CertificatesManager = () => {
     }
   };
 
-  const handleAutofillPresentation = (rp) => {    setFormData(prev => ({
+  const handleAutofillPresentation = (rp) => {
+    const fecha = rp.presentations?.sessions?.date || '';
+    setFormData(prev => ({
       ...prev,
       presentation_title: rp.presentations?.title || '',
       symposium_title: rp.presentations?.symposiums?.name || '',
+      fecha_participacion: fecha,
     }));
-    toast.success('Título de ponencia y simposio autocompletados');
+    toast.success(fecha ? 'Título, simposio y fecha autocompletados' : 'Título y simposio autocompletados (sin fecha de sesión asignada aún)');
   };
 
   const handleSubmit = async (e) => {
@@ -711,7 +714,10 @@ const CertificatesManager = () => {
                       className="w-full text-left p-3 bg-white rounded-lg border border-blue-100 hover:border-blue-400 transition-colors"
                     >
                       <p className="text-sm font-bold text-gray-800">{rp.presentations?.title}</p>
-                      <p className="text-xs text-gray-400">{rp.presentations?.symposiums?.name}</p>
+                      <p className="text-xs text-gray-400">
+                        {rp.presentations?.symposiums?.name}
+                        {rp.presentations?.sessions?.date && ` · ${rp.presentations.sessions.date}`}
+                      </p>
                     </button>
                   ))}
                 </div>
