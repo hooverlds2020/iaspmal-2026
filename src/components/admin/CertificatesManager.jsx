@@ -321,14 +321,46 @@ const CertificatesManager = () => {
       participant_email: person.email || '',
     }));
 
-    // Traer ponencias de esta persona vía registration_presentations
+    // Traer ponencias de esta persona vía registration_presentations (vínculo formal)
     try {
       const { data, error } = await supabase
         .from('registration_presentations')
         .select('presentation_id, presentations(title, symposium_id, symposiums(name), sessions(date))')
         .eq('registration_id', person.id);
       if (error) throw error;
-      setPersonPresentations(data || []);
+
+      if (data && data.length > 0) {
+        setPersonPresentations(data);
+        return;
+      }
+
+      // Respaldo: no hay vínculo formal (frecuente — ~mitad de las ponencias no
+      // están vinculadas), buscamos por coincidencia de nombre en el campo de
+      // autores como texto. Es una sugerencia a verificar, no una certeza.
+      const nameWords = (person.full_name || '')
+        .split(/\s+/)
+        .filter(w => w.length > 2);
+
+      if (nameWords.length === 0) {
+        setPersonPresentations([]);
+        return;
+      }
+
+      const orClause = nameWords.map(w => `authors.ilike.%${w}%`).join(',');
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from('presentations')
+        .select('id, title, symposium_id, authors, symposiums(name), sessions(date)')
+        .or(orClause)
+        .limit(10);
+
+      if (fallbackError) throw fallbackError;
+
+      const mapped = (fallbackData || []).map(p => ({
+        presentation_id: p.id,
+        presentations: p,
+        fallback: true,
+      }));
+      setPersonPresentations(mapped);
     } catch (error) {
       console.error(error);
       setPersonPresentations([]);
@@ -724,19 +756,24 @@ const CertificatesManager = () => {
 
               {/* Autocompletar desde ponencias, solo para tipo ponente */}
               {needsPresentationFields && personPresentations.length > 0 && (
-                <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-4 space-y-2">
-                  <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Ponencias registradas de esta persona — clic para autocompletar</p>
+                <div className={`border rounded-xl p-4 space-y-2 ${personPresentations[0]?.fallback ? 'bg-amber-50/50 border-amber-200' : 'bg-blue-50/50 border-blue-100'}`}>
+                  <p className={`text-[10px] font-black uppercase tracking-widest ${personPresentations[0]?.fallback ? 'text-amber-600' : 'text-blue-600'}`}>
+                    {personPresentations[0]?.fallback
+                      ? 'Sugeridas por coincidencia de nombre — verifica antes de usar'
+                      : 'Ponencias registradas de esta persona — clic para autocompletar'}
+                  </p>
                   {personPresentations.map(rp => (
                     <button
                       type="button"
                       key={rp.presentation_id}
                       onClick={() => handleAutofillPresentation(rp)}
-                      className="w-full text-left p-3 bg-white rounded-lg border border-blue-100 hover:border-blue-400 transition-colors"
+                      className={`w-full text-left p-3 bg-white rounded-lg border transition-colors ${rp.fallback ? 'border-amber-100 hover:border-amber-400' : 'border-blue-100 hover:border-blue-400'}`}
                     >
                       <p className="text-sm font-bold text-gray-800">{rp.presentations?.title}</p>
                       <p className="text-xs text-gray-400">
                         {rp.presentations?.symposiums?.name}
                         {rp.presentations?.sessions?.date && ` · ${rp.presentations.sessions.date}`}
+                        {rp.fallback && rp.presentations?.authors && ` · Autores: ${rp.presentations.authors}`}
                       </p>
                     </button>
                   ))}
