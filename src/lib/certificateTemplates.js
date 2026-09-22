@@ -26,51 +26,132 @@ const stripSurroundingQuotes = (text) => {
   return text.trim().replace(re, '');
 };
 
+// Construye la lista de "runs" (fragmentos con estilo) que forman el párrafo
+// principal de la constancia: "a NOMBRE por haber participado con la ponencia
+// "TÍTULO", en el simposio SIMPOSIO, de su XVII Congreso...", con negritas en
+// el nombre y el título de ponencia, y cursivas en el título del simposio —
+// tal como en la plantilla oficial de Word.
 export const buildCertificateText = (cert) => {
   const nombre = cert.participant_name || '[nombre]';
-  const presentationTitle = stripSurroundingQuotes(cert.presentation_title);
-  const intro = 'La rama latinoamericana de la Asociación Internacional para el Estudio de la Música Popular otorga la presente';
+  const presentationTitle = stripSurroundingQuotes(cert.presentation_title) || '[título de la ponencia]';
+  const simposio = cert.symposium_title || '[título del simposio]';
   const fechas = 'de su XVII Congreso, celebrado en San Cristóbal de Las Casas, México, del 28 de septiembre al 2 de octubre de 2026';
   const fechasChis = fechas.replace('México,', 'Chiapas,');
   const temaGeneral = 'cuyo tema general fue "Ética, política y música popular"';
+  const intro = 'La rama latinoamericana de la Asociación Internacional para el Estudio de la Música Popular otorga la presente';
 
-  let body;
+  const runA = { t: 'a ', b: false, i: false };
+  const runNombre = { t: nombre + ' ', b: true, i: false };
+
+  let rest;
   switch (cert.certificate_type) {
     case 'ponente':
-      body = `por haber participado con la ponencia "${presentationTitle || '[título de la ponencia]'}", en el simposio ${cert.symposium_title || '[título del simposio]'}, ${fechas}.`;
+      rest = [
+        { t: 'por haber participado con la ponencia ', b: false, i: false },
+        { t: `"${presentationTitle}",`, b: true, i: false },
+        { t: ' en el simposio ', b: false, i: false },
+        { t: simposio, b: false, i: true },
+        { t: `, ${fechas}.`, b: false, i: false },
+      ];
       break;
     case 'coordinador':
-      body = `por haber coordinado el simposio ${cert.symposium_title || '[título del simposio]'}, ${fechasChis}, ${temaGeneral}.`;
+      rest = [
+        { t: 'por haber coordinado el simposio ', b: false, i: false },
+        { t: simposio, b: false, i: true },
+        { t: `, ${fechasChis}, ${temaGeneral}.`, b: false, i: false },
+      ];
       break;
     case 'moderador':
-      body = `por haber moderado la mesa — simposio/mesa: ${cert.symposium_title || '[título]'}, ${fechasChis}.`;
+      rest = [
+        { t: 'por haber moderado la mesa del simposio ', b: false, i: false },
+        { t: simposio, b: false, i: true },
+        { t: `, ${fechasChis}.`, b: false, i: false },
+      ];
       break;
     case 'estelar':
-      body = `por haber participado en el ${cert.symposium_title || '[título del concierto/conversatorio]'}, ${fechasChis}, ${temaGeneral}.`;
+      rest = [
+        { t: 'por haber participado en el ', b: false, i: false },
+        { t: simposio, b: false, i: true },
+        { t: `, ${fechasChis}, ${temaGeneral}.`, b: false, i: false },
+      ];
       break;
     case 'conversatorio':
-      body = `por haber participado en el conversatorio "${cert.symposium_title || '[título del conversatorio]'}", ${fechasChis}, ${temaGeneral}.`;
+      rest = [
+        { t: 'por haber participado en el conversatorio ', b: false, i: false },
+        { t: simposio, b: false, i: true },
+        { t: `, ${fechasChis}, ${temaGeneral}.`, b: false, i: false },
+      ];
       break;
     case 'concierto':
-      body = `por haber participado en el concierto "${cert.symposium_title || '[título del concierto]'}", ${fechasChis}, ${temaGeneral}.`;
+      rest = [
+        { t: 'por haber participado en el concierto ', b: false, i: false },
+        { t: simposio, b: false, i: true },
+        { t: `, ${fechasChis}, ${temaGeneral}.`, b: false, i: false },
+      ];
       break;
     case 'publicacion':
-      body = `por haber presentado la publicación "${presentationTitle || '[título de la publicación]'}", ${fechasChis}, ${temaGeneral}.`;
+      rest = [
+        { t: 'por haber presentado la publicación ', b: false, i: false },
+        { t: `"${presentationTitle}",`, b: true, i: false },
+        { t: ` ${fechasChis}, ${temaGeneral}.`, b: false, i: false },
+      ];
       break;
     case 'logistica':
-      body = `por su valioso apoyo logístico durante ${fechasChis}, ${temaGeneral}.`;
+      rest = [{ t: `por su valioso apoyo logístico durante ${fechasChis}, ${temaGeneral}.`, b: false, i: false }];
       break;
     case 'coordinacion_congreso':
-      body = `por su labor de coordinación general del XVII Congreso, ${fechasChis}, ${temaGeneral}.`;
+      rest = [{ t: `por su labor de coordinación general del XVII Congreso, ${fechasChis}, ${temaGeneral}.`, b: false, i: false }];
       break;
     case 'comite_organizador':
-      body = `por su participación como integrante del Comité Organizador del XVII Congreso, ${fechasChis}, ${temaGeneral}.`;
+      rest = [{ t: `por su participación como integrante del Comité Organizador del XVII Congreso, ${fechasChis}, ${temaGeneral}.`, b: false, i: false }];
       break;
     default:
-      body = '.';
+      rest = [{ t: '.', b: false, i: false }];
   }
 
-  return { intro, titulo: 'CONSTANCIA', a: 'a', nombre, body };
+  const runs = [runA, runNombre, ...rest];
+  return { intro, titulo: 'CONSTANCIA', nombre, runs };
+};
+
+// Convierte una lista de runs (fragmentos con estilo) en una lista de tokens
+// palabra por palabra, uniendo signos de puntuación sueltos a la palabra
+// anterior (para que no quede un espacio antes de una coma o punto).
+const tokenizeRuns = (runs) => {
+  const tokens = [];
+  runs.forEach(run => {
+    run.t.split(' ').forEach(word => {
+      if (word === '') return;
+      tokens.push({ text: word, b: run.b, i: run.i });
+    });
+  });
+  for (let idx = 1; idx < tokens.length; idx++) {
+    if (/^[,.;:]+$/.test(tokens[idx].text)) {
+      tokens[idx - 1].text += tokens[idx].text;
+      tokens.splice(idx, 1);
+      idx--;
+    }
+  }
+  return tokens;
+};
+
+// Dibuja un párrafo con estilos mixtos (negritas/cursivas por palabra),
+// alineado a la izquierda, con salto de línea automático. Devuelve la
+// coordenada Y donde terminó, para poder seguir dibujando debajo.
+const drawRichParagraph = (doc, runs, x, yStart, maxWidth, lineHeight) => {
+  const tokens = tokenizeRuns(runs);
+  let cx = x, cy = yStart;
+  const spaceWidth = doc.getTextWidth(' ');
+  tokens.forEach(tok => {
+    doc.setFont('helvetica', tok.i ? 'italic' : (tok.b ? 'bold' : 'normal'));
+    const w = doc.getTextWidth(tok.text);
+    if (cx !== x && cx + w > x + maxWidth) {
+      cx = x;
+      cy += lineHeight;
+    }
+    doc.text(tok.text, cx, cy);
+    cx += w + spaceWidth;
+  });
+  return cy;
 };
 
 const loadImageAsDataUrl = (url) => new Promise((resolve, reject) => {
@@ -105,33 +186,23 @@ export const generateOfficialCertificatePDF = async (cert, mode = 'open') => {
     console.error('No se pudo cargar el fondo de la plantilla:', e);
   }
 
+  const marginX = 35;
+  const textWidth = pageWidth - marginX * 2;
+
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(11);
-  doc.setTextColor(60, 60, 60);
-  const introWrapped = doc.splitTextToSize(t.intro, 200);
-  doc.text(introWrapped, 148.5, 65, { align: 'center' });
+  doc.setTextColor(40, 40, 40);
+  const introWrapped = doc.splitTextToSize(t.intro, textWidth);
+  doc.text(introWrapped, marginX, 68);
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(22);
   doc.setTextColor(30, 58, 95);
-  doc.text(t.titulo, 148.5, 80, { align: 'center' });
+  doc.text(t.titulo, 148.5, 90, { align: 'center' });
 
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(11);
-  doc.setTextColor(80, 80, 80);
-  doc.text(t.a, 148.5, 89, { align: 'center' });
-
-  doc.setFont('times', 'bold');
-  doc.setFontSize(24);
-  doc.setTextColor(0, 0, 0);
-  doc.text(t.nombre.toUpperCase(), 148.5, 100, { align: 'center' });
-
-  doc.setFont('helvetica', 'normal');
   doc.setFontSize(12);
   doc.setTextColor(20, 20, 20);
-  const bodyCapitalized = t.body.charAt(0).toUpperCase() + t.body.slice(1);
-  const bodyWrapped = doc.splitTextToSize(bodyCapitalized, 235);
-  doc.text(bodyWrapped, 148.5, 115, { align: 'center', lineHeightFactor: 1.35 });
+  drawRichParagraph(doc, t.runs, marginX, 105, textWidth, 6.5);
 
   doc.setFontSize(9);
   doc.setTextColor(150, 150, 150);
