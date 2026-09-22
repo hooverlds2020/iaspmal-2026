@@ -218,6 +218,7 @@ const CertificatesManager = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('todas');
+  const [currentPage, setCurrentPage] = useState(1);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState(emptyForm);
@@ -584,6 +585,11 @@ const CertificatesManager = () => {
     return matchesSearch && matchesCategory;
   });
 
+  const PAGE_SIZE = 20;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPageSafe = Math.min(currentPage, totalPages);
+  const paginated = filtered.slice((currentPageSafe - 1) * PAGE_SIZE, currentPageSafe * PAGE_SIZE);
+
   const countByType = (typeValue) => certificates.filter(c => c.certificate_type === typeValue).length;
 
   // Estilos auxiliares (mismos patrones que PresentationsManager)
@@ -895,7 +901,7 @@ const CertificatesManager = () => {
               placeholder="Buscar por nombre, correo o folio..."
               className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 outline-none focus:border-[#1e3a5f] bg-gray-50 focus:bg-white shadow-sm text-sm font-bold transition-all"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
             />
           </div>
           <button
@@ -928,7 +934,7 @@ const CertificatesManager = () => {
 
       <div className="flex flex-wrap gap-2 bg-white p-3 rounded-2xl border border-gray-100 shadow-sm">
         <button
-          onClick={() => setCategoryFilter('todas')}
+          onClick={() => { setCategoryFilter('todas'); setCurrentPage(1); }}
           className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${categoryFilter === 'todas' ? 'bg-[#1e3a5f] text-white' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
         >
           Todas ({certificates.length})
@@ -936,7 +942,7 @@ const CertificatesManager = () => {
         {CERT_TYPES.map(t => (
           <button
             key={t.value}
-            onClick={() => setCategoryFilter(t.value)}
+            onClick={() => { setCategoryFilter(t.value); setCurrentPage(1); }}
             className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${categoryFilter === t.value ? 'bg-[#1e3a5f] text-white' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
           >
             {t.label} ({countByType(t.value)})
@@ -961,7 +967,7 @@ const CertificatesManager = () => {
             ) : filtered.length === 0 ? (
               <tr><td colSpan="5" className="p-8 text-center text-sm font-bold text-gray-400 uppercase tracking-widest">No hay constancias registradas todavía.</td></tr>
             ) : (
-              filtered.map(cert => (
+              paginated.map(cert => (
                 <tr key={cert.id} className="hover:bg-blue-50/30 transition-colors group/row">
                   <td className="p-4 pl-6 align-top">
                     <p className="font-bold text-[#1e3a5f] text-sm">{cert.participant_name}</p>
@@ -997,6 +1003,33 @@ const CertificatesManager = () => {
           </tbody>
         </table>
       </div>
+
+      {!loading && filtered.length > 0 && (
+        <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+            Mostrando {(currentPageSafe - 1) * PAGE_SIZE + 1}–{Math.min(currentPageSafe * PAGE_SIZE, filtered.length)} de {filtered.length}
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPageSafe === 1}
+              className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all bg-gray-50 text-gray-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Anterior
+            </button>
+            <span className="text-xs font-bold text-gray-500 px-2">
+              Página {currentPageSafe} de {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPageSafe === totalPages}
+              className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all bg-gray-50 text-gray-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Siguiente
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
