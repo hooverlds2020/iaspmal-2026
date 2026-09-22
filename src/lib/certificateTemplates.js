@@ -38,6 +38,15 @@ const stripSurroundingQuotes = (text) => {
 // "TÍTULO", en el simposio SIMPOSIO, de su XVII Congreso...", con negritas en
 // el nombre y el título de ponencia, y cursivas en el título del simposio —
 // tal como en la plantilla oficial de Word.
+// Envuelve el título entre comillas dobles, agregando un espacio si el
+// título ya termina o empieza con comilla simple (evita que queden pegadas
+// como 'regionalizadas'" y se confundan con una sola marca).
+const wrapInQuotes = (title) => {
+  const startsWithQuote = title.startsWith("'");
+  const endsWithQuote = title.endsWith("'");
+  return `"${startsWithQuote ? ' ' : ''}${title}${endsWithQuote ? ' ' : ''}"`;
+};
+
 export const buildCertificateText = (cert) => {
   const nombre = cert.participant_name || '[nombre]';
   const presentationTitle = stripSurroundingQuotes(cert.presentation_title) || '[título de la ponencia]';
@@ -55,7 +64,7 @@ export const buildCertificateText = (cert) => {
     case 'ponente':
       rest = [
         { t: 'por haber participado con la ponencia ', b: false, i: false },
-        { t: `"${presentationTitle}",`, b: false, i: false },
+        { t: `${wrapInQuotes(presentationTitle)},`, b: false, i: false },
         { t: ' en el simposio ', b: false, i: false },
         { t: simposio, b: false, i: true },
         { t: `, ${fechas}.`, b: false, i: false },
@@ -99,7 +108,7 @@ export const buildCertificateText = (cert) => {
     case 'publicacion':
       rest = [
         { t: 'por haber presentado la publicación ', b: false, i: false },
-        { t: `"${presentationTitle}",`, b: false, i: false },
+        { t: `${wrapInQuotes(presentationTitle)},`, b: false, i: false },
         { t: ` ${fechasChis}, ${temaGeneral}.`, b: false, i: false },
       ];
       break;
