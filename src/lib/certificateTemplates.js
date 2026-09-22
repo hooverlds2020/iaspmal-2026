@@ -24,13 +24,12 @@ const stripSurroundingQuotes = (text) => {
   // Normaliza saltos de línea y espacios múltiples a un solo espacio
   // (algunos títulos vienen con \n pegados en medio del texto, no solo al final)
   const normalized = text.replace(/[\r\n]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
-  const quoteChars = '\u0022\u201C\u201D\u0027\u2018\u2019';
-  const re = new RegExp('^[' + quoteChars + ']+|[' + quoteChars + ']+$', 'g');
-  const stripped = normalized.replace(re, '');
-  // Si el título ya trae comillas internas (ej. una palabra entrecomillada),
-  // se convierten a comillas simples para no chocar con las comillas dobles
-  // que envuelven el título completo en la constancia (evita "..." "" "...").
-  return stripped.replace(/[\u0022\u201C\u201D]/g, "'");
+  // El título completo SIEMPRE se envuelve aparte en comillas dobles al
+  // mostrarse (ver wrapInQuotes), así que cualquier comilla doble que ya
+  // traiga el título -- ya sea al inicio, al final o en medio (por ejemplo
+  // una sola palabra entrecomillada) -- se convierte a comilla simple.
+  // Así se evita adivinar si una comilla "envuelve todo el título" o no.
+  return normalized.replace(/[\u0022\u201C\u201D]/g, "'");
 };
 
 // Construye la lista de "runs" (fragmentos con estilo) que forman el párrafo
