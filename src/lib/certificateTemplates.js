@@ -21,9 +21,12 @@ export const certTypeLabel = (value) => CERT_TYPES.find(t => t.value === value)?
 
 const stripSurroundingQuotes = (text) => {
   if (!text) return text;
+  // Normaliza saltos de línea y espacios múltiples a un solo espacio
+  // (algunos títulos vienen con \n pegados en medio del texto, no solo al final)
+  const normalized = text.replace(/[\r\n]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
   const quoteChars = '\u0022\u201C\u201D\u0027\u2018\u2019';
   const re = new RegExp('^[' + quoteChars + ']+|[' + quoteChars + ']+$', 'g');
-  return text.trim().replace(re, '');
+  return normalized.replace(re, '');
 };
 
 // Construye la lista de "runs" (fragmentos con estilo) que forman el párrafo
