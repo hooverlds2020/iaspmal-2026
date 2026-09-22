@@ -135,21 +135,46 @@ const tokenizeRuns = (runs) => {
 };
 
 // Dibuja un párrafo con estilos mixtos (negritas/cursivas por palabra),
-// alineado a la izquierda, con salto de línea automático. Devuelve la
-// coordenada Y donde terminó, para poder seguir dibujando debajo.
+// justificado (ambos márgenes parejos, salvo la última línea), con salto
+// de línea automático. Devuelve la coordenada Y donde terminó.
 const drawRichParagraph = (doc, runs, x, yStart, maxWidth, lineHeight) => {
   const tokens = tokenizeRuns(runs);
-  let cx = x, cy = yStart;
   const spaceWidth = doc.getTextWidth(' ');
-  tokens.forEach(tok => {
+
+  // Primera pasada: medir cada token con su estilo real y agrupar en líneas
+  const measured = tokens.map(tok => {
     doc.setFont('helvetica', tok.i ? 'italic' : (tok.b ? 'bold' : 'normal'));
-    const w = doc.getTextWidth(tok.text);
-    if (cx !== x && cx + w > x + maxWidth) {
-      cx = x;
-      cy += lineHeight;
+    return { ...tok, width: doc.getTextWidth(tok.text) };
+  });
+
+  const lines = [];
+  let current = [];
+  let curWidth = 0;
+  measured.forEach(tok => {
+    const projected = curWidth === 0 ? tok.width : curWidth + spaceWidth + tok.width;
+    if (projected > maxWidth && current.length > 0) {
+      lines.push(current);
+      current = [];
+      curWidth = 0;
     }
-    doc.text(tok.text, cx, cy);
-    cx += w + spaceWidth;
+    current.push(tok);
+    curWidth = curWidth === 0 ? tok.width : curWidth + spaceWidth + tok.width;
+  });
+  if (current.length) lines.push(current);
+
+  // Segunda pasada: dibujar, justificando todas las líneas menos la última
+  let cy = yStart;
+  lines.forEach((line, li) => {
+    const isLast = li === lines.length - 1;
+    const naturalWidth = line.reduce((s, t) => s + t.width, 0) + spaceWidth * (line.length - 1);
+    const extraSpace = (!isLast && line.length > 1) ? (maxWidth - naturalWidth) / (line.length - 1) : 0;
+    let cx = x;
+    line.forEach(tok => {
+      doc.setFont('helvetica', tok.i ? 'italic' : (tok.b ? 'bold' : 'normal'));
+      doc.text(tok.text, cx, cy);
+      cx += tok.width + spaceWidth + extraSpace;
+    });
+    cy += lineHeight;
   });
   return cy;
 };
@@ -186,11 +211,11 @@ export const generateOfficialCertificatePDF = async (cert, mode = 'open') => {
     console.error('No se pudo cargar el fondo de la plantilla:', e);
   }
 
-  const marginX = 35;
+  const marginX = 55;
   const textWidth = pageWidth - marginX * 2;
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(11);
+  doc.setFontSize(12);
   doc.setTextColor(40, 40, 40);
   const introWrapped = doc.splitTextToSize(t.intro, textWidth);
   doc.text(introWrapped, marginX, 68);
@@ -200,9 +225,9 @@ export const generateOfficialCertificatePDF = async (cert, mode = 'open') => {
   doc.setTextColor(30, 58, 95);
   doc.text(t.titulo, 148.5, 90, { align: 'center' });
 
-  doc.setFontSize(12);
+  doc.setFontSize(13);
   doc.setTextColor(20, 20, 20);
-  drawRichParagraph(doc, t.runs, marginX, 105, textWidth, 6.5);
+  drawRichParagraph(doc, t.runs, marginX, 105, textWidth, 7.2);
 
   doc.setFontSize(9);
   doc.setTextColor(150, 150, 150);
