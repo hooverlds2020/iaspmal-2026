@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { jsPDF } from 'jspdf';
 import {
-  Plus, Edit2, Trash2, Search, Award, Save, ArrowLeft, User, CheckCircle2, XCircle, Copy, Pencil, Check, X as XIcon, Eye
+  Plus, Edit2, Trash2, Search, Award, Save, ArrowLeft, User, CheckCircle2, XCircle, Copy, Pencil, Check, X as XIcon, Eye, Image as ImageIcon, UploadCloud
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -254,6 +254,38 @@ const CertificatesManager = () => {
       toast.error('Error al cargar constancias');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // --- Plantilla de diseño (fondo JPG usado en el PDF oficial) ---
+  const [uploadingTemplate, setUploadingTemplate] = useState(false);
+  const [templatePreviewUrl, setTemplatePreviewUrl] = useState(
+    `https://rvpovifwugksrsmgabcj.supabase.co/storage/v1/object/public/constancias-assets/plantilla-fondo.jpg?t=${Date.now()}`
+  );
+
+  const handleUploadTemplate = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.includes('jpeg') && !file.type.includes('jpg')) {
+      toast.error('El archivo debe ser un JPG');
+      return;
+    }
+    try {
+      setUploadingTemplate(true);
+      const { error } = await supabase.storage
+        .from('constancias-assets')
+        .upload('plantilla-fondo.jpg', file, { upsert: true, contentType: 'image/jpeg' });
+      if (error) throw error;
+      setTemplatePreviewUrl(
+        `https://rvpovifwugksrsmgabcj.supabase.co/storage/v1/object/public/constancias-assets/plantilla-fondo.jpg?t=${Date.now()}`
+      );
+      toast.success('Plantilla actualizada. Los próximos PDF generados usarán este diseño.');
+    } catch (error) {
+      console.error(error);
+      toast.error('Error al subir la plantilla');
+    } finally {
+      setUploadingTemplate(false);
+      e.target.value = '';
     }
   };
 
@@ -872,6 +904,25 @@ const CertificatesManager = () => {
             <Plus size={18} /> Nueva
           </button>
         </div>
+      </div>
+
+      <div className="flex flex-col md:flex-row items-start md:items-center gap-4 bg-white p-5 rounded-3xl border border-gray-100 shadow-sm">
+        <img
+          src={templatePreviewUrl}
+          alt="Plantilla de diseño actual"
+          className="w-40 h-auto rounded-xl border border-gray-200 shadow-sm object-cover"
+          onError={(e) => { e.target.style.display = 'none'; }}
+        />
+        <div className="flex-1">
+          <p className="text-sm font-black text-[#1e3a5f] uppercase tracking-wide">Plantilla de diseño</p>
+          <p className="text-xs text-gray-400 font-bold mt-1">
+            Fondo (JPG) usado como base de todas las constancias oficiales. Al reemplazarlo, los próximos PDF generados usarán el nuevo diseño automáticamente.
+          </p>
+        </div>
+        <label className="bg-[#1e3a5f] text-white px-6 py-3 rounded-xl flex items-center gap-2 hover:bg-black transition-all shadow-lg active:scale-95 font-black text-xs uppercase tracking-widest cursor-pointer">
+          {uploadingTemplate ? 'Subiendo...' : <><UploadCloud size={18} /> Reemplazar JPG</>}
+          <input type="file" accept="image/jpeg" className="hidden" onChange={handleUploadTemplate} disabled={uploadingTemplate} />
+        </label>
       </div>
 
       <div className="flex flex-wrap gap-2 bg-white p-3 rounded-2xl border border-gray-100 shadow-sm">
