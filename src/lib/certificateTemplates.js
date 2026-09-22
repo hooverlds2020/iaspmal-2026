@@ -48,7 +48,7 @@ export const buildCertificateText = (cert) => {
     case 'ponente':
       rest = [
         { t: 'por haber participado con la ponencia ', b: false, i: false },
-        { t: `"${presentationTitle}",`, b: true, i: false },
+        { t: `"${presentationTitle}",`, b: false, i: false },
         { t: ' en el simposio ', b: false, i: false },
         { t: simposio, b: false, i: true },
         { t: `, ${fechas}.`, b: false, i: false },
@@ -92,7 +92,7 @@ export const buildCertificateText = (cert) => {
     case 'publicacion':
       rest = [
         { t: 'por haber presentado la publicación ', b: false, i: false },
-        { t: `"${presentationTitle}",`, b: true, i: false },
+        { t: `"${presentationTitle}",`, b: false, i: false },
         { t: ` ${fechasChis}, ${temaGeneral}.`, b: false, i: false },
       ];
       break;
