@@ -19,8 +19,16 @@ export const CERT_TYPES = [
 
 export const certTypeLabel = (value) => CERT_TYPES.find(t => t.value === value)?.label || value;
 
+const stripSurroundingQuotes = (text) => {
+  if (!text) return text;
+  const quoteChars = '\u0022\u201C\u201D\u0027\u2018\u2019';
+  const re = new RegExp('^[' + quoteChars + ']+|[' + quoteChars + ']+$', 'g');
+  return text.trim().replace(re, '');
+};
+
 export const buildCertificateText = (cert) => {
   const nombre = cert.participant_name || '[nombre]';
+  const presentationTitle = stripSurroundingQuotes(cert.presentation_title);
   const intro = 'La rama latinoamericana de la Asociación Internacional para el Estudio de la Música Popular otorga la presente';
   const fechas = 'de su XVII Congreso, celebrado en San Cristóbal de Las Casas, México, del 28 de septiembre al 2 de octubre de 2026';
   const fechasChis = fechas.replace('México,', 'Chiapas,');
@@ -29,7 +37,7 @@ export const buildCertificateText = (cert) => {
   let body;
   switch (cert.certificate_type) {
     case 'ponente':
-      body = `por haber participado con la ponencia "${cert.presentation_title || '[título de la ponencia]'}", en el simposio ${cert.symposium_title || '[título del simposio]'}, ${fechas}.`;
+      body = `por haber participado con la ponencia "${presentationTitle || '[título de la ponencia]'}", en el simposio ${cert.symposium_title || '[título del simposio]'}, ${fechas}.`;
       break;
     case 'coordinador':
       body = `por haber coordinado el simposio ${cert.symposium_title || '[título del simposio]'}, ${fechasChis}, ${temaGeneral}.`;
@@ -47,7 +55,7 @@ export const buildCertificateText = (cert) => {
       body = `por haber participado en el concierto "${cert.symposium_title || '[título del concierto]'}", ${fechasChis}, ${temaGeneral}.`;
       break;
     case 'publicacion':
-      body = `por haber presentado la publicación "${cert.presentation_title || '[título de la publicación]'}", ${fechasChis}, ${temaGeneral}.`;
+      body = `por haber presentado la publicación "${presentationTitle || '[título de la publicación]'}", ${fechasChis}, ${temaGeneral}.`;
       break;
     case 'logistica':
       body = `por su valioso apoyo logístico durante ${fechasChis}, ${temaGeneral}.`;
@@ -96,32 +104,32 @@ export const generateOfficialCertificatePDF = async (cert, mode = 'open') => {
   }
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(12);
+  doc.setFontSize(11);
   doc.setTextColor(60, 60, 60);
-  const introWrapped = doc.splitTextToSize(t.intro, 210);
-  doc.text(introWrapped, 148.5, 32, { align: 'center' });
+  const introWrapped = doc.splitTextToSize(t.intro, 200);
+  doc.text(introWrapped, 148.5, 30, { align: 'center' });
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(24);
+  doc.setFontSize(22);
   doc.setTextColor(30, 58, 95);
-  doc.text(t.titulo, 148.5, 50, { align: 'center' });
+  doc.text(t.titulo, 148.5, 45, { align: 'center' });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(80, 80, 80);
+  doc.text(t.a, 148.5, 54, { align: 'center' });
+
+  doc.setFont('times', 'bold');
+  doc.setFontSize(24);
+  doc.setTextColor(0, 0, 0);
+  doc.text(t.nombre.toUpperCase(), 148.5, 65, { align: 'center' });
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(12);
-  doc.setTextColor(80, 80, 80);
-  doc.text(t.a, 148.5, 60, { align: 'center' });
-
-  doc.setFont('times', 'bold');
-  doc.setFontSize(26);
-  doc.setTextColor(0, 0, 0);
-  doc.text(t.nombre.toUpperCase(), 148.5, 72, { align: 'center' });
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(13);
   doc.setTextColor(20, 20, 20);
   const bodyCapitalized = t.body.charAt(0).toUpperCase() + t.body.slice(1);
-  const bodyWrapped = doc.splitTextToSize(bodyCapitalized, 220);
-  doc.text(bodyWrapped, 148.5, 88, { align: 'center' });
+  const bodyWrapped = doc.splitTextToSize(bodyCapitalized, 235);
+  doc.text(bodyWrapped, 148.5, 80, { align: 'center', lineHeightFactor: 1.35 });
 
   try {
     const [darioDataUrl, mariaLuisaDataUrl] = await Promise.all([
