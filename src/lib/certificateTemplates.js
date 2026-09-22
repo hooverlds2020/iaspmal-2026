@@ -26,7 +26,11 @@ const stripSurroundingQuotes = (text) => {
   const normalized = text.replace(/[\r\n]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
   const quoteChars = '\u0022\u201C\u201D\u0027\u2018\u2019';
   const re = new RegExp('^[' + quoteChars + ']+|[' + quoteChars + ']+$', 'g');
-  return normalized.replace(re, '');
+  const stripped = normalized.replace(re, '');
+  // Si el título ya trae comillas internas (ej. una palabra entrecomillada),
+  // se convierten a comillas simples para no chocar con las comillas dobles
+  // que envuelven el título completo en la constancia (evita "..." "" "...").
+  return stripped.replace(/[\u0022\u201C\u201D]/g, "'");
 };
 
 // Construye la lista de "runs" (fragmentos con estilo) que forman el párrafo
