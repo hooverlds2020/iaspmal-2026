@@ -1,167 +1,98 @@
 // src/pages/CertificateDownload.jsx
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { jsPDF } from 'jspdf';
-import { Search, Download, AlertCircle, CheckCircle, QrCode, Loader2, RefreshCw, ArrowLeft } from 'lucide-react';
+import { Search, Download, AlertCircle, CheckCircle, QrCode, Loader2, ArrowLeft, Lock, Award } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import {
+  certTypeLabel,
+  generateOfficialCertificatePDF,
+  isCertificateUnlocked,
+  getUnlockDateLabel,
+} from '../lib/certificateTemplates';
 
 const CertificateDownload = () => {
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [userData, setUserData] = useState(null);
-  const [debugInfo, setDebugInfo] = useState('');
+  const [participantName, setParticipantName] = useState('');
+  const [certs, setCerts] = useState(null); // null = aún no se ha buscado
 
-  // Función para reiniciar la búsqueda (limpiar pantalla)
   const handleReset = () => {
-    setUserData(null);
+    setCerts(null);
     setCode('');
     setError('');
-    setDebugInfo('');
+    setParticipantName('');
   };
 
   const handleSearch = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-    setDebugInfo('');
-    setUserData(null);
+    setCerts(null);
 
-    // --- LÓGICA DE LIMPIEZA CORREGIDA ---
-    // 1. Quitamos espacios y pasamos a mayúsculas
     let rawInput = code.toUpperCase().trim().replace(/\s/g, '');
-    
-    // 2. Si el usuario escribe "IASP-XXXXXX", se lo quitamos para quedarnos con el código limpio
     let cleanHex = rawInput.replace(/^IASP[-]?/, '');
-    
-    // 3. Buscamos EXACTAMENTE el código limpio (ej: AEA584)
-    const searchCode = cleanHex; 
+    const searchCode = cleanHex;
 
     if (!cleanHex) {
-        setError('Por favor ingresa un código válido.');
-        setLoading(false);
-        return;
+      setError('Por favor ingresa un código válido.');
+      setLoading(false);
+      return;
     }
 
     try {
-      const { data, error } = await supabase
+      // 1. Buscar la inscripción por su código de asistencia (gafete/QR)
+      const { data: reg, error: regError } = await supabase
         .from('registrations')
+        .select('id, full_name, status, attendance_confirmed')
+        .ilike('attendance_code', searchCode)
+        .maybeSingle();
+
+      if (regError) throw regError;
+
+      if (!reg) {
+        setError(`No encontramos la inscripción con el código "${searchCode}". Verifica que sea idéntico al de tu gafete.`);
+        setLoading(false);
+        return;
+      }
+
+      // 2. Traer TODAS las constancias asociadas a esa persona
+      const { data: certificates, error: certError } = await supabase
+        .from('certificates')
         .select('*')
-        .ilike('attendance_code', searchCode) // Buscamos coincidencia exacta (case-insensitive)
-        .maybeSingle(); 
+        .eq('registration_id', reg.id)
+        .order('created_at', { ascending: true });
 
-      if (error) throw error;
+      if (certError) throw certError;
 
-      if (!data) {
-        setError(`No encontramos la inscripción con el código "${searchCode}".`);
-        setDebugInfo("Verifica que el código de tu gafete sea idéntico.");
+      setParticipantName(reg.full_name);
+
+      if (!certificates || certificates.length === 0) {
+        setCerts([]);
       } else {
-        setUserData(data);
+        setCerts(certificates);
       }
     } catch (err) {
+      console.error(err);
       setError('Ocurrió un problema al consultar. Inténtalo de nuevo.');
     } finally {
       setLoading(false);
     }
   };
 
-  const getCategoryLabel = (category) => {
-    const labels = {
-      'sur_global': 'Sur Global',
-      'norte_global': 'Norte Global',
-      'institucion_convocante': 'Institución Convocante',
-      'estudiante': 'Estudiante',
-      'asistente': 'Asistente'
-    };
-    return labels[category] || category;
-  };
-
-  const generateCertificate = () => {
-    if (!userData) return;
-
-    const doc = new jsPDF({
-      orientation: 'landscape',
-      unit: 'mm',
-      format: 'a4'
-    });
-
-    const primaryColor = [5, 150, 105]; 
-    const darkColor = [31, 41, 55]; 
-
-    // --- MARCO Y FONDO ---
-    doc.setLineWidth(2);
-    doc.setDrawColor(...primaryColor);
-    doc.rect(10, 10, 277, 190);
-
-    // --- ENCABEZADO ---
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(28);
-    doc.setTextColor(...primaryColor);
-    doc.text('CONSTANCIA DE PARTICIPACIÓN', 148.5, 40, { align: 'center' });
-
-    // --- TEXTO INTRO ---
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(14);
-    doc.setTextColor(...darkColor);
-    doc.text('El Comité Organizador del XVII Congreso de la IASPM-AL otorga la presente a:', 148.5, 60, { align: 'center' });
-
-    // --- NOMBRE DEL PARTICIPANTE ---
-    doc.setFont('times', 'bold');
-    doc.setFontSize(32);
-    doc.setTextColor(0, 0, 0);
-    doc.text(userData.full_name, 148.5, 85, { align: 'center' });
-
-    // --- LÍNEA DECORATIVA ---
-    doc.setDrawColor(200, 200, 200);
-    doc.setLineWidth(0.5);
-    doc.line(70, 90, 227, 90);
-
-    // --- DETALLES DE PARTICIPACIÓN ---
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(16);
-    doc.setTextColor(...darkColor);
-    const categoryText = getCategoryLabel(userData.category).toUpperCase();
-    
-    doc.text(`Por su valiosa participación en calidad de ${categoryText}`, 148.5, 105, { align: 'center' });
-    doc.text('en el XVII Congreso de la Asociación Internacional para el Estudio', 148.5, 120, { align: 'center' });
-    doc.text('de la Música Popular - Rama Latinoamericana (IASPM-AL).', 148.5, 130, { align: 'center' });
-
-    // --- FECHA Y LUGAR ---
-    doc.setFontSize(14);
-    doc.setTextColor(100, 100, 100);
-    doc.text('Celebrado en San Cristóbal de Las Casas, Chiapas, México', 148.5, 150, { align: 'center' });
-    doc.text('del 28 de septiembre al 2 de octubre de 2026.', 148.5, 160, { align: 'center' });
-
-    // --- FIRMAS ---
-    doc.setFontSize(12);
-    doc.setTextColor(0, 0, 0);
-    doc.text('_________________________', 90, 180, { align: 'center' });
-    doc.text('_________________________', 207, 180, { align: 'center' });
-    doc.setFontSize(10);
-    doc.text('Comité Organizador', 90, 185, { align: 'center' });
-    doc.text('Presidencia IASPM-AL', 207, 185, { align: 'center' });
-
-    // --- NUEVO: PIE DE PÁGINA DE VALIDACIÓN (SEGURIDAD) ---
-    doc.setFontSize(8);
-    doc.setTextColor(150, 150, 150);
-    // Usamos tu dominio real para que sea válido
-    const validationUrl = `iaspmal2026.com/constancias`;
-    const validationText = `Autenticidad verificable en: ${validationUrl} | Código: ${userData.attendance_code}`;
-    doc.text(validationText, 148.5, 196, { align: 'center' });
-
-    doc.save(`Constancia_${userData.full_name.replace(/\s+/g, '_')}.pdf`);
+  const handleDownload = (cert) => {
+    generateOfficialCertificatePDF(cert, 'download');
   };
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center">
-      
-      {/* Botón flotante para volver al inicio */}
+
       <Link to="/" className="absolute top-6 left-6 text-gray-500 hover:text-teal-600 flex items-center gap-2 transition">
         <ArrowLeft className="w-5 h-5" /> Volver al inicio
       </Link>
 
-      <div className="max-w-md w-full bg-white rounded-xl shadow-lg overflow-hidden relative">
-        
+      <div className="max-w-lg w-full bg-white rounded-xl shadow-lg overflow-hidden relative">
+
         <div className="bg-teal-600 p-6 text-center">
           <QrCode className="w-12 h-12 text-white mx-auto mb-2" />
           <h2 className="text-2xl font-bold text-white">Descarga tu Constancia</h2>
@@ -169,8 +100,7 @@ const CertificateDownload = () => {
         </div>
 
         <div className="p-8">
-          {/* Si NO hay usuario encontrado, mostramos el buscador */}
-          {!userData ? (
+          {certs === null ? (
             <form onSubmit={handleSearch} className="space-y-4">
               <div>
                 <label htmlFor="code" className="block text-sm font-medium text-gray-700 mb-1">
@@ -182,7 +112,7 @@ const CertificateDownload = () => {
                     id="code"
                     required
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition font-mono uppercase tracking-widest text-center text-lg placeholder-gray-300"
-                    placeholder="Ej: AEA584" 
+                    placeholder="Ej: AEA584"
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
                   />
@@ -192,7 +122,7 @@ const CertificateDownload = () => {
                   Ingresa los 6 caracteres de tu código (letras y números)
                 </p>
               </div>
-              
+
               <button
                 type="submit"
                 disabled={loading}
@@ -218,53 +148,67 @@ const CertificateDownload = () => {
               )}
             </form>
           ) : (
-            // Si YA encontramos al usuario, mostramos el resultado
             <div className="animate-in fade-in slide-in-from-bottom-4">
               <div className="text-center mb-6">
                 <p className="text-sm text-gray-500 mb-1">Participante encontrado:</p>
-                <h3 className="text-xl font-bold text-gray-900">{userData.full_name}</h3>
-                <p className="text-sm text-gray-600 capitalize">{getCategoryLabel(userData.category)}</p>
+                <h3 className="text-xl font-bold text-gray-900">{participantName}</h3>
               </div>
 
-              {userData.status === 'paid' && userData.attendance_confirmed ? (
-                <div className="space-y-4">
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-5 text-center">
-                    <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-3" />
-                    <h4 className="text-green-800 font-bold mb-1">¡Constancia Disponible!</h4>
-                    <p className="text-green-700 text-sm mb-4">
-                      Requisitos cumplidos correctamente.
-                    </p>
-                    <button
-                      onClick={generateCertificate}
-                      className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
-                    >
-                      <Download className="w-5 h-5" />
-                      Descargar PDF Oficial
-                    </button>
-                  </div>
+              {certs.length === 0 ? (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-5 text-center">
+                  <AlertCircle className="w-10 h-10 text-amber-600 mx-auto mb-3" />
+                  <p className="text-amber-800 font-bold mb-1">Aún no hay constancias registradas</p>
+                  <p className="text-amber-700 text-sm">
+                    Si ya participaste, contacta al Comité Organizador para que registren tu constancia.
+                  </p>
                 </div>
               ) : (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-5">
-                  <div className="flex items-start gap-3">
-                    <AlertCircle className="w-6 h-6 text-amber-600 flex-shrink-0" />
-                    <div>
-                      <h4 className="text-amber-800 font-bold mb-1">Aún no disponible</h4>
-                      <ul className="text-sm text-amber-800 space-y-1 list-disc list-inside mt-2 text-left">
-                        <li>{userData.status === 'paid' ? '✅ Pago confirmado' : '⏳ Falta confirmar Pago'}</li>
-                        <li>{userData.attendance_confirmed ? '✅ Asistencia registrada' : '⏳ Falta registrar Asistencia en sede'}</li>
-                      </ul>
-                    </div>
-                  </div>
+                <div className="space-y-3">
+                  {certs.map((cert) => {
+                    const unlocked = isCertificateUnlocked(cert);
+                    return (
+                      <div key={cert.id} className="border border-gray-200 rounded-lg p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="bg-blue-50 text-[#1e3a5f] p-2 rounded-lg shrink-0">
+                            <Award className="w-5 h-5" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-black uppercase tracking-wide text-gray-400">
+                              {certTypeLabel(cert.certificate_type)}
+                            </p>
+                            {(cert.presentation_title || cert.symposium_title) && (
+                              <p className="text-sm text-gray-600 mt-0.5 truncate">
+                                {cert.presentation_title || cert.symposium_title}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {unlocked ? (
+                          <button
+                            onClick={() => handleDownload(cert)}
+                            className="w-full mt-3 bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 px-4 rounded-lg shadow-sm transition flex items-center justify-center gap-2 text-sm"
+                          >
+                            <Download className="w-4 h-4" />
+                            Descargar PDF
+                          </button>
+                        ) : (
+                          <div className="w-full mt-3 bg-gray-100 text-gray-500 font-bold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 text-sm">
+                            <Lock className="w-4 h-4" />
+                            Disponible a partir del {getUnlockDateLabel(cert)}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
-              {/* BOTÓN PARA REINICIAR (BUSCAR OTRO) */}
               <button
                 onClick={handleReset}
-                className="w-full mt-6 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2 text-sm"
+                className="w-full mt-6 text-sm text-gray-400 hover:text-gray-600 font-medium transition"
               >
-                <RefreshCw className="w-4 h-4" />
-                Buscar otra constancia
+                Buscar otro código
               </button>
             </div>
           )}
