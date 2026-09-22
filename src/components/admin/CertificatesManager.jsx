@@ -1,6 +1,7 @@
 // src/components/admin/CertificatesManager.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
+import { generateOfficialCertificatePDF } from '../../lib/certificateTemplates';
 import { jsPDF } from 'jspdf';
 import {
   Plus, Edit2, Trash2, Search, Award, Save, ArrowLeft, User, CheckCircle2, XCircle, Copy, Pencil, Check, X as XIcon, Eye, Image as ImageIcon, UploadCloud
@@ -985,7 +986,7 @@ const CertificatesManager = () => {
                   </td>
                   <td className="p-4 pr-6 text-right align-top">
                     <div className="flex justify-end gap-2 opacity-0 group-hover/row:opacity-100 transition-opacity">
-                      <button onClick={() => generatePreviewPDF(cert)} title="Vista previa PDF (solo texto)" className="p-2 text-amber-600 bg-white hover:bg-amber-600 hover:text-white rounded-lg transition-all border border-amber-100 shadow-sm"><Eye size={16} /></button>
+                      <button onClick={() => generateOfficialCertificatePDF(cert, 'open')} title="Vista previa PDF (diseño oficial)" className="p-2 text-amber-600 bg-white hover:bg-amber-600 hover:text-white rounded-lg transition-all border border-amber-100 shadow-sm"><Eye size={16} /></button>
                       <button onClick={() => handleEdit(cert)} className="p-2 text-blue-600 bg-white hover:bg-blue-600 hover:text-white rounded-lg transition-all border border-blue-100 shadow-sm"><Edit2 size={16} /></button>
                       <button onClick={() => handleDelete(cert.id)} className="p-2 text-red-600 bg-white hover:bg-red-600 hover:text-white rounded-lg transition-all border border-red-100 shadow-sm"><Trash2 size={16} /></button>
                     </div>
