@@ -215,10 +215,10 @@ export const generateOfficialCertificatePDF = async (cert, mode = 'open') => {
   const textWidth = pageWidth - marginX * 2;
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(12);
+  doc.setFontSize(13);
   doc.setTextColor(40, 40, 40);
   const introWrapped = doc.splitTextToSize(t.intro, textWidth);
-  doc.text(introWrapped, marginX, 68);
+  doc.text(introWrapped, marginX, 68, { lineHeightFactor: 1.3 });
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(22);
