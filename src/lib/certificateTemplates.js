@@ -113,13 +113,13 @@ export const buildCertificateText = (cert) => {
       ];
       break;
     case 'logistica':
-      rest = [{ t: `por su valioso apoyo logístico durante ${fechasChis}, ${temaGeneral}.`, b: false, i: false }];
+      rest = [{ t: `por su valioso apoyo logístico durante el XVII Congreso, celebrado en San Cristóbal de Las Casas, Chiapas, del 28 de septiembre al 2 de octubre de 2026, ${temaGeneral}.`, b: false, i: false }];
       break;
     case 'coordinacion_congreso':
-      rest = [{ t: `por su destacada labor de coordinación general del XVII Congreso, ${fechasChis}, ${temaGeneral}.`, b: false, i: false }];
+      rest = [{ t: `por su destacada labor de coordinación general, ${fechasChis}, ${temaGeneral}.`, b: false, i: false }];
       break;
     case 'comite_organizador':
-      rest = [{ t: `por su valiosa participación como integrante del Comité Organizador del XVII Congreso, ${fechasChis}, ${temaGeneral}.`, b: false, i: false }];
+      rest = [{ t: `por su valiosa participación como integrante del Comité Organizador, ${fechasChis}, ${temaGeneral}.`, b: false, i: false }];
       break;
     case 'sitio_web':
       rest = [{ t: `por su valiosa contribución en el desarrollo y administración del sitio web del XVII Congreso, ${fechasChis}, ${temaGeneral}.`, b: false, i: false }];
