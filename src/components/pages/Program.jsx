@@ -343,19 +343,21 @@ const Program = () => {
     printWindow.document.write(html); printWindow.document.close();
   };
 
-  // Mismo criterio que el badge en pantalla, reutilizado al imprimir
+  // Mismo criterio que el badge en pantalla, reutilizado al imprimir (con color real por tipo)
   const getPrintBadgeHtml = (ev) => {
-    if (ev.symposiums) return `<span class="badge">Simposio ${ev.symposiums.id}</span>`;
+    if (ev.symposiums) return `<span class="badge" style="background:#1e3a5f;">Simposio ${ev.symposiums.id}</span>`;
     const badgeByType = {
-      libro: 'Presentacion de Publicaciones',
-      plenaria: 'Conferencia Plenaria',
-      conversatorio: 'Conversatorio',
-      musica: 'Concierto',
-      concierto_estelar: 'Concierto',
-      inauguracion: 'Inauguracion',
+      libro: { label: 'Presentacion de Publicaciones', color: '#10b981' },
+      plenaria: { label: 'Conferencia Plenaria', color: '#f59e0b' },
+      conversatorio: { label: 'Conversatorio', color: '#f97316' },
+      musica: { label: 'Concierto', color: '#a855f7' },
+      concierto_estelar: { label: 'Concierto', color: '#6366f1' },
+      inauguracion: { label: 'Inauguracion', color: '#ef4444' },
+      asamblea: { label: 'Asamblea', color: '#14b8a6' },
+      clausura: { label: 'Clausura', color: '#f43f5e' },
     };
-    const label = badgeByType[ev.event_type];
-    return label ? `<span class="badge">${label}</span>` : '<span class="badge-gray">GENERAL</span>';
+    const info = badgeByType[ev.event_type];
+    return info ? `<span class="badge" style="background:${info.color};">${info.label}</span>` : '<span class="badge-gray">GENERAL</span>';
   };
 
   const handlePrint = () => {
