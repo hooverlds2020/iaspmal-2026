@@ -122,7 +122,7 @@ export const buildCertificateText = (cert) => {
       rest = [{ t: `por su valiosa participación como integrante del Comité Organizador, ${fechasChis}, ${temaGeneral}.`, b: false, i: false }];
       break;
     case 'sitio_web':
-      rest = [{ t: `por su valiosa contribución en el desarrollo y administración del sitio web del XVII Congreso, ${fechasChis}, ${temaGeneral}.`, b: false, i: false }];
+      rest = [{ t: `por su valiosa contribución en el desarrollo y administración del sitio web, ${fechasChis}, ${temaGeneral}.`, b: false, i: false }];
       break;
     default:
       rest = [{ t: '.', b: false, i: false }];
