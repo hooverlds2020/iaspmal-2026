@@ -1,4 +1,6 @@
 // src/components/admin/CertificatesManager.jsx
+import { exportarExcel, exportarPDF } from '../../utils/exportLista';
+import { FileSpreadsheet as IconXls, FileText as IconPdf } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { generateOfficialCertificatePDF } from '../../lib/certificateTemplates';
@@ -593,6 +595,11 @@ const CertificatesManager = () => {
 
   const countByType = (typeValue) => certificates.filter(c => c.certificate_type === typeValue).length;
 
+  const catLabel = (c) =>
+    (CERT_TYPES.find(t => t.value === c.certificate_type)?.label || c.certificate_type || 'Sin categoría').split(' (')[0];
+  const filtroNombre = categoryFilter === 'todas' ? 'Todas' : catLabel({ certificate_type: categoryFilter });
+  const slug = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
   // Estilos auxiliares (mismos patrones que PresentationsManager)
   const Label = ({ children }) => (
     <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-1 mb-1.5">{children}</label>
@@ -931,6 +938,35 @@ const CertificatesManager = () => {
           {uploadingTemplate ? 'Subiendo...' : <><UploadCloud size={18} /> Reemplazar JPG</>}
           <input type="file" accept="image/jpeg" className="hidden" onChange={handleUploadTemplate} disabled={uploadingTemplate} />
         </label>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 bg-white p-3 rounded-2xl border border-gray-100 shadow-sm">
+        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 mr-2">Exportar</span>
+        <button
+          onClick={() => exportarExcel(certificates, catLabel, 'constancias-iaspmal2026-completo', true)}
+          disabled={!certificates.length}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-green-700 text-white hover:bg-green-800 disabled:opacity-40">
+          <IconXls size={14} /> Excel completo
+        </button>
+        <button
+          onClick={() => exportarPDF(certificates, catLabel, 'Constancias por categoría', true)}
+          disabled={!certificates.length}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-red-700 text-white hover:bg-red-800 disabled:opacity-40">
+          <IconPdf size={14} /> PDF completo
+        </button>
+        <span className="text-gray-300 mx-1">|</span>
+        <button
+          onClick={() => exportarExcel(filtered, catLabel, `constancias-${slug(filtroNombre)}`, false)}
+          disabled={!filtered.length}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-gray-50 text-gray-600 hover:bg-gray-100 disabled:opacity-40">
+          <IconXls size={14} /> Excel: {filtroNombre} ({filtered.length})
+        </button>
+        <button
+          onClick={() => exportarPDF(filtered, catLabel, `Constancias: ${filtroNombre}`, false)}
+          disabled={!filtered.length}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-gray-50 text-gray-600 hover:bg-gray-100 disabled:opacity-40">
+          <IconPdf size={14} /> PDF: {filtroNombre}
+        </button>
       </div>
 
       <div className="flex flex-wrap gap-2 bg-white p-3 rounded-2xl border border-gray-100 shadow-sm">
