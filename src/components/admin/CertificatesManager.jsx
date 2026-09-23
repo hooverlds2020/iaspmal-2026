@@ -19,6 +19,7 @@ const CERT_TYPES = [
   { value: 'logistica', label: 'Apoyo Logístico' },
   { value: 'coordinacion_congreso', label: 'Coordinación del Congreso' },
   { value: 'comite_organizador', label: 'Comité Organizador' },
+  { value: 'sitio_web', label: 'Desarrollo y Administración del Sitio Web' },
 ];
 
 const certTypeLabel = (value) => CERT_TYPES.find(t => t.value === value)?.label || value;

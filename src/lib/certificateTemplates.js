@@ -15,6 +15,7 @@ export const CERT_TYPES = [
   { value: 'logistica', label: 'Apoyo Logístico' },
   { value: 'coordinacion_congreso', label: 'Coordinación del Congreso' },
   { value: 'comite_organizador', label: 'Comité Organizador' },
+  { value: 'sitio_web', label: 'Desarrollo y Administración del Sitio Web' },
 ];
 
 export const certTypeLabel = (value) => CERT_TYPES.find(t => t.value === value)?.label || value;
@@ -115,10 +116,13 @@ export const buildCertificateText = (cert) => {
       rest = [{ t: `por su valioso apoyo logístico durante ${fechasChis}, ${temaGeneral}.`, b: false, i: false }];
       break;
     case 'coordinacion_congreso':
-      rest = [{ t: `por su labor de coordinación general del XVII Congreso, ${fechasChis}, ${temaGeneral}.`, b: false, i: false }];
+      rest = [{ t: `por su destacada labor de coordinación general del XVII Congreso, ${fechasChis}, ${temaGeneral}.`, b: false, i: false }];
       break;
     case 'comite_organizador':
-      rest = [{ t: `por su participación como integrante del Comité Organizador del XVII Congreso, ${fechasChis}, ${temaGeneral}.`, b: false, i: false }];
+      rest = [{ t: `por su valiosa participación como integrante del Comité Organizador del XVII Congreso, ${fechasChis}, ${temaGeneral}.`, b: false, i: false }];
+      break;
+    case 'sitio_web':
+      rest = [{ t: `por su valiosa contribución en el desarrollo y administración del sitio web del XVII Congreso, ${fechasChis}, ${temaGeneral}.`, b: false, i: false }];
       break;
     default:
       rest = [{ t: '.', b: false, i: false }];
