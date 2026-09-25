@@ -12,6 +12,14 @@ const DIAS = [
   { key: '2026-09-29', label: 'Martes 29', horarios: ['7:15am', '10:30am', '1:00pm', '4:00pm', '5:30pm', '6:00pm', '7:30pm', '10:15pm'] },
 ];
 
+// Horarios que la Dra. María Luisa marcó como transporte ya confirmado/organizado
+const CONFIRMADOS = [
+  { dia: '2026-09-26', hora: '7:15am' },
+  { dia: '2026-09-26', hora: '4:00pm' },
+  { dia: '2026-09-27', hora: '1:00pm' },
+  { dia: '2026-09-27', hora: '10:15pm' },
+];
+
 export default function TrasladosAeropuerto() {
   const [diaActivo, setDiaActivo] = useState(DIAS[0].key);
   const [registros, setRegistros] = useState([]);
@@ -99,20 +107,28 @@ export default function TrasladosAeropuerto() {
         {diaInfo.horarios.map((hora) => {
           const personas = registros.filter((r) => r.horario === hora);
           const seleccionado = form.horario === hora;
+          const confirmado = CONFIRMADOS.some((c) => c.dia === diaActivo && c.hora === hora);
           return (
             <button
               key={hora}
               type="button"
               onClick={() => elegirHorario(hora)}
-              className={`text-left border rounded-xl p-3 bg-white transition ${
+              className={`text-left border rounded-xl p-3 transition ${
                 seleccionado
-                  ? 'border-orange-400 ring-2 ring-orange-200'
-                  : 'border-gray-200 hover:border-gray-300'
+                  ? 'border-orange-400 ring-2 ring-orange-200 bg-white'
+                  : confirmado
+                  ? 'border-lime-400 ring-2 ring-lime-200 bg-lime-50'
+                  : 'border-gray-200 hover:border-gray-300 bg-white'
               }`}
             >
               <div className="flex items-center justify-between mb-1.5">
                 <span className="font-bold text-[#1e3a5f]">{hora}</span>
                 {seleccionado && <Check size={16} className="text-orange-500" />}
+                {!seleccionado && confirmado && (
+                  <span className="text-[10px] font-bold text-lime-700 bg-lime-100 px-2 py-0.5 rounded-full uppercase tracking-wide">
+                    Confirmado
+                  </span>
+                )}
               </div>
               {personas.length === 0 ? (
                 <p className="text-xs text-gray-400 italic">Nadie registrado aún</p>
